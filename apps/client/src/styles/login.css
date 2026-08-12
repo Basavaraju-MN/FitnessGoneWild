@@ -1,0 +1,176 @@
+.login-page {
+  min-height: 100vh;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(10, 43, 38, 0.86),
+      rgba(10, 43, 38, 0.96)
+    ),
+    url("/assets/images/hero.jpg") center / cover;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 40px 20px;
+}
+
+.login-container {
+  width: 100%;
+  max-width: 460px;
+}
+
+.login-card {
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 44px 40px;
+  text-align: center;
+
+  box-shadow:
+    0 25px 70px rgba(0, 0, 0, 0.25);
+}
+
+.login-logo {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.login-logo img {
+  width: auto;
+  height: 70px;
+}
+
+.login-eyebrow {
+  color: #e4881f;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+
+  margin-bottom: 10px;
+}
+
+.login-card h1 {
+  color: #0f3d36;
+  font-family: "Barlow Condensed", sans-serif;
+
+  font-size: clamp(2.4rem, 6vw, 3.5rem);
+  line-height: 0.98;
+
+  text-transform: uppercase;
+
+  margin-bottom: 18px;
+}
+
+.login-description {
+  color: #56655f;
+  font-size: 0.94rem;
+  line-height: 1.65;
+
+  max-width: 340px;
+  margin: 0 auto 28px;
+}
+
+.google-login-button {
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+
+  background: #ffffff;
+  color: #16211e;
+
+  border: 1px solid #d8dfdb;
+  border-radius: 999px;
+
+  padding: 14px 20px;
+
+  font-size: 0.95rem;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.google-login-button:hover {
+  border-color: #0f3d36;
+
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 8px 22px rgba(15, 61, 54, 0.12);
+}
+
+.google-icon {
+  width: 24px;
+  height: 24px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 50%;
+
+  font-size: 1rem;
+  font-weight: 700;
+
+  color: #4285f4;
+}
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  margin: 28px 0 18px;
+
+  color: #8a9690;
+  font-size: 0.75rem;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: "";
+
+  flex: 1;
+
+  height: 1px;
+  background: #dde4de;
+}
+
+.login-footer {
+  color: #8a9690;
+  font-size: 0.72rem;
+  line-height: 1.6;
+
+  margin-bottom: 20px;
+}
+
+.back-button {
+  border: none;
+  background: transparent;
+
+  color: #0f3d36;
+
+  font-size: 0.85rem;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.back-button:hover {
+  color: #e4881f;
+}
+
+@media (max-width: 520px) {
+  .login-card {
+    padding: 36px 24px;
+    border-radius: 20px;
+  }
+}
