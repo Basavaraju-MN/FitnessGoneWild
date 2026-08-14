@@ -10,5 +10,8 @@ router.post(
   phonepeController.processPhonePe
 );
 
+const controller = require('../controller/controller');
+
+router.get('/get-all-trek-details', controller.getTrekDetails);
 
 module.exports = router;
