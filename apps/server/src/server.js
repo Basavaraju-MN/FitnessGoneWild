@@ -1,17 +1,31 @@
-const http = require('http');
+/******************************************************************************
+Project Name: GMDSoft Admin and Customer Portal 
 
-const PORT = 4000;
+File Name: server.js
+Description: Entry point of the application. This file initializes the Express  
+             server, loads middleware, sets up routes, and starts the server
 
-const server = http.createServer((req, res) => {
-  res.writeHead(200, { 'Content-Type': 'application/json' });
-  res.end(
-    JSON.stringify({
-      success: true,
-      message: 'Node.js server is running',
-    })
-  );
-});
+Author: Samartha Info solution pvt ltd 
+Created On: Oct 21 2024
+Last Modified: Aug 22 2025
 
-server.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+Copyright (c) 2025 GMDSoft. All rights reserved.
+******************************************************************************/
+
+//Core Node.js module (if needed)
+const path = require('path');
+
+//Third-party libraries
+const express = require('express');
+const cookieParser = require('cookie-parser');
+const cors = require('cors');
+const routes = require('./routes/routes');
+const app = express();
+// Routes
+app.use('/api/phonepe', routes);
+
+// Start the server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
