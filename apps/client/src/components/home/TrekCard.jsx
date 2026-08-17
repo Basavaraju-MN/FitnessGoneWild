@@ -125,6 +125,7 @@ export default function TrekCard({ trek }) {
           src={images[currentImage]}
           alt={trek.name}
           onError={handleImageError}
+          
         />
 
         {/* Badge */}

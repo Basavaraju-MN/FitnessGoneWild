@@ -4,19 +4,12 @@ const cors = require('cors');
 const trekRoutes = require('./routes/routes');
 
 const app = express();
-const path = require('path');
 
-//Third-party libraries
-const express = require('express');
-const cookieParser = require('cookie-parser');
-const cors = require('cors');
-const routes = require('./routes/routes');
-const app = express();
-// Routes
-app.use('/api/phonepe', routes);
+const PORT = 4000;
 
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: 'http://localhost:5173' || process.env.CLIENT_URL || 'http://localhost:5174',
+  credentials: true,
 }));
 
 app.use(express.json());

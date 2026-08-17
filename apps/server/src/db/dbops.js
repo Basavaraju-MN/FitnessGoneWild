@@ -5,6 +5,7 @@ class Cmds {
 
   async getTrekCategories() {
     const rows = await executeQuery(sqlQueries.getTrekCategories);
+    console.log('Rows fetched from getTrekCategories:', rows);
     if (rows.length === 0) {
       throw utils.getErrorObject(
         'Trek categories not found',
