@@ -1,0 +1,15 @@
+
+> client@1.0.0 build C:\Users\Admin\Documents\GitHub\FitnessGoneWild\apps\client
+> tsc -b && vite build
+
+[36mvite v8.2.1 [32mbuilding client environment for production...[36m[39m
+
+/assets/images/hero.jpg referenced in /assets/images/hero.jpg didn't resolve at build time, it will remain unchanged to be resolved at runtime
+[2Ktransforming...✓ 1819 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.51 kB │ gzip:  0.32 kB
+dist/assets/index-CWE4Lhl0.css   14.64 kB │ gzip:  3.80 kB
+dist/assets/index-BH9Rsluc.js   250.62 kB │ gzip: 80.15 kB
+
+[32m✓ built in 607ms[39m

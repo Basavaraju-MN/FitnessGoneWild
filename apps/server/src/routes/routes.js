@@ -12,6 +12,8 @@ router.post(
 
 const controller = require('../controller/controller');
 
+router.get('/trek-category', controller.getTrekCategories);
+
 router.get('/get-all-trek-details', controller.getTrekDetails);
 
 module.exports = router;

@@ -1,8 +1,27 @@
 {
+	"name": "Fitness Gone Wild",
+	"private": true,
+	"packageManager": "pnpm@9.6.0",
+	"scripts": {
+		"dev": "turbo run dev --parallel",
+		"build": "turbo run build",
+		"start": "turbo run start"
+	},
+	"devDependencies": {
+		"@tailwindcss/postcss": "^4.1.17",
+		"autoprefixer": "^10.4.22",
+		"postcss": "^8.5.6",
+		"tailwindcss": "^4.1.17",
+		"turbo": "^2.10.9"
+	},
 	"dependencies": {
-		"express": "^5.2.1",
-		"cors": "^2.8.6",
-		"mysql2": "^3.23.3",
-		"dotenv": "^17.4.2"
+		"@emotion/react": "^11.14.0",
+		"@emotion/styled": "^11.14.1",
+		"@mui/material": "^7.3.5",
+		"@mui/x-date-pickers": "^8.19.0",
+		"@react-google-maps/api": "^2.20.7",
+		"@tanstack/react-table": "^8.21.3",
+		"dayjs": "^1.11.19",
+		"react-time-picker": "^8.0.2"
 	}
 }

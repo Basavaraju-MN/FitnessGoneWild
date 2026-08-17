@@ -60,10 +60,27 @@ exports.processPhonePe = async (req, res) => {
   }
 };
 
+exports.getTrekCategories = async (req, res) => {
+    try {
+        const result = await component.getTrekCategories();
+        console.log('Result from getTrekCategories:', result);
+        return res.status(200).json({
+            success: true,
+            message: 'Trek categories fetched successfully',
+            data: result.data,
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'Error fetching trek categories',
+        });
+    }
+};
 
 exports.getTrekDetails = async (req, res) => {
+    const categoryId = req.query.category_id;
     try {
-        const result = await component.getTrekDetails();
+        const result = await component.getTrekDetails(categoryId);
         return res.status(200).json({
             success: true,
             message: 'Trek details fetched successfully',

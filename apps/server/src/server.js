@@ -1,18 +1,9 @@
-/******************************************************************************
-Project Name: GMDSoft Admin and Customer Portal 
+const express = require('express');
+const cors = require('cors');
 
-File Name: server.js
-Description: Entry point of the application. This file initializes the Express  
-             server, loads middleware, sets up routes, and starts the server
+const trekRoutes = require('./routes/routes');
 
-Author: Samartha Info solution pvt ltd 
-Created On: Oct 21 2024
-Last Modified: Aug 22 2025
-
-Copyright (c) 2025 GMDSoft. All rights reserved.
-******************************************************************************/
-
-//Core Node.js module (if needed)
+const app = express();
 const path = require('path');
 
 //Third-party libraries
@@ -24,8 +15,21 @@ const app = express();
 // Routes
 app.use('/api/phonepe', routes);
 
-// Start the server
-const PORT = process.env.PORT || 5000;
+app.use(cors({
+  origin: 'http://localhost:5173',
+}));
+
+app.use(express.json());
+
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Node.js server is running',
+  });
+});
+
+app.use('/api', trekRoutes);
+
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`Server running on http://localhost:${PORT}`);
 });
