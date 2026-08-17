@@ -3,13 +3,26 @@ const sqlQueries = require('../db/sqlqueries');
 
 class Cmds {
 
-  async getTrekDetails() {
-    const rows = await executeQuery(sqlQueries.getTrekDetails);
+  async getTrekCategories() {
+    const rows = await executeQuery(sqlQueries.getTrekCategories);
     if (rows.length === 0) {
       throw utils.getErrorObject(
-        'User Not found or invalid passwd',
+        'Trek categories not found',
         appConstants.HTTP_STATUS_CODES.NOT_FOUND,
-        'Error in verifyPasswd - user not found or invalid credentails',
+        'Error in getTrekCategories - no categories found',
+        appConstants.HTTP_STATUS_CODES.ZERO_ROWS
+      );
+    }
+    return rows;
+  }
+
+  async getTrekDetails(categoryId) {
+    const rows = await executeQuery(sqlQueries.getTrekDetails, [categoryId]);
+    if (rows.length === 0) {
+      throw utils.getErrorObject(
+        'Trek details not found',
+        appConstants.HTTP_STATUS_CODES.NOT_FOUND,
+        'Error in getTrekDetails - no details found',
         appConstants.HTTP_STATUS_CODES.ZERO_ROWS
       );
     }
