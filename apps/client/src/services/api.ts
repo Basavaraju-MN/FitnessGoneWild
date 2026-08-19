@@ -24,7 +24,7 @@ export async function getTrekCategories() {
   return result.data;
 }
 
-export async function getTreksByCategory(categoryId) {
+export async function getTreksByCategory(categoryId: number) {
   const response = await fetch(
     `${API_BASE_URL}/get-all-trek-details?category_id=${categoryId}`
   );
