@@ -7,11 +7,10 @@ const app = express();
 const path = require('path');
 
 //Third-party libraries
-const express = require('express');
+
 const cookieParser = require('cookie-parser');
-const cors = require('cors');
 const routes = require('./routes/routes');
-const app = express();
+
 // Routes
 app.use('/api/phonepe', routes);
 
