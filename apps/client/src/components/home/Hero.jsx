@@ -13,14 +13,6 @@ const heroSlides = [
     image: '/images/hero3.jpg',
     message: 'Walk deeper into nature. Come back with stories.',
   },
-  {
-    image: '/images/hero4.jpg',
-    message: 'New trails. New friends. Unforgettable weekends.',
-  },
-  {
-    image: '/images/hero5.jpg',
-    message: 'The mountains are calling. Are you ready to go?',
-  },
 ];
 
 export default function Hero() {

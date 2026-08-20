@@ -1,0 +1,43 @@
+services:
+  - type: web
+    name: fitnessgonewild
+    runtime: node
+    plan: free
+    buildCommand: python3 -m pip install -r apps/server/requirements.txt && pnpm install --frozen-lockfile && pnpm run build
+    startCommand: pnpm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 24.14.1
+      - key: NODE_ENV
+        value: production
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "3306"
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_CONNECTION_LIMIT
+        value: "10"
+      - key: CLIENT_URL
+        value: https://fitnessgonewild.in
+      - key: PHONEPE_CLIENT_ID
+        sync: false
+      - key: PHONEPE_CLIENT_SECRET
+        sync: false
+      - key: PHONEPE_CLIENT_VERSION
+        value: "1"
+      - key: PHONEPE_ENV
+        value: SANDBOX
+      - key: PHONEPE_REDIRECT_URL
+        value: https://fitnessgonewild.in/payment-result
+      - key: PHONEPE_WEBHOOK_USERNAME
+        sync: false
+      - key: PHONEPE_WEBHOOK_PASSWORD
+        sync: false
+      - key: PYTHON_COMMAND
+        value: python3
