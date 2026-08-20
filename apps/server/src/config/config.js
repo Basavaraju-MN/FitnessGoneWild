@@ -5,7 +5,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 const logDirectory = path.join(__dirname, '../logs');
 
 const db = {
-  host: '82.25.121.162',
+  host: 'srv875.hstgr.io',
   port: 3306,
   user: 'u441995167_fitnessGone',
   password: 'Password@1234',
