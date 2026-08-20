@@ -5,13 +5,13 @@ const isProduction = process.env.NODE_ENV === 'production';
 const logDirectory = path.join(__dirname, '../logs');
 
 const db = {
-  host: process.env.DB_HOST || (isProduction ? undefined : 'localhost'),
-  port: Number(process.env.DB_PORT || 3306),
-  user: process.env.DB_USER || (isProduction ? undefined : 'root'),
-  password: process.env.DB_PASSWORD || (isProduction ? undefined : ''),
-  database: process.env.DB_NAME || (isProduction ? undefined : 'fgonewild'),
-  connectionLimit: Number(process.env.DB_CONNECTION_LIMIT || 10),
-  timezone: process.env.DB_TIMEZONE || '+05:30',
+  host: '82.25.121.162',
+  port: 3306,
+  user: 'u441995167_fitnessGone',
+  password: 'Password@1234',
+  database: 'u441995167_fitnessGone',
+  connectionLimit: 10,
+  timezone: '+05:30',
   dateStrings: true,
 };
 
