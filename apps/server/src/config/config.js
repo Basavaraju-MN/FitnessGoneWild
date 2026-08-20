@@ -8,7 +8,7 @@ const db = {
   host: 'srv875.hstgr.io',
   port: 3306,
   user: 'u441995167_fitnessGone',
-  password: 'Password@1234',
+  password: 'Password@123',
   database: 'u441995167_fitnessGone',
   connectionLimit: 10,
   timezone: '+05:30',
