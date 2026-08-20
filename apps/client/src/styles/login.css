@@ -6,7 +6,7 @@
       rgba(10, 43, 38, 0.86),
       rgba(10, 43, 38, 0.96)
     ),
-    url("/assets/images/hero.jpg") center / cover;
+    url("/images/hero1.jpg") center / cover;
 
   display: flex;
   align-items: center;

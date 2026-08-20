@@ -105,7 +105,15 @@ export default function TrekCard({ trek }) {
    * show the main kudremukh.jpg instead.
    */
   const handleImageError = (event) => {
-    event.currentTarget.src = `/images/${trek.slug}.jpg`;
+    // Fall back to the first known trek image and avoid an onError loop.
+    const fallbackImage = images[0];
+
+    if (event.currentTarget.src.endsWith(fallbackImage)) {
+      event.currentTarget.onerror = null;
+      return;
+    }
+
+    event.currentTarget.src = fallbackImage;
   };
 
   return (

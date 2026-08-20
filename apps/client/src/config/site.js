@@ -2,16 +2,16 @@ export const siteConfig = {
   name: 'Fitness Gone Wild',
   shot_name: 'FGW',
 
-  url: process.env.NEXT_JS_SITE_URL || '',
+  url: import.meta.env.VITE_SITE_URL || window.location.origin,
 
-  description: '',
-  keywords: [],
+  description: 'Weekend treks, backpacking and bike rides.',
+  keywords: ['treks', 'backpacking', 'bike rides', 'Fitness Gone Wild'],
 
   authors: [],
 
   links: {
-    github: '', 
-    documentation: '', 
-    demo: '', 
+    github: '',
+    documentation: '',
+    demo: import.meta.env.VITE_SITE_URL || window.location.origin,
   },
 };

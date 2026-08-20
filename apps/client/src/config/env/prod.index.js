@@ -1,7 +1,6 @@
 const prodConfig = {
-    // Todo: Update api url
-    api: process.env.NEXT_PUBLIC_BACKEND_URL || 'localhost:4000/api',
-    debug: process.env.NEXT_PUBLIC_DEBUG === 'true',
+  api: import.meta.env.VITE_API_BASE_URL || '/api',
+  debug: import.meta.env.VITE_DEBUG === 'true',
 };
 
 export default prodConfig;

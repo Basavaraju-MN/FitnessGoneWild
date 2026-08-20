@@ -23,7 +23,7 @@ const Login = () => {
 
           <div className="login-logo">
             <img
-              src="/assets/logo-mark.png"
+              src="/images/logo.png"
               alt="The Fitness Gone Wild"
             />
           </div>

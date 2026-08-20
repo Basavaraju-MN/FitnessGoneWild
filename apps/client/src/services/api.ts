@@ -1,47 +1,49 @@
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  'http://localhost:4000/api';
+const configuredApiBaseUrl =
+  import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, '');
 
-export async function getTrekCategories() {
-  const response = await fetch(
-    `${API_BASE_URL}/trek-category`
-  );
+const API_BASE_URL =
+  configuredApiBaseUrl ||
+  (import.meta.env.DEV ? 'http://localhost:4000/api' : '/api');
+
+async function parseResponse(response: Response) {
+  let result;
+
+  try {
+    result = await response.json();
+  } catch {
+    throw new Error(`API returned an invalid JSON response (${response.status})`);
+  }
 
   if (!response.ok) {
     throw new Error(
-      `Failed to fetch trek categories. Status: ${response.status}`
+      result?.message || `Request failed with status ${response.status}`
     );
   }
 
-  const result = await response.json();
-
-  if (!result.success) {
-    throw new Error(
-      result.message || 'Failed to fetch trek categories'
-    );
+  if (!result?.success) {
+    throw new Error(result?.message || 'Request failed');
   }
 
+  return result;
+}
+
+export async function getTrekCategories() {
+  const response = await fetch(`${API_BASE_URL}/trek-category`, {
+    credentials: 'include',
+  });
+
+  const result = await parseResponse(response);
   return result.data;
 }
 
 export async function getTreksByCategory(categoryId: number) {
   const response = await fetch(
-    `${API_BASE_URL}/get-all-trek-details?category_id=${categoryId}`
+    `${API_BASE_URL}/get-all-trek-details?category_id=${encodeURIComponent(categoryId)}`,
+    {
+      credentials: 'include',
+    }
   );
 
-  if (!response.ok) {
-    throw new Error(
-      `Failed to fetch trek details. Status: ${response.status}`
-    );
-  }
-
-  const result = await response.json();
-
-  if (!result.success) {
-    throw new Error(
-      result.message || 'Failed to fetch trek details'
-    );
-  }
-
+  const result = await parseResponse(response);
   return result.data;
 }

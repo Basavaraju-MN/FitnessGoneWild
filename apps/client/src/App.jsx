@@ -45,6 +45,11 @@ export default function App() {
           element={<Login />}
         />
 
+        <Route
+          path="/payment-result"
+          element={<Placeholder title="Payment Result" />}
+        />
+
       </Routes>
     </BrowserRouter>
   );

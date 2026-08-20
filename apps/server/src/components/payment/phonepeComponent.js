@@ -25,7 +25,7 @@ const executePython = (payload) => {
        */
       const pythonCommand =
         process.env.PYTHON_COMMAND ||
-        'py';
+        (process.platform === 'win32' ? 'py' : 'python3');
 
 
       const pythonProcess = spawn(
