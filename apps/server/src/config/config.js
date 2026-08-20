@@ -15,17 +15,17 @@ const db = {
   dateStrings: true,
 };
 
-if (isProduction) {
-  const missing = ['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASSWORD'].filter(
-    (key) => !process.env[key]
-  );
+// if (isProduction) {
+//   const missing = ['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASSWORD'].filter(
+//     (key) => !process.env[key]
+//   );
 
-  if (missing.length > 0) {
-    console.warn(
-      `Database environment variables are not configured yet: ${missing.join(', ')}`
-    );
-  }
-}
+//   if (missing.length > 0) {
+//     console.warn(
+//       `Database environment variables are not configured yet: ${missing.join(', ')}`
+//     );
+//   }
+// }
 
 const clientOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
   .split(',')
