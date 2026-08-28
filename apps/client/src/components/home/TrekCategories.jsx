@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import SectionHeader from '../common/SectionHeader';
 import TrekCard from './TrekCard';
+
 import {
   getTrekCategories,
   getTreksByCategory,
 } from '../../api/treks';
 
-export default function TrekCategories() {
+export default function TrekCategories({ onTrekSelect }) {
   const [categories, setCategories] = useState([]);
   const [activeCategoryId, setActiveCategoryId] = useState(null);
 
@@ -17,22 +18,17 @@ export default function TrekCategories() {
 
   const [error, setError] = useState('');
 
-  // Load trek categories when the screen loads
+  // Load trek categories
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         setCategoryLoading(true);
         setError('');
 
-        console.log('Fetching trek categories...');
-
         const data = await getTrekCategories();
-
-        console.log('Trek categories:', data);
 
         setCategories(data);
 
-        // Automatically select the first category
         if (data.length > 0) {
           setActiveCategoryId(data[0].id);
         }
@@ -53,7 +49,7 @@ export default function TrekCategories() {
     fetchCategories();
   }, []);
 
-  // Load treks whenever the selected category changes
+  // Load treks when category changes
   useEffect(() => {
     if (!activeCategoryId) {
       return;
@@ -64,16 +60,9 @@ export default function TrekCategories() {
         setTrekLoading(true);
         setError('');
 
-        console.log(
-          'Fetching treks for category:',
-          activeCategoryId
-        );
-
         const data = await getTreksByCategory(
           activeCategoryId
         );
-
-        console.log('Treks:', data);
 
         setTreks(data);
       } catch (err) {
@@ -111,6 +100,7 @@ export default function TrekCategories() {
 
   return (
     <section className="section" id="trips">
+
       <SectionHeader
         eyebrow="Pick your weekend"
         title="Upcoming departures"
@@ -119,7 +109,7 @@ export default function TrekCategories() {
 
       {error && <p>{error}</p>}
 
-      {/* Categories from backend */}
+      {/* Categories */}
       <div className="tabs">
         {categories.map((category) => (
           <button
@@ -138,18 +128,24 @@ export default function TrekCategories() {
         ))}
       </div>
 
-      {/* Treks from backend */}
+      {/* Treks */}
       {trekLoading && (
         <p>Loading treks...</p>
       )}
 
       {!trekLoading && !error && (
         <div className="content-grid">
+
           {treks.length > 0 ? (
             treks.map((trek) => (
               <TrekCard
                 key={trek.id}
                 trek={trek}
+                onClick={() => {
+                  if (onTrekSelect) {
+                    onTrekSelect(trek);
+                  }
+                }}
               />
             ))
           ) : (
@@ -157,8 +153,10 @@ export default function TrekCategories() {
               No treks available for this category.
             </p>
           )}
+
         </div>
       )}
+
     </section>
   );
 }

@@ -1,6 +1,7 @@
 
 const phonepeComponent = require('../components/payment/phonepeComponent');
 const component = require('../components/trekDetails');
+const brochureComponent = require('../components/broucher/broucher')
 
 exports.processPhonePe = async (req, res) => {
   try {
@@ -61,36 +62,73 @@ exports.processPhonePe = async (req, res) => {
 };
 
 exports.getTrekCategories = async (req, res) => {
-    try {
-        const result = await component.getTrekCategories();
-        console.log('Result from getTrekCategories:', result);
-        return res.status(200).json({
-            success: true,
-            message: 'Trek categories fetched successfully',
-            data: result.data,
-        });
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: 'Error fetching trek categories',
-        });
-    }
+  try {
+    const result = await component.getTrekCategories();
+    return res.status(200).json({
+      success: true,
+      message: 'Trek categories fetched successfully',
+      data: result.data,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching trek categories',
+    });
+  }
 };
 
 exports.getTrekDetails = async (req, res) => {
-    const categoryId = req.query.category_id;
-    try {
-        const result = await component.getTrekDetails(categoryId);
-        return res.status(200).json({
-            success: true,
-            message: 'Trek details fetched successfully',
-            data: result.data,
-        });
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: 'Error fetching trek details',
-        });
-    }
+  const categoryId = req.query.category_id;
+  try {
+    const result = await component.getTrekDetails(categoryId);
+    return res.status(200).json({
+      success: true,
+      message: 'Trek details fetched successfully',
+      data: result.data,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching trek details',
+    });
+  }
 };
 
+exports.downloadBroucher = async (req, res) => {
+  const { trip_id } = req.body;
+  try {
+    const result = await brochureComponent.getBrochure(trip_id);
+    if (!result.success) {
+      return res.status(result.statusCode).json({
+        success: false,
+        message: result.message,
+      });
+    }
+    const brochure = result.data;
+    
+    res.setHeader(
+      'Content-Type',
+      brochure.mime_type || 'application/pdf'
+    );
+
+    res.setHeader(
+      'Content-Length',
+      brochure.file_data.length
+    );
+
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${brochure.file_name}"`
+    );
+
+    return res.send(brochure.file_data);
+
+  } catch (error) {
+    console.error('getBrochure error:', error);
+
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching brochure',
+    });
+  }
+};

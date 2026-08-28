@@ -28,5 +28,22 @@ class Cmds {
     }
     return rows;
   }
+
+  async getBrochureById(trip_id) {
+    const rows = await executeQuery(sqlQueries.downloadBroucher, [trip_id]);
+    if (rows.length === 0) {
+      throw utils.getErrorObject(
+        'Trek details not found',
+        appConstants.HTTP_STATUS_CODES.NOT_FOUND,
+        'Error in getTrekDetails - no details found',
+        appConstants.HTTP_STATUS_CODES.ZERO_ROWS
+      );
+    }
+    return rows[0];
+  }
+
+  async updateDownloadCount(trip_id) {
+    await executeQuery(sqlQueries.updateDownloadCount, [trip_id]);
+  }
 }
 module.exports = new Cmds();
