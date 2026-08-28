@@ -1,193 +1,99 @@
-const {
-  spawn,
-} = require('child_process');
+const { randomUUID } = require('crypto');
+const { StandardCheckoutPayRequest } = require('@phonepe-pg/pg-sdk-node');
+const paymentDbOps = require('../../db/paymentDbops');
+const { phonePeClient } = require('../../config/config');
 
-const path = require('path');
+exports.createPayment = async ({ amount, userId }) => {
+    if (!amount) throw new Error('Amount is required');
 
+    const amountInPaise = Math.round(Number(amount) * 100);
+    if (!Number.isFinite(amountInPaise) || amountInPaise <= 0) throw new Error('Invalid payment amount');
 
-const executePython = (payload) => {
+    const merchantOrderId = `FGW_${Date.now()}_${randomUUID().replace(/-/g, '').substring(0, 12)}`;
+    const redirectUrl = `${process.env.PHONEPE_REDIRECT_URL}?merchantOrderId=${encodeURIComponent(merchantOrderId)}`;
 
-  return new Promise(
-    (resolve, reject) => {
+    await paymentDbOps.createTransaction(merchantOrderId, userId, amountInPaise, 'INR', redirectUrl);
 
-      const scriptPath = path.join(
-      __dirname,
-      '../../scripts/python/phonepe_payment.py'
-    );
+    const request = StandardCheckoutPayRequest.builder().merchantOrderId(merchantOrderId).amount(amountInPaise).redirectUrl(redirectUrl).build();
+    const response = await phonePeClient.pay(request);
 
-
-
-      /*
-       * Windows:
-       *
-       * If "python" doesn't work,
-       * change this to "py".
-       */
-      const pythonCommand =
-        process.env.PYTHON_COMMAND ||
-        (process.platform === 'win32' ? 'py' : 'python3');
-
-
-      const pythonProcess = spawn(
-        pythonCommand,
-        [scriptPath],
-        {
-          env: process.env,
-        }
-      );
-
-
-      let output = '';
-      let errorOutput = '';
-
-
-      /*
-       * Receive output from Python
-       */
-      pythonProcess.stdout.on(
-        'data',
-        (data) => {
-
-          output += data.toString();
-
-        }
-      );
-
-
-      /*
-       * Receive Python errors
-       */
-      pythonProcess.stderr.on(
-        'data',
-        (data) => {
-
-          errorOutput += data.toString();
-
-        }
-      );
-
-
-      /*
-       * Send JSON to Python through stdin.
-       */
-      pythonProcess.stdin.write(
-        JSON.stringify(payload)
-      );
-
-      pythonProcess.stdin.end();
-
-
-      /*
-       * Python completed
-       */
-      pythonProcess.on(
-        'close',
-        (code) => {
-
-          if (code !== 0) {
-
-            console.error(
-              'Python Error:',
-              errorOutput
-            );
-
-            return reject(
-              new Error(
-                errorOutput ||
-                'Python script execution failed'
-              )
-            );
-
-          }
-
-
-          try {
-
-            const result =
-              JSON.parse(
-                output.trim()
-              );
-
-
-            if (result.success === false) {
-
-              return reject(
-                new Error(
-                  result.message ||
-                  'PhonePe operation failed'
-                )
-              );
-
-            }
-
-
-            resolve(result.data);
-
-          } catch (error) {
-
-            console.error(
-              'Python raw output:',
-              output
-            );
-
-            reject(
-              new Error(
-                'Invalid response received from Python'
-              )
-            );
-
-          }
-
-        }
-      );
-
-
-      pythonProcess.on(
-        'error',
-        (error) => {
-
-          reject(
-            new Error(
-              `Unable to execute Python: ${error.message}`
-            )
-          );
-
-        }
-      );
-
-    }
-  );
-
+    return { merchantOrderId, amount: amountInPaise, redirectUrl: response.redirectUrl, status: 'PROCESSING', phonepeResponse: response };
 };
 
+exports.checkPaymentStatus = async (merchantOrderId) => {
+    if (!merchantOrderId) throw new Error('merchantOrderId is required');
 
+    const transaction = await paymentDbOps.getTransactionByOrderId(merchantOrderId);
+    if (!transaction) throw new Error('Payment transaction not found');
 
-exports.executePhonePe = async (
-  action,
-  data
-) => {
+    const response = await phonePeClient.getOrderStatus(merchantOrderId);
+    const state = response.state;
+    const status = state === 'COMPLETED' ? 'SUCCESS' : state === 'FAILED' ? 'FAILED' : 'PROCESSING';
 
-  const allowedActions = [
-    'create-payment',
-    'check-status',
-    'webhook',
-  ];
+    await paymentDbOps.updateTransactionStatus({
+        merchantOrderId, status, phonepeState: state,
+        responseCode: response.responseCode, responseMessage: response.responseMessage,
+        phonepeOrderId: response.orderId, transactionId: response.transactionId,
+        providerReferenceId: response.providerReferenceId,
+        paymentMethod: response.paymentInstrument?.type,
+        paymentTimestamp: response.paymentTimestamp
+    });
 
+    return { merchantOrderId, status, phonepeState: state, phonepeResponse: response };
+};
 
-  if (
-    !allowedActions.includes(action)
-  ) {
+exports.processWebhook = async ({ authorization, rawBody }) => {
+    if (!authorization) throw new Error('PhonePe Authorization header missing');
+    if (!rawBody) throw new Error('PhonePe webhook body missing');
 
-    throw new Error(
-      `Invalid PhonePe action: ${action}`
-    );
+    let callback;
+    try {
+        callback = phonePeClient.validateCallback(
+            process.env.PHONEPE_WEBHOOK_USERNAME,
+            process.env.PHONEPE_WEBHOOK_PASSWORD,
+            authorization,
+            rawBody
+        );
+    } catch (error) {
+        console.error('PhonePe callback validation failed:', error);
+        throw new Error('Invalid PhonePe webhook');
+    }
 
-  }
+    const payload = callback.payload || {};
+    const merchantOrderId = payload.orderId;
+    const state = payload.state;
 
+    const webhookId = await paymentDbOps.insertWebhookLog({
+        merchantOrderId,
+        eventType: callback.type || callback.event,
+        authorization,
+        requestBody: JSON.parse(rawBody),
+        paymentStatus: state,
+        signatureValid: true,
+        processingStatus: 'RECEIVED'
+    });
 
-  return executePython({
-    action,
-    data,
-  });
+    try {
+        let status = state === 'COMPLETED' ? 'SUCCESS' : state === 'FAILED' ? 'FAILED' : 'PROCESSING';
 
+        const transaction = await paymentDbOps.getTransactionByOrderId(merchantOrderId);
+        if (!transaction) throw new Error(`Transaction not found: ${merchantOrderId}`);
+
+        if (transaction.status === 'SUCCESS' && status !== 'SUCCESS') status = 'SUCCESS';
+
+        await paymentDbOps.updateTransactionStatus({
+            merchantOrderId, status, phonepeState: state,
+            responseCode: payload.responseCode, responseMessage: payload.responseMessage,
+            phonepeOrderId: payload.orderId, transactionId: payload.transactionId,
+            providerReferenceId: payload.providerReferenceId,
+            paymentMethod: payload.paymentInstrument?.type,
+            paymentTimestamp: payload.paymentTimestamp
+        });
+
+        await paymentDbOps.updateWebhookLog(webhookId, 'PROCESSED', null);
+        return { success: true, merchantOrderId, status, state };
+    } catch (error) {
+        await paymentDbOps.updateWebhookLog(webhookId, 'FAILED', error.message);
+        throw error;
+    }
 };

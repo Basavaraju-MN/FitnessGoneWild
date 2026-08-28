@@ -45,5 +45,6 @@ class Cmds {
   async updateDownloadCount(trip_id) {
     await executeQuery(sqlQueries.updateDownloadCount, [trip_id]);
   }
+
 }
 module.exports = new Cmds();

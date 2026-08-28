@@ -3,64 +3,6 @@ const phonepeComponent = require('../components/payment/phonepeComponent');
 const component = require('../components/trekDetails');
 const brochureComponent = require('../components/broucher/broucher')
 
-exports.processPhonePe = async (req, res) => {
-  try {
-
-    const action = req.params.action;
-
-    let data = {
-      ...req.body,
-    };
-
-
-    /*
-     * Webhook needs Authorization Header
-     * and original raw request body.
-     */
-    if (action === 'webhook') {
-
-      data = {
-        authorization:
-          req.headers.authorization || '',
-
-        rawBody:
-          req.rawBody || '',
-      };
-
-    }
-
-
-    const result =
-      await phonepeComponent.executePhonePe(
-        action,
-        data
-      );
-
-
-    return res.status(200).json({
-      success: true,
-      data: result,
-    });
-
-
-  } catch (error) {
-
-    console.error(
-      'PhonePe Controller Error:',
-      error
-    );
-
-
-    return res.status(500).json({
-      success: false,
-      message:
-        error.message ||
-        'PhonePe payment failed',
-    });
-
-  }
-};
-
 exports.getTrekCategories = async (req, res) => {
   try {
     const result = await component.getTrekCategories();
@@ -131,4 +73,44 @@ exports.downloadBroucher = async (req, res) => {
       message: 'Error fetching brochure',
     });
   }
+};
+
+exports.createPhonePePayment = async (req, res) => {
+    try {
+        const { amount, user_id } = req.body;
+        const result = await phonepeComponent.createPayment({ amount, userId: user_id });
+        return res.status(200).json({ success: true, message: 'PhonePe payment created successfully', data: result });
+    } catch (error) {
+        console.error('Create PhonePe Payment Error:', error);
+        if (error?.httpStatusCode === 401 || error?.code === '401') {
+            return res.status(502).json({
+                success: false,
+                message: 'PhonePe rejected the configured credentials. Verify the client ID, client secret, client version, and environment in the server .env file.',
+            });
+        }
+        return res.status(500).json({ success: false, message: error.message || 'Unable to create PhonePe payment' });
+    }
+};
+
+exports.checkPhonePePaymentStatus = async (req, res) => {
+    try {
+        const { merchantOrderId } = req.params;
+        const result = await phonepeComponent.checkPaymentStatus(merchantOrderId);
+        return res.status(200).json({ success: true, data: result });
+    } catch (error) {
+        console.error('PhonePe Status Error:', error);
+        return res.status(500).json({ success: false, message: error.message || 'Unable to check PhonePe payment' });
+    }
+};
+
+exports.phonePeWebhook = async (req, res) => {
+    try {
+        const authorization = req.headers.authorization || '';
+        const rawBody = req.rawBody || '';
+        const result = await phonepeComponent.processWebhook({ authorization, rawBody });
+        return res.status(200).json({ success: true, message: 'Webhook processed successfully', data: result });
+    } catch (error) {
+        console.error('PhonePe Webhook Error:', error);
+        return res.status(401).json({ success: false, message: error.message || 'Invalid PhonePe webhook' });
+    }
 };

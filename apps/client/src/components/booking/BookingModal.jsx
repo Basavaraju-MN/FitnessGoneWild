@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import '../../styles/bookingmodal.css';
+import '../../styles/payment.css';
+import { PaymentMethodChooser } from '../../pages/PaymentOptions';
 
 const PICKUP_LOCATIONS = [
   'Indiranagar',
@@ -93,6 +95,7 @@ export default function BookingModal({
     useState(false);
 
   const [error, setError] = useState('');
+  const [paymentBooking, setPaymentBooking] = useState(null);
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -179,27 +182,12 @@ export default function BookingModal({
       return;
     }
 
-    /*
-     * Integrate your payment API here.
-     *
-     * Example:
-     *
-     * createPhonePePayment({
-     *   trekId: trek.id,
-     *   date: selectedWeekend.id,
-     *   name,
-     *   mobile,
-     *   email,
-     *   pickupLocation,
-     *   transportTickets,
-     *   withoutTransportTickets,
-     *   subtotal,
-     *   gst,
-     *   total
-     * });
-     */
+    if (transportTickets + withoutTransportTickets < 1) {
+      setError('Please select at least one ticket.');
+      return;
+    }
 
-    console.log({
+    const booking = {
       trekId: trek.id,
       trekName: trek.name,
       selectedDate: selectedWeekend.id,
@@ -212,7 +200,10 @@ export default function BookingModal({
       subtotal,
       gst,
       total,
-    });
+    };
+
+    sessionStorage.setItem('pendingBooking', JSON.stringify(booking));
+    setPaymentBooking(booking);
   };
 
   if (!trek) {
@@ -750,6 +741,20 @@ export default function BookingModal({
         </div>
 
       </div>
+
+      {paymentBooking && (
+        <div
+          className="payment-method-modal-overlay"
+          onClick={() => setPaymentBooking(null)}
+        >
+          <div onClick={(event) => event.stopPropagation()}>
+            <PaymentMethodChooser
+              booking={paymentBooking}
+              onBack={() => setPaymentBooking(null)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
