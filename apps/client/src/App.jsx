@@ -1,6 +1,8 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 
 import Home from './pages/Home';
+import PaymentOptions from './pages/PaymentOptions';
+import PaymentResult from './pages/PaymentResult';
 import Placeholder from './pages/Placeholder';
 
 import './styles/global.css';
@@ -39,8 +41,13 @@ export default function App() {
         />
 
         <Route
+          path="/payment"
+          element={<PaymentOptions />}
+        />
+
+        <Route
           path="/payment-result"
-          element={<Placeholder title="Payment Result" />}
+          element={<PaymentResult />}
         />
 
       </Routes>
