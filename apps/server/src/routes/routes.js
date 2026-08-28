@@ -4,16 +4,17 @@ const router = express.Router();
 
 const phonepeController = require('../controller/controller');
 
-
-router.post(
-  '/:action',
-  phonepeController.processPhonePe
-);
+// router.post(
+//   '/:action',
+//   phonepeController.processPhonePe
+// );
 
 const controller = require('../controller/controller');
 
 router.get('/trek-category', controller.getTrekCategories);
 
 router.get('/get-all-trek-details', controller.getTrekDetails);
+
+router.post('/brochure-download', controller.downloadBroucher)
 
 module.exports = router;

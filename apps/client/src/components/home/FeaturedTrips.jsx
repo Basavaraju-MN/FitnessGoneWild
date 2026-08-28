@@ -1,26 +1,8 @@
 import { featuredTrips } from '../../data/content';
 import SectionHeader from '../common/SectionHeader';
-import { useNavigate } from 'react-router-dom';
 
 export default function FeaturedTrips() {
-  const navigate = useNavigate();
-
   const handleBookNow = () => {
-    const isAuthenticated =
-      localStorage.getItem('isAuthenticated') === 'true';
-
-    if (!isAuthenticated) {
-      navigate('/login', {
-        state: {
-          from: window.location.pathname,
-        },
-      });
-
-      return;
-    }
-
-    // Booking page will be added later
-    console.log('Continue to booking');
   };
   return (
     <section className="section section-alt" id="featured">

@@ -1,0 +1,479 @@
+/* =========================================
+   TREK DETAILS PAGE
+========================================= */
+
+.trek-details-page {
+  background: #f7f8f6;
+  min-height: 100vh;
+  padding-top: 30px;
+}
+
+.trek-details-container {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+}
+
+/* =========================================
+   BACK BUTTON
+========================================= */
+
+.trek-back-button {
+  border: none;
+  background: transparent;
+  color: #008b8b;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-bottom: 25px;
+}
+
+/* =========================================
+   IMAGE
+========================================= */
+
+.trek-details-gallery {
+  position: relative;
+  width: 100%;
+  height: 520px;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #ddd;
+}
+
+.trek-details-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.details-slider-button {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 45px;
+  height: 45px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 32px;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.details-prev {
+  left: 20px;
+}
+
+.details-next {
+  right: 20px;
+}
+
+.details-image-dots {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+}
+
+.details-image-dots button {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255,255,255,.5);
+  cursor: pointer;
+}
+
+.details-image-dots button.active {
+  width: 28px;
+  border-radius: 20px;
+  background: #fff;
+}
+
+/* =========================================
+   OVERVIEW
+========================================= */
+
+.trek-details-overview {
+  background: #fff;
+  padding: 45px;
+  border-radius: 18px;
+  margin-top: 25px;
+}
+
+.trek-details-overview h1 {
+  margin: 0 0 15px;
+  font-size: clamp(32px, 5vw, 52px);
+  color: #063f40;
+}
+
+.details-blurb {
+  font-size: 18px;
+  line-height: 1.7;
+  color: #555;
+}
+
+.details-info-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+  margin: 30px 0;
+}
+
+.details-info-item {
+  padding: 20px;
+  background: #f4f7f5;
+  border-radius: 12px;
+}
+
+.details-info-item span {
+  display: block;
+  font-size: 13px;
+  color: #777;
+  margin-bottom: 8px;
+}
+
+.details-info-item strong {
+  display: block;
+  font-size: 18px;
+  color: #063f40;
+}
+
+.details-description {
+  margin-top: 35px;
+}
+
+.details-description h2 {
+  color: #063f40;
+}
+
+.details-description-text {
+  font-size: 16px;
+  line-height: 1.8;
+  color: #555;
+  white-space: pre-line;
+}
+
+/* =========================================
+   TABS
+========================================= */
+
+.trek-details-tabs {
+  background: #fff;
+  margin-top: 25px;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.details-tab-buttons {
+  display: flex;
+  border-bottom: 1px solid #ddd;
+  background: #f5f7f5;
+}
+
+.details-tab {
+  flex: 1;
+  padding: 20px 25px;
+  border: none;
+  background: transparent;
+  color: #555;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: .2s;
+}
+
+.details-tab:hover {
+  background: #eaf1ef;
+}
+
+.details-tab.active {
+  background: #008b8b;
+  color: #fff;
+}
+
+.details-tab-content {
+  padding: 40px;
+}
+
+.details-tab-content h2 {
+  color: #063f40;
+  margin-top: 0;
+}
+
+/* =========================================
+   ITINERARY
+========================================= */
+
+.itinerary-content {
+  white-space: pre-line;
+  font-size: 16px;
+  line-height: 1.8;
+  color: #555;
+}
+
+/* =========================================
+   PRICING
+========================================= */
+
+.pricing-block {
+  margin-bottom: 35px;
+}
+
+.pricing-main {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.pricing-main strong {
+  font-size: 38px;
+  color: #008b8b;
+}
+
+.pricing-main span {
+  color: #666;
+}
+
+/* =========================================
+   INCLUDE / EXCLUDE
+========================================= */
+
+.include-exclude-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 25px;
+}
+
+.include-block,
+.exclude-block {
+  padding: 30px;
+  border-radius: 14px;
+}
+
+.include-block {
+  background: #eef8f1;
+}
+
+.exclude-block {
+  background: #fff3f1;
+}
+
+.include-block ul,
+.exclude-block ul {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.include-block li,
+.exclude-block li {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  line-height: 1.6;
+}
+
+.include-icon {
+  color: #15803d;
+  font-weight: bold;
+}
+
+.exclude-icon {
+  color: #dc2626;
+  font-weight: bold;
+}
+
+.text-list {
+  white-space: pre-line;
+  line-height: 1.8;
+  color: #555;
+}
+
+.details-empty {
+  color: #888;
+}
+
+/* =========================================
+   FIXED ACTION BAR
+========================================= */
+
+.trek-details-action-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  background: #fff;
+  border-top: 1px solid #ddd;
+  box-shadow: 0 -5px 20px rgba(0,0,0,.08);
+}
+
+.trek-action-container {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+  min-height: 75px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.trek-action-container button {
+  border: none;
+  padding: 13px 22px;
+  border-radius: 30px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.trek-action-back {
+  margin-right: auto;
+  background: transparent;
+  color: #063f40;
+}
+
+.trek-action-brochure {
+  background: #f1f3f2;
+  color: #063f40;
+}
+
+.trek-action-whatsapp {
+  background: #25d366;
+  color: #fff;
+}
+
+.trek-action-book {
+  background: #008b8b;
+  color: #fff;
+}
+
+/* Prevent fixed bar from covering content */
+.trek-details-bottom-space {
+  height: 110px;
+}
+
+/* =========================================
+   BROCHURE MODAL
+========================================= */
+
+.brochure-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0,0,0,.6);
+}
+
+.brochure-modal {
+  position: relative;
+  width: min(480px, 100%);
+  padding: 35px;
+  background: #fff;
+  border-radius: 18px;
+}
+
+.brochure-modal-close {
+  position: absolute;
+  right: 15px;
+  top: 12px;
+  border: none;
+  background: transparent;
+  font-size: 28px;
+  cursor: pointer;
+}
+
+.brochure-form-group {
+  margin-bottom: 18px;
+}
+
+.brochure-form-group label {
+  display: block;
+  margin-bottom: 7px;
+  font-weight: 700;
+}
+
+.brochure-form-group input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 13px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+.brochure-form-error {
+  margin-bottom: 15px;
+  color: #dc2626;
+}
+
+.brochure-download-btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 8px;
+  background: #008b8b;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* =========================================
+   MOBILE
+========================================= */
+
+@media (max-width: 768px) {
+
+  .trek-details-container {
+    width: min(100% - 24px, 1180px);
+  }
+
+  .trek-details-gallery {
+    height: 300px;
+    border-radius: 12px;
+  }
+
+  .trek-details-overview {
+    padding: 25px 20px;
+  }
+
+  .details-info-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .details-tab-buttons {
+    flex-direction: column;
+  }
+
+  .details-tab {
+    text-align: left;
+  }
+
+  .details-tab-content {
+    padding: 25px 20px;
+  }
+
+  .include-exclude-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .trek-action-container {
+    width: calc(100% - 20px);
+    gap: 6px;
+  }
+
+  .trek-action-container button {
+    padding: 11px 12px;
+    font-size: 12px;
+  }
+
+  .trek-action-back span {
+    display: none;
+  }
+}

@@ -3,7 +3,7 @@ const configuredApiBaseUrl =
 
 const API_BASE_URL =
   configuredApiBaseUrl ||
-  (import.meta.env.DEV ? 'http://localhost:4000/api' : '/api');
+  (import.meta.env.DEV ? 'http://localhost:5000/api' : '/api');
 
 async function parseResponse(response: Response) {
   let result;

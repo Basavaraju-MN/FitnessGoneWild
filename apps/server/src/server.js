@@ -13,15 +13,6 @@ const { checkDatabaseConnection } = require('./db/connection');
 
 const app = express();
 
-/**
- * Render provides PORT automatically.
- *
- * Local:
- *   PORT=4000
- *
- * Render:
- *   PORT=10000 (or another Render assigned port)
- */
 const PORT = Number(process.env.PORT || 4000);
 
 const CLIENT_DIST_PATH = path.resolve(
@@ -62,17 +53,6 @@ if (Array.isArray(clientOrigins)) {
   });
 }
 
-/**
- * Allow CLIENT_URL from Render environment variables.
- *
- * Example:
- *
- * CLIENT_URL=https://fitnessgonewild.onrender.com
- *
- * Or:
- *
- * CLIENT_URL=https://fitnessgonewild.in,https://www.fitnessgonewild.in
- */
 if (process.env.CLIENT_URL) {
   process.env.CLIENT_URL
     .split(',')
@@ -83,14 +63,6 @@ if (process.env.CLIENT_URL) {
     });
 }
 
-/**
- * Render automatically provides RENDER_EXTERNAL_URL
- * for the service in the Render environment.
- *
- * Example:
- *
- * https://fitnessgonewild.onrender.com
- */
 if (process.env.RENDER_EXTERNAL_URL) {
   allowedOrigins.add(
     process.env.RENDER_EXTERNAL_URL
@@ -107,13 +79,7 @@ console.log(
 app.use(
   cors({
     origin(origin, callback) {
-      /**
-       * Requests without an Origin header can be:
-       * - curl
-       * - Postman
-       * - Render health checks
-       * - server-to-server requests
-       */
+
       if (!origin) {
         return callback(null, true);
       }
@@ -130,16 +96,6 @@ app.use(
         `[CORS] Blocked origin: ${normalizedOrigin}`
       );
 
-      /**
-       * Do not throw an Express error here.
-       *
-       * callback(new Error(...))
-       *
-       * was causing:
-       *
-       * "Unhandled server error:
-       *  Error: CORS origin not allowed"
-       */
       return callback(null, false);
     },
 
@@ -164,14 +120,6 @@ app.use(
   })
 );
 
-/* =========================================================
-   BODY PARSER
-   ========================================================= */
-
-/**
- * Preserve raw request body because PhonePe webhook
- * validation uses it.
- */
 app.use(
   express.json({
     verify(req, res, buffer) {
@@ -186,20 +134,12 @@ app.use(
   })
 );
 
-/* =========================================================
-   HEALTH CHECK
-   ========================================================= */
-
 app.get('/health', (req, res) => {
   return res.status(200).json({
     success: true,
     message: 'Fitness Gone Wild server is running',
   });
 });
-
-/* =========================================================
-   API HEALTH CHECK
-   ========================================================= */
 
 app.get('/api/health', async (req, res) => {
   try {
@@ -224,23 +164,11 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-/* =========================================================
-   API ROUTES
-   ========================================================= */
-
 app.use('/api', trekRoutes);
-
-/* =========================================================
-   SERVE REACT PRODUCTION BUILD
-   ========================================================= */
 
 app.use(
   express.static(CLIENT_DIST_PATH)
 );
-
-/* =========================================================
-   API 404
-   ========================================================= */
 
 app.use('/api', (req, res) => {
   return res.status(404).json({
@@ -249,20 +177,6 @@ app.use('/api', (req, res) => {
   });
 });
 
-/* =========================================================
-   REACT SPA FALLBACK
-   ========================================================= */
-
-/**
- * React Router handles browser routes.
- *
- * Example:
- *
- * /treks
- * /treks/kedarkantha
- * /about
- * /contact
- */
 app.use((req, res, next) => {
   if (
     req.method !== 'GET' ||
@@ -284,10 +198,6 @@ app.use((req, res, next) => {
   );
 });
 
-/* =========================================================
-   ERROR HANDLER
-   ========================================================= */
-
 app.use((error, req, res, next) => {
   console.error(
     'Unhandled server error:',
@@ -303,10 +213,6 @@ app.use((error, req, res, next) => {
     message: 'Internal server error',
   });
 });
-
-/* =========================================================
-   START SERVER
-   ========================================================= */
 
 app.listen(
   PORT,

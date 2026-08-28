@@ -1,0 +1,390 @@
+/* =========================================
+   TREK CARD
+========================================= */
+
+.trek-card {
+  position: relative;
+}
+
+.thumb {
+  position: relative;
+  overflow: hidden;
+}
+
+.thumb img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* =========================================
+   TREK IMAGE SLIDER
+========================================= */
+
+.trek-slider-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+
+  z-index: 2;
+
+  width: 40px;
+  height: 40px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+
+  border: none;
+  background: transparent;
+
+  color: #ffffff;
+  font-size: 32px;
+  font-weight: bold;
+
+  cursor: pointer;
+
+  transition: opacity 0.2s ease;
+}
+
+.trek-slider-btn:hover {
+  opacity: 0.75;
+}
+
+.trek-slider-btn-prev {
+  left: 10px;
+}
+
+.trek-slider-btn-next {
+  right: 10px;
+}
+
+/* =========================================
+   TREK SLIDER DOTS
+========================================= */
+
+.trek-slider-dots {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+
+  transform: translateX(-50%);
+
+  z-index: 2;
+
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.trek-slider-dot {
+  width: 8px;
+  height: 8px;
+
+  padding: 0;
+
+  border: none;
+  border-radius: 50%;
+
+  background: rgba(255, 255, 255, 0.5);
+
+  cursor: pointer;
+}
+
+.trek-slider-dot.active {
+  background: #ffffff;
+}
+
+/* =========================================
+   BROCHURE MODAL OVERLAY
+========================================= */
+
+.brochure-modal-overlay {
+  position: fixed;
+  inset: 0;
+
+  z-index: 9999;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background: rgba(0, 0, 0, 0.65);
+
+  overflow-y: auto;
+}
+
+/* =========================================
+   BROCHURE MODAL
+========================================= */
+
+.brochure-modal {
+  position: relative;
+
+  width: 100%;
+  max-width: 450px;
+
+  padding: 28px;
+
+  background: #ffffff;
+
+  border-radius: 16px;
+
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.3);
+
+  box-sizing: border-box;
+
+  animation: brochureModalOpen 0.2s ease-out;
+}
+
+@keyframes brochureModalOpen {
+  from {
+    opacity: 0;
+    transform: translateY(15px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* =========================================
+   CLOSE BUTTON
+========================================= */
+
+.brochure-modal-close {
+  position: absolute;
+
+  top: 12px;
+  right: 15px;
+
+  width: 32px;
+  height: 32px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+
+  border: none;
+  background: transparent;
+
+  color: #555;
+
+  font-size: 28px;
+  line-height: 1;
+
+  cursor: pointer;
+}
+
+.brochure-modal-close:hover {
+  color: #111111;
+}
+
+.brochure-modal-close:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* =========================================
+   MODAL HEADER
+========================================= */
+
+.brochure-modal-header {
+  padding-right: 30px;
+}
+
+.brochure-modal-header h2 {
+  margin: 0 0 8px;
+
+  color: #111111;
+
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.brochure-modal-header p {
+  margin: 0 0 22px;
+
+  color: #666666;
+
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.brochure-modal-header strong {
+  color: #222222;
+}
+
+/* =========================================
+   BROCHURE FORM
+========================================= */
+
+.brochure-form {
+  width: 100%;
+}
+
+.brochure-form-group {
+  margin-bottom: 16px;
+}
+
+.brochure-form-group label {
+  display: block;
+
+  margin-bottom: 6px;
+
+  color: #222222;
+
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.brochure-form-group input {
+  display: block;
+
+  width: 100%;
+  height: 46px;
+
+  box-sizing: border-box;
+
+  padding: 0 12px;
+
+  border: 1px solid #dddddd;
+  border-radius: 8px;
+
+  background: #ffffff;
+
+  color: #222222;
+
+  font-family: inherit;
+  font-size: 15px;
+
+  outline: none;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.brochure-form-group input::placeholder {
+  color: #999999;
+}
+
+.brochure-form-group input:focus {
+  border-color: #111111;
+
+  box-shadow:
+    0 0 0 2px rgba(17, 17, 17, 0.08);
+}
+
+.brochure-form-group input:disabled {
+  background: #f5f5f5;
+
+  cursor: not-allowed;
+}
+
+/* =========================================
+   ERROR
+========================================= */
+
+.brochure-form-error {
+  margin-bottom: 15px;
+
+  color: #dc2626;
+
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* =========================================
+   DOWNLOAD BUTTON
+========================================= */
+
+.brochure-download-btn {
+  display: block;
+
+  width: 100%;
+  min-height: 46px;
+
+  padding: 12px 18px;
+
+  border: none;
+  border-radius: 8px;
+
+  background: #111111;
+  color: #ffffff;
+
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.brochure-download-btn:hover:not(:disabled) {
+  background: #333333;
+}
+
+.brochure-download-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.brochure-download-btn:disabled {
+  opacity: 0.7;
+
+  cursor: not-allowed;
+}
+
+/* =========================================
+   MOBILE
+========================================= */
+
+@media (max-width: 480px) {
+  .brochure-modal-overlay {
+    align-items: flex-start;
+
+    padding: 15px;
+
+    padding-top: 50px;
+  }
+
+  .brochure-modal {
+    max-width: 100%;
+
+    padding: 22px 18px;
+
+    border-radius: 12px;
+  }
+
+  .brochure-modal-header h2 {
+    font-size: 21px;
+  }
+
+  .brochure-modal-header p {
+    font-size: 14px;
+  }
+
+  .brochure-form-group input {
+    height: 44px;
+
+    font-size: 14px;
+  }
+
+  .brochure-download-btn {
+    min-height: 44px;
+
+    font-size: 15px;
+  }
+}
