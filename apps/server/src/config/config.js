@@ -6,11 +6,11 @@ const logDirectory = path.join(__dirname, '../logs');
 const {StandardCheckoutClient, Env } = require('@phonepe-pg/pg-sdk-node');
 
 const db = {
-  host: 'localhost',
+  host: 'srv875.hstgr.io',
   port: 3306,
-  user: 'root',
-  password: '',
-  database: 'fgonewild',
+  user: 'u441995167_fitnessGone',
+  password: 'FitnessGoneWild@123',
+  database: 'u441995167_fitnessGone',
   connectionLimit: 10,
   timezone: '+05:30',
   dateStrings: true,
