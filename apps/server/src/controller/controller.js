@@ -77,8 +77,8 @@ exports.downloadBroucher = async (req, res) => {
 
 exports.createPhonePePayment = async (req, res) => {
     try {
-        const { amount, user_id } = req.body;
-        const result = await phonepeComponent.createPayment({ amount, userId: user_id });
+        const { amount } = req.body;
+        const result = await phonepeComponent.createPayment({ amount});
         return res.status(200).json({ success: true, message: 'PhonePe payment created successfully', data: result });
     } catch (error) {
         console.error('Create PhonePe Payment Error:', error);

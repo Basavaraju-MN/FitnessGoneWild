@@ -3,7 +3,8 @@ const { StandardCheckoutPayRequest } = require('@phonepe-pg/pg-sdk-node');
 const paymentDbOps = require('../../db/paymentDbops');
 const { phonePeClient } = require('../../config/config');
 
-exports.createPayment = async ({ amount, userId }) => {
+exports.createPayment = async ({ amount }) => {
+
   if (amount === undefined || amount === null || amount === '') {
     throw new Error('Amount is required');
   }
@@ -14,8 +15,6 @@ exports.createPayment = async ({ amount, userId }) => {
     throw new Error('Invalid payment amount');
   }
 
-  // Convert INR to paise
-  // ₹1.05 = 105 paise
   const amountInPaise = Math.round(numericAmount * 100);
 
   const merchantOrderId = `FGW_${Date.now()}_${randomUUID()
@@ -27,23 +26,19 @@ exports.createPayment = async ({ amount, userId }) => {
       merchantOrderId
     )}`;
 
-  // Save transaction
   await paymentDbOps.createTransaction(
     merchantOrderId,
-    userId,
     amountInPaise,
     'INR',
     redirectUrl
   );
 
-  // Create PhonePe payment request
   const request = StandardCheckoutPayRequest.builder()
     .merchantOrderId(merchantOrderId)
     .amount(amountInPaise)
     .redirectUrl(redirectUrl)
     .build();
 
-  // Create payment
   const response = await phonePeClient.pay(request);
 
   if (!response?.redirectUrl) {
