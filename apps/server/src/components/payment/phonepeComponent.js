@@ -4,20 +4,59 @@ const paymentDbOps = require('../../db/paymentDbops');
 const { phonePeClient } = require('../../config/config');
 
 exports.createPayment = async ({ amount, userId }) => {
-    if (!amount) throw new Error('Amount is required');
+  if (amount === undefined || amount === null || amount === '') {
+    throw new Error('Amount is required');
+  }
 
-    const amountInPaise = Math.round(Number(amount) * 100);
-    if (!Number.isFinite(amountInPaise) || amountInPaise <= 0) throw new Error('Invalid payment amount');
+  const numericAmount = Number(amount);
 
-    const merchantOrderId = `FGW_${Date.now()}_${randomUUID().replace(/-/g, '').substring(0, 12)}`;
-    const redirectUrl = `${process.env.PHONEPE_REDIRECT_URL}?merchantOrderId=${encodeURIComponent(merchantOrderId)}`;
+  if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+    throw new Error('Invalid payment amount');
+  }
 
-    await paymentDbOps.createTransaction(merchantOrderId, userId, amountInPaise, 'INR', redirectUrl);
+  // Convert INR to paise
+  // ₹1.05 = 105 paise
+  const amountInPaise = Math.round(numericAmount * 100);
 
-    const request = StandardCheckoutPayRequest.builder().merchantOrderId(merchantOrderId).amount(amountInPaise).redirectUrl(redirectUrl).build();
-    const response = await phonePeClient.pay(request);
+  const merchantOrderId = `FGW_${Date.now()}_${randomUUID()
+    .replace(/-/g, '')
+    .substring(0, 12)}`;
 
-    return { merchantOrderId, amount: amountInPaise, redirectUrl: response.redirectUrl, status: 'PROCESSING', phonepeResponse: response };
+  const redirectUrl =
+    `${process.env.PHONEPE_REDIRECT_URL}?merchantOrderId=${encodeURIComponent(
+      merchantOrderId
+    )}`;
+
+  // Save transaction
+  await paymentDbOps.createTransaction(
+    merchantOrderId,
+    userId,
+    amountInPaise,
+    'INR',
+    redirectUrl
+  );
+
+  // Create PhonePe payment request
+  const request = StandardCheckoutPayRequest.builder()
+    .merchantOrderId(merchantOrderId)
+    .amount(amountInPaise)
+    .redirectUrl(redirectUrl)
+    .build();
+
+  // Create payment
+  const response = await phonePeClient.pay(request);
+
+  if (!response?.redirectUrl) {
+    throw new Error('PhonePe checkout URL was not generated');
+  }
+
+  return {
+    success: true,
+    merchantOrderId,
+    amount: amountInPaise,
+    redirectUrl: response.redirectUrl,
+    status: 'PROCESSING',
+  };
 };
 
 exports.checkPaymentStatus = async (merchantOrderId) => {
