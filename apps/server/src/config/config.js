@@ -35,9 +35,9 @@ const clientOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
 
 
 
-const clientId = 'M16EG0S5H527_26081408420';
+const clientId = 'SU2609011723119040433951';
 
-const clientSecret = 'ZjhiNTIwYmQtMTQyYy00MTE1LTllNDItMzVlMTZkZjQ4ZmQ5';
+const clientSecret = '4220a5ce-9a53-4a90-92c5-7aee30405bdf';
 
 const clientVersion = 1;
 
