@@ -105,16 +105,21 @@ export default function BookingModal({
     };
   }, []);
 
-  const price = Number(trek?.price || 0);
+  const price = Number(
+    trek?.without_transport_price ??
+      trek?.price ??
+      0
+  );
 
   /*
-   * Transportation price.
-   *
-   * Change this if your API gives a different
-   * transportation price.
+   * Trip price with transportation.
    */
   const transportationPrice =
-    Number(trek?.transportation_price || 0);
+    Number(
+      trek?.with_transport_price ??
+        trek?.transportation_price ??
+        price
+    );
 
   const withoutTransportationAmount =
     withoutTransportTickets * price;

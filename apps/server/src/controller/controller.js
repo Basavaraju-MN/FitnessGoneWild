@@ -36,18 +36,116 @@ exports.getTrekDetails = async (req, res) => {
   }
 };
 
-exports.downloadBroucher = async (req, res) => {
-  const { trip_id } = req.body;
+exports.getFeaturedTrips = async (req, res) => {
   try {
-    const result = await brochureComponent.getBrochure(trip_id);
+    const result = await component.getFeaturedTrips();
+    return res.status(200).json({
+      success: true,
+      message: 'Featured trips fetched successfully',
+      data: result.data || [],
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching featured trips',
+    });
+  }
+};
+
+exports.getReviews = async (req, res) => {
+  try {
+    const result = await component.getReviews();
+    return res.status(200).json({
+      success: true,
+      message: 'Reviews fetched successfully',
+      data: result.data || [],
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching reviews',
+    });
+  }
+};
+
+exports.getWhyUs = async (req, res) => {
+  try {
+    const result = await component.getWhyUs();
+    return res.status(200).json({
+      success: true,
+      message: 'Why us items fetched successfully',
+      data: result.data || [],
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching why us items',
+    });
+  }
+};
+
+exports.getFaq = async (req, res) => {
+  try {
+    const result = await component.getFaq();
+    return res.status(200).json({
+      success: true,
+      message: 'FAQ items fetched successfully',
+      data: result.data || [],
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching FAQ items',
+    });
+  }
+};
+
+exports.createTripInterest = async (req, res) => {
+  const { trip_id, type = 'interested', source = 'website' } = req.body || {};
+
+  try {
+    const result = await component.createTripInterest({ trip_id, type, source });
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        message: result.message || 'Error saving trip interest',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Trip interest saved successfully',
+      data: result.data,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Error saving trip interest',
+    });
+  }
+};
+
+exports.downloadBroucher = async (req, res) => {
+  const { trip_id, name, phone, email, city } = req.body;
+  try {
+    const result = await brochureComponent.getBrochure({
+      trip_id,
+      name,
+      phone,
+      email,
+      city,
+    });
+
     if (!result.success) {
       return res.status(result.statusCode).json({
         success: false,
         message: result.message,
       });
     }
+
     const brochure = result.data;
-    
+
     res.setHeader(
       'Content-Type',
       brochure.mime_type || 'application/pdf'

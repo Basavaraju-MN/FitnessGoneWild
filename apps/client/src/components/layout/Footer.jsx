@@ -1,9 +1,38 @@
+import { useEffect, useState } from 'react';
+import { getTrekCategories } from '../../api/treks';
+
 export default function Footer() {
+  const [tripCategories, setTripCategories] = useState([]);
+
+  useEffect(() => {
+    const fetchTripCategories = async () => {
+      try {
+        const categories = await getTrekCategories();
+        setTripCategories(Array.isArray(categories) ? categories : []);
+      } catch (error) {
+        console.error('Failed to load footer trip categories:', error);
+        setTripCategories([]);
+      }
+    };
+
+    fetchTripCategories();
+  }, []);
+
   return (
     <footer className="site-footer">
       <div className="footer-grid">
         <div>
-          <div className="footer-logo">FGW</div>
+          <img
+            src="/images/logo.png"
+            alt="The Fitness Gone Wild"
+            style={{
+              height: '72px',
+              width: '110px',
+              objectFit: 'contain',
+              display: 'block',
+              marginBottom: '12px',
+            }}
+          />
           <h3>The Fitness Gone Wild</h3>
           <p>Experience with us</p>
           <p className="footer-note">Running treks and trips out of Bangalore since 2018.</p>
@@ -11,10 +40,15 @@ export default function Footer() {
         <div>
           <h4>Trips</h4>
           <ul>
-            <li><a href="#trips">Weekend treks</a></li>
-            <li><a href="#trips">One day treks</a></li>
-            <li><a href="#trips">Backpacking</a></li>
-            <li><a href="#trips">Bike rides</a></li>
+            {tripCategories.length > 0 ? (
+              tripCategories.map((category) => (
+                <li key={category.id}>
+                  <a href="#trips">{category.name}</a>
+                </li>
+              ))
+            ) : (
+              <li><a href="#trips">Trips</a></li>
+            )}
           </ul>
         </div>
         <div>

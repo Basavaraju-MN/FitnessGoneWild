@@ -47,3 +47,21 @@ export async function getTreksByCategory(categoryId: number) {
   const result = await parseResponse(response);
   return result.data;
 }
+
+export async function getFeaturedTrips() {
+  const response = await fetch(`${API_BASE_URL}/featured-trips`, {
+    credentials: 'include',
+  });
+
+  const result = await parseResponse(response);
+  return result.data;
+}
+
+export async function getReviews() {
+  const response = await fetch(`${API_BASE_URL}/reviews`, {
+    credentials: 'include',
+  });
+
+  const result = await parseResponse(response);
+  return result.data;
+}

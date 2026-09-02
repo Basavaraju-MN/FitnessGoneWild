@@ -16,10 +16,11 @@ import TrekDetails from '../components/treks/TrekDetails';
 export default function Home() {
 
   const [selectedTrek, setSelectedTrek] = useState(null);
+  const [scrollBeforeDetails, setScrollBeforeDetails] = useState(0);
 
 
   const handleTrekSelect = (trek) => {
-
+    setScrollBeforeDetails(window.scrollY);
     setSelectedTrek(trek);
 
     window.scrollTo({
@@ -31,18 +32,14 @@ export default function Home() {
 
 
   const handleBack = () => {
-
     setSelectedTrek(null);
 
-    setTimeout(() => {
-
-      document
-        .getElementById('trips')
-        ?.scrollIntoView({
-          behavior: 'smooth',
-        });
-
-    }, 100);
+    window.requestAnimationFrame(() => {
+      window.scrollTo({
+        top: scrollBeforeDetails,
+        behavior: 'auto',
+      });
+    });
 
   };
 
@@ -69,7 +66,7 @@ export default function Home() {
               onTrekSelect={handleTrekSelect}
             />
 
-            <FeaturedTrips />
+            <FeaturedTrips onTrekSelect={handleTrekSelect} />
 
             <WhyChooseUs />
 
