@@ -22,9 +22,9 @@ exports.createPayment = async ({ amount }) => {
     .substring(0, 12)}`;
 
   const redirectUrl =
-    `${{'https://www.fitnessgonewild.in/payment-result'}?merchantOrderId=${encodeURIComponent(
-      merchantOrderId
-    )}`;
+  `https://www.fitnessgonewild.in/payment-result?merchantOrderId=${encodeURIComponent(
+    merchantOrderId
+  )}`;
 
   await paymentDbOps.createTransaction(
     merchantOrderId,
