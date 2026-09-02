@@ -22,7 +22,7 @@ exports.createPayment = async ({ amount }) => {
     .substring(0, 12)}`;
 
   const redirectUrl =
-    `${process.env.PHONEPE_REDIRECT_URL}?merchantOrderId=${encodeURIComponent(
+    `${{'https://www.fitnessgonewild.in/payment-result'}?merchantOrderId=${encodeURIComponent(
       merchantOrderId
     )}`;
 
