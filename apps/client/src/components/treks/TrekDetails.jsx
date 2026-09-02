@@ -27,14 +27,45 @@ export default function TrekDetails({ trek, onBack }) {
     `/images/${trek.slug}5.jpg`,
   ];
 
-  const exclusions =
-    trek.excludes ||
-    trek.exclusions ||
-    [];
+  const normalizeList = (value) => {
+    if (Array.isArray(value)) {
+      return value.filter(Boolean);
+    }
 
-  const formattedPrice = Number(
-    trek.price || 0
-  ).toLocaleString('en-IN');
+    if (typeof value === 'string') {
+      return value
+        .split(/\|\||\n|,/) 
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+
+    return [];
+  };
+
+  const inclusionItems = normalizeList(
+    trek.includes || trek.inclusion || []
+  );
+
+  const exclusions = normalizeList(
+    trek.excludes || trek.exclusions || trek.exclusion || []
+  );
+
+  const withoutTransportPrice = Number(
+    trek.without_transport_price ??
+      trek.price ??
+      0
+  );
+
+  const withTransportPrice = Number(
+    trek.with_transport_price ??
+      trek.transportation_price ??
+      withoutTransportPrice
+  );
+
+  const formattedPrice = new Intl.NumberFormat('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(withoutTransportPrice);
 
   /* ============================= */
   /* IMAGE SLIDER */
@@ -71,7 +102,7 @@ export default function TrekDetails({ trek, onBack }) {
       `Hi, I am interested in booking ${trek.name}.`;
 
     window.open(
-      `https://wa.me/919876543210?text=${encodeURIComponent(
+      `https://wa.me/918762350551?text=${encodeURIComponent(
         message
       )}`,
       '_blank',
@@ -409,7 +440,21 @@ export default function TrekDetails({ trek, onBack }) {
                 setActiveTab('pricing')
               }
             >
-              Pricing / Inclusion / Exclusion
+              Pricing
+            </button>
+
+            <button
+              type="button"
+              className={
+                activeTab === 'inclusion'
+                  ? 'details-tab active'
+                  : 'details-tab'
+              }
+              onClick={() =>
+                setActiveTab('inclusion')
+              }
+            >
+              Inclusion & Exclusion
             </button>
 
           </div>
@@ -450,51 +495,60 @@ export default function TrekDetails({ trek, onBack }) {
 
                 <div className="pricing-main">
 
-                  <strong>
-                    ₹{formattedPrice}
-                  </strong>
+                  <div className="pricing-option">
+                    <span>Without Transportation</span>
+                    <strong>
+                      ₹{new Intl.NumberFormat('en-IN', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      }).format(withoutTransportPrice)}
+                    </strong>
+                  </div>
 
-                  <span>
-                    {trek.price_note ||
-                      'per person'}
-                  </span>
+                  <div className="pricing-option">
+                    <span>With Transportation</span>
+                    <strong>
+                      ₹{new Intl.NumberFormat('en-IN', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      }).format(withTransportPrice)}
+                    </strong>
+                  </div>
 
                 </div>
 
               </div>
 
-              <div className="include-exclude-grid">
+            </div>
+          )}
 
-                {/* INCLUDED */}
+          {activeTab === 'inclusion' && (
+            <div className="details-tab-content">
+
+              <div className="include-exclude-grid">
 
                 <div className="include-block">
 
                   <h2>What's included</h2>
 
-                  {trek.includes ? (
-                    Array.isArray(trek.includes) ? (
-                      <ul>
+                  {inclusionItems.length > 0 ? (
+                    <ul>
 
-                        {trek.includes.map(
-                          (item, index) => (
-                            <li key={index}>
+                      {inclusionItems.map(
+                        (item, index) => (
+                          <li key={index}>
 
-                              <span className="include-icon">
-                                ✓
-                              </span>
+                            <span className="include-icon">
+                              ✓
+                            </span>
 
-                              {item}
+                            {item}
 
-                            </li>
-                          )
-                        )}
+                          </li>
+                        )
+                      )}
 
-                      </ul>
-                    ) : (
-                      <div className="text-list">
-                        {trek.includes}
-                      </div>
-                    )
+                    </ul>
                   ) : (
                     <p className="details-empty">
                       Inclusion details are
@@ -504,14 +558,11 @@ export default function TrekDetails({ trek, onBack }) {
 
                 </div>
 
-                {/* EXCLUDED */}
-
                 <div className="exclude-block">
 
                   <h2>What's not included</h2>
 
-                  {Array.isArray(exclusions) &&
-                  exclusions.length > 0 ? (
+                  {exclusions.length > 0 ? (
                     <ul>
 
                       {exclusions.map(
@@ -529,10 +580,6 @@ export default function TrekDetails({ trek, onBack }) {
                       )}
 
                     </ul>
-                  ) : exclusions ? (
-                    <div className="text-list">
-                      {exclusions}
-                    </div>
                   ) : (
                     <p className="details-empty">
                       Exclusion details are

@@ -128,9 +128,3 @@ export const treks: Trek[] = [
   },
 ];
 
-export const categories = [
-  { id: 'weekend', label: 'Weekend treks' },
-  { id: 'oneday', label: 'One day treks' },
-  { id: 'backpacking', label: 'Backpacking' },
-  { id: 'bike', label: 'Bike rides' },
-] as const;

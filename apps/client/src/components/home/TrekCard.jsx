@@ -1,6 +1,37 @@
 import { useEffect, useRef, useState } from 'react';
 import '../../styles/trekcard.css'
 
+const formatDisplayPrice = (price) => {
+  const numericPrice = Number(price || 0);
+
+  return new Intl.NumberFormat('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(numericPrice);
+};
+
+const getWithoutTransportPrice = (trip) =>
+  Number(trip?.without_transport_price ?? trip?.price ?? 0);
+
+const getPriceNote = (trip) => {
+  const rawNote = trip?.price_note || 'per person';
+
+  if (typeof rawNote !== 'string') {
+    return 'per person';
+  }
+
+  const cleaned = rawNote
+    .replace(/\bwith transportation\b/gi, '')
+    .replace(/\btransportation included\b/gi, '')
+    .replace(/\btransport included\b/gi, '')
+    .replace(/\bwithout transportation\b/gi, '')
+    .replace(/[,\-]/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
+  return cleaned || 'per person';
+};
+
 export default function TrekCard({ trek, onClick }) {
   const [currentImage, setCurrentImage] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
@@ -114,7 +145,7 @@ export default function TrekCard({ trek, onClick }) {
       `Hi, I am interested in booking ${trek.name}.`;
 
     window.open(
-      `https://wa.me/919876543210?text=${encodeURIComponent(message)}`,
+      `https://wa.me/918762350551?text=${encodeURIComponent(message)}`,
       '_blank',
       'noopener,noreferrer'
     );
@@ -191,7 +222,9 @@ export default function TrekCard({ trek, onClick }) {
           body: JSON.stringify({
             trip_id: trek.id,
             name: trimmedName,
-            mobile: trimmedMobile,
+            phone: trimmedMobile,
+            email: null,
+            city: null,
           }),
         }
       );
@@ -305,6 +338,7 @@ export default function TrekCard({ trek, onClick }) {
         onClick={onClick}
         role="button"
         tabIndex={0}
+        style={{ cursor: 'pointer' }}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             onClick();
@@ -322,7 +356,11 @@ export default function TrekCard({ trek, onClick }) {
             loading="lazy"
             decoding="async"
             fetchPriority="low"
+            style={{ cursor: 'default' }}
             onError={handleImageError}
+            onClick={(event) => {
+              event.stopPropagation();
+            }}
           />
 
           {/* Badge */}
@@ -342,7 +380,11 @@ export default function TrekCard({ trek, onClick }) {
             <button
               type="button"
               className="trek-slider-btn trek-slider-btn-prev"
-              onClick={handlePrevious}
+              style={{ cursor: 'pointer' }}
+              onClick={(event) => {
+                event.stopPropagation();
+                handlePrevious();
+              }}
               aria-label="Previous image"
             >
               ‹
@@ -354,7 +396,11 @@ export default function TrekCard({ trek, onClick }) {
             <button
               type="button"
               className="trek-slider-btn trek-slider-btn-next"
-              onClick={handleNext}
+              style={{ cursor: 'pointer' }}
+              onClick={(event) => {
+                event.stopPropagation();
+                handleNext();
+              }}
               aria-label="Next image"
             >
               ›
@@ -372,9 +418,11 @@ export default function TrekCard({ trek, onClick }) {
                       ? 'active'
                       : ''
                     }`}
-                  onClick={() =>
-                    setCurrentImage(index)
-                  }
+                  style={{ cursor: 'pointer' }}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setCurrentImage(index);
+                  }}
                   aria-label={`Go to image ${index + 1
                     }`}
                 />
@@ -401,12 +449,12 @@ export default function TrekCard({ trek, onClick }) {
           <div className="price">
             <strong>
               ₹
-              {Number(trek.price).toLocaleString(
-                'en-IN'
+              {formatDisplayPrice(
+                getWithoutTransportPrice(trek)
               )}
             </strong>
 
-            <small>{trek.price_note}</small>
+            <small>{getPriceNote(trek)}</small>
           </div>
 
           <div className="buttons">

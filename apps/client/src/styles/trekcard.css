@@ -28,8 +28,8 @@
 
   z-index: 2;
 
-  width: 40px;
-  height: 40px;
+  width: 18px;
+  height: 18px;
 
   display: flex;
   align-items: center;
@@ -40,17 +40,26 @@
   border: none;
   background: transparent;
 
-  color: #ffffff;
-  font-size: 32px;
-  font-weight: bold;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 28px;
+  line-height: 1;
+  font-weight: 700;
 
   cursor: pointer;
 
-  transition: opacity 0.2s ease;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  opacity: 0.9;
 }
 
-.trek-slider-btn:hover {
-  opacity: 0.75;
+.trek-slider-btn:hover,
+.trek-slider-btn:focus-visible {
+  opacity: 1;
+  background: transparent;
+  transform: translateY(-50%) scale(1.05);
+}
+
+.trek-slider-btn:focus-visible {
+  outline: none;
 }
 
 .trek-slider-btn-prev {

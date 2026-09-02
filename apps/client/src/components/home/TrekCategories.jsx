@@ -64,7 +64,8 @@ export default function TrekCategories({ onTrekSelect }) {
           activeCategoryId
         );
 
-        setTreks(data);
+        setTreks(Array.isArray(data) ? data : []);
+        setError('');
       } catch (err) {
         console.error(
           'Failed to load treks:',
@@ -72,7 +73,6 @@ export default function TrekCategories({ onTrekSelect }) {
         );
 
         setTreks([]);
-
         setError(
           'Unable to load treks. Please try again.'
         );

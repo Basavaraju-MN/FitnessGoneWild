@@ -47,3 +47,57 @@ export async function getTreksByCategory(categoryId) {
   const result = await parseResponse(response);
   return result.data;
 }
+
+export async function getFeaturedTrips() {
+  const response = await fetch(`${API_BASE_URL}/featured-trips`, {
+    credentials: 'include',
+  });
+
+  const result = await parseResponse(response);
+  return result.data;
+}
+
+export async function getReviews() {
+  const response = await fetch(`${API_BASE_URL}/reviews`, {
+    credentials: 'include',
+  });
+
+  const result = await parseResponse(response);
+  return result.data;
+}
+
+export async function getWhyUs() {
+  const response = await fetch(`${API_BASE_URL}/why-us`, {
+    credentials: 'include',
+  });
+
+  const result = await parseResponse(response);
+  return result.data;
+}
+
+export async function getFaq() {
+  const response = await fetch(`${API_BASE_URL}/faq`, {
+    credentials: 'include',
+  });
+
+  const result = await parseResponse(response);
+  return result.data;
+}
+
+export async function saveTripInterest(tripId, type = 'interested') {
+  const response = await fetch(`${API_BASE_URL}/trip-interest`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      trip_id: tripId,
+      type,
+      source: 'website',
+    }),
+  });
+
+  const result = await parseResponse(response);
+  return result.data;
+}

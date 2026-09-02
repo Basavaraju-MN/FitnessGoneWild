@@ -5,8 +5,8 @@ export default function ContactCTA() {
         <h2>Still deciding? Ask us anything.</h2>
         <p>Send us where you want to go and when you're free. We'll tell you honestly whether the trek suits you.</p>
         <div className="cta-actions">
-          <a className="btn btn-lg" href="https://wa.me/919876543210" target="_blank" rel="noreferrer">Message us on WhatsApp</a>
-          <a className="btn-ghost" href="tel:+919876543210">+91 98765 43210</a>
+          <a className="btn btn-lg" href="https://wa.me/918762350551" target="_blank" rel="noreferrer">Message us on WhatsApp</a>
+          <a className="btn-ghost" href="tel:+918762350551">+91 87623 50551</a>
         </div>
       </div>
     </section>
