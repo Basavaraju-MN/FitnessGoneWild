@@ -38,8 +38,8 @@ const allowedOrigins = new Set([
   'https://fitnessgonewild.onrender.com',
 
   // Production domain
-  'https://fitnessgonewild.in',
-  'https://www.fitnessgonewild.in',
+  'https://thefitnessgonewild.in',
+  'https://www.thefitnessgonewild.in',
 ]);
 
 /**
