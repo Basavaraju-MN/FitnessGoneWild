@@ -107,8 +107,8 @@ export default function BookingModal({
 
   const price = Number(
     trek?.without_transport_price ??
-      trek?.price ??
-      0
+    trek?.price ??
+    0
   );
 
   /*
@@ -117,8 +117,8 @@ export default function BookingModal({
   const transportationPrice =
     Number(
       trek?.with_transport_price ??
-        trek?.transportation_price ??
-        price
+      trek?.transportation_price ??
+      price
     );
 
   const withoutTransportationAmount =
@@ -259,9 +259,8 @@ export default function BookingModal({
           <div className="booking-stepper">
 
             <div
-              className={`booking-step ${
-                step >= 1 ? 'active' : ''
-              }`}
+              className={`booking-step ${step >= 1 ? 'active' : ''
+                }`}
             >
               <span>✓</span>
               <small>Details</small>
@@ -270,9 +269,8 @@ export default function BookingModal({
             <div className="booking-step-line" />
 
             <div
-              className={`booking-step ${
-                step >= 2 ? 'active' : ''
-              }`}
+              className={`booking-step ${step >= 2 ? 'active' : ''
+                }`}
             >
               <span>2</span>
               <small>Payment</small>
@@ -361,7 +359,7 @@ export default function BookingModal({
                       key={weekend.id}
                       className={
                         selectedWeekend?.id ===
-                        weekend.id
+                          weekend.id
                           ? 'date-option selected'
                           : 'date-option'
                       }
@@ -501,8 +499,8 @@ export default function BookingModal({
                     ▣{' '}
                     {selectedWeekend
                       ? `${formatDateWithDay(
-                          selectedWeekend.friday
-                        )}, 07:00 PM`
+                        selectedWeekend.friday
+                      )}, 07:00 PM`
                       : ''}
                   </p>
                 </div>
@@ -591,7 +589,7 @@ export default function BookingModal({
                           Math.max(
                             0,
                             withoutTransportTickets -
-                              1
+                            1
                           )
                         )
                       }
@@ -608,7 +606,7 @@ export default function BookingModal({
                       onClick={() =>
                         setWithoutTransportTickets(
                           withoutTransportTickets +
-                            1
+                          1
                         )
                       }
                     >
@@ -756,8 +754,40 @@ export default function BookingModal({
             <PaymentMethodChooser
               booking={paymentBooking}
               onBack={() => setPaymentBooking(null)}
+              onPaymentSuccess={() => {
+                setPaymentBooking(null);
+                setStep(3);
+              }}
             />
           </div>
+        </div>
+      )}
+      {step === 3 && (
+        <div className="booking-success">
+          <div className="success-icon">✓</div>
+
+          <h2>Payment Successful</h2>
+
+          <p>
+            Your payment of ₹
+            {total.toLocaleString('en-IN', {
+              maximumFractionDigits: 2,
+            })}{' '}
+            has been received successfully.
+          </p>
+
+          <p>
+            Your payment receipt has been sent to{' '}
+            <strong>{email}</strong>.
+          </p>
+
+          <button
+            type="button"
+            className="booking-proceed-button"
+            onClick={onClose}
+          >
+            Done
+          </button>
         </div>
       )}
     </div>
