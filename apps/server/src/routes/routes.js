@@ -2,7 +2,6 @@ const express = require('express');
 
 const router = express.Router();
 
-const phonepeController = require('../controller/controller');
 
 // router.post(
 //   '/:action',
@@ -33,5 +32,7 @@ router.post('/create-payment', controller.createPhonePePayment);
 router.get('/payment-status/:merchantOrderId', controller.checkPhonePePaymentStatus);
 
 router.post('/webhook', controller.phonePeWebhook);
+
+router.post('/payment-success', controller.paymentSuccess);
 
 module.exports = router;

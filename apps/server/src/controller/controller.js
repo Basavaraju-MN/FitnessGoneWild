@@ -1,7 +1,14 @@
 
+const crypto = require('crypto');
+
 const phonepeComponent = require('../components/payment/phonepeComponent');
 const component = require('../components/trekDetails');
 const brochureComponent = require('../components/broucher/broucher')
+const {  generatePaymentReceiptFile,} = require('../utils/paymentReceipt');
+
+const {
+  sendPaymentReceiptMail,
+} = require('../utils/mail');
 
 exports.getTrekCategories = async (req, res) => {
   try {
@@ -211,4 +218,203 @@ exports.phonePeWebhook = async (req, res) => {
         console.error('PhonePe Webhook Error:', error);
         return res.status(401).json({ success: false, message: error.message || 'Invalid PhonePe webhook' });
     }
+};
+
+exports.paymentSuccess = async (req, res) => {
+  try {
+    const {
+      merchantOrderId,
+      customerName,
+      customerEmail,
+      customerMobile,
+      trekName,
+      trekDate,
+      pickupLocation,
+
+      transportTickets,
+      transportPrice,
+      transportAmount,
+
+      withoutTransportTickets,
+      withoutTransportPrice,
+      withoutTransportAmount,
+    } = req.body;
+
+    if (!merchantOrderId) {
+      return res.status(400).json({
+        success: false,
+        message:
+          'merchantOrderId is required',
+      });
+    }
+    const paymentResult =
+      await phonepeComponent.checkPaymentStatus(
+        merchantOrderId
+      );
+    const paymentStatus =
+      paymentResult?.status ||
+      paymentResult?.state ||
+      paymentResult?.data?.status ||
+      paymentResult?.data?.state;
+
+    if (
+      paymentStatus !== 'SUCCESS' &&
+      paymentStatus !== 'COMPLETED'
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          'Payment is not successful',
+        status: paymentStatus,
+      });
+    }
+    const receiptNumber =
+      `FGW-${Date.now()}-${crypto
+        .randomBytes(3)
+        .toString('hex')
+        .toUpperCase()}`;
+
+    const amountInPaise = Number(
+      paymentResult
+        ?.phonepeResponse
+        ?.amount || 0
+    );
+
+    const totalAmount = Number(
+      (amountInPaise / 100).toFixed(2)
+    );
+
+    // GST 5% included in total
+    const gst = Number(
+      (totalAmount * 5 / 105).toFixed(2)
+    );
+
+    const subtotal = Number(
+      (totalAmount - gst).toFixed(2)
+    );
+
+    
+    const transactionId =
+      paymentResult
+        ?.phonepeResponse
+        ?.orderId ||
+      merchantOrderId;
+
+    const receiptData = {
+      companyName:
+        'Fitness Gone Wild',
+
+      companyAddress:
+        process.env.COMPANY_ADDRESS ||
+        'Bengaluru, Karnataka, India',
+
+      companyEmail:
+        process.env.GMAIL_USER || '',
+
+      companyPhone:
+        process.env.COMPANY_PHONE || '',
+
+      receiptNumber,
+
+      paymentDate:
+        new Date().toLocaleString(
+          'en-IN',
+          {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          }
+        ),
+
+      paymentStatus:
+        'SUCCESS',
+
+      merchantOrderId,
+
+      transactionId,
+
+      paymentMethod:
+        'PhonePe',
+
+      customerName:
+        customerName || '',
+
+      customerEmail:
+        customerEmail || '',
+
+      customerMobile:
+        customerMobile || '',
+
+      trekName:
+        trekName || '',
+
+      trekDate:
+        trekDate || '',
+
+      pickupLocation:
+        pickupLocation || '',
+
+      transportTickets:
+        transportTickets || 0,
+
+      transportPrice:
+        transportPrice || 0,
+
+      transportAmount:
+        transportAmount || 0,
+
+      withoutTransportTickets:
+        withoutTransportTickets || 0,
+
+      withoutTransportPrice:
+        withoutTransportPrice || 0,
+
+      withoutTransportAmount:
+        withoutTransportAmount || 0,
+
+      subtotal,
+
+      gst,
+
+      totalAmount,
+    };
+
+const receiptFile =
+  await generatePaymentReceiptFile(receiptData);
+
+const mailResult = await sendPaymentReceiptMail({
+  customerEmail,
+  customerName,
+  receiptNumber,
+  htmlFilePath: receiptFile.filePath,
+  htmlFileName: receiptFile.fileName,
+});
+
+
+    return res.status(200).json({
+      success: true,
+
+      message:
+        'Payment successful and receipt email sent',
+
+      receiptNumber,
+    });
+
+  } catch (error) {
+
+    console.error(
+      'PAYMENT SUCCESS ERROR'
+    );
+
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message:
+        error.message ||
+        'Failed to process payment success',
+    });
+  }
 };

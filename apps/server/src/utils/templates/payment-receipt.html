@@ -1,0 +1,1554 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+
+  <title>Payment Receipt - {{receiptNumber}}</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    @page {
+      size: A4;
+      margin: 0;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100%;
+      font-family: Arial, Helvetica, sans-serif;
+      color: #172033;
+      background: #eef3f1;
+    }
+
+    body {
+      padding: 14px;
+    }
+
+    /* =====================================================
+       RECEIPT
+    ===================================================== */
+
+    .receipt {
+      width: 100%;
+      max-width: 794px;
+      min-height: 1120px;
+      margin: 0 auto;
+
+      background: #ffffff;
+
+      border-radius: 14px;
+      overflow: hidden;
+
+      border: 1px solid #dbe5df;
+
+      box-shadow:
+        0 8px 30px rgba(25, 50, 40, 0.12);
+    }
+
+    /* =====================================================
+       TOP HEADER
+    ===================================================== */
+    .hero {
+      position: relative;
+      height: 170px;
+      overflow: hidden;
+      padding: 22px 28px;
+      color: #ffffff;
+
+      /* No background image - logo is rendered as an <img>. */
+      background: linear-gradient(
+        135deg,
+        #e8f8ef,
+        #d7f1e2
+      );
+    }
+
+    .hero.blue {
+      background: linear-gradient(
+        135deg,
+        #eaf4ff,
+        #d9ebfb
+      );
+    }
+
+    .hero.orange {
+      background: linear-gradient(
+        135deg,
+        #fff2e6,
+        #ffe1cc
+      );
+    }
+
+    .hero.purple {
+      background: linear-gradient(
+        135deg,
+        #f4edff,
+        #e6d8fa
+      );
+    }
+
+    .company-logo {
+      width: 180px;
+      height: 62px;
+      display: block;
+      object-fit: contain;
+      object-position: left center;
+    }
+
+    /* =====================================================
+       HEADER CONTENT
+    ===================================================== */
+
+    .header-content {
+      position: relative;
+
+      z-index: 5;
+
+      display: flex;
+
+      justify-content: space-between;
+
+      align-items: flex-start;
+    }
+
+    .brand {
+      max-width: 55%;
+    }
+
+    .brand-name {
+      margin: 0;
+      display: flex;
+      align-items: center;
+    }
+
+    .brand-subtitle {
+      margin-top: 3px;
+
+      font-size: 8.5px;
+
+      font-weight: 800;
+
+      letter-spacing: 0.7px;
+
+      color: #315b49;
+    }
+
+    .blue .brand-subtitle {
+      color: #15528c;
+    }
+
+    .orange .brand-subtitle {
+      color: #7c3218;
+    }
+
+    .purple .brand-subtitle {
+      color: #6338a5;
+    }
+
+    /* =====================================================
+       COMPANY DETAILS
+    ===================================================== */
+
+    .company-details {
+      margin-top: 13px;
+
+      font-size: 8.5px;
+
+      line-height: 1.8;
+
+      color: #234438;
+    }
+
+    .blue .company-details {
+      color: #234e73;
+    }
+
+    .orange .company-details {
+      color: #713b27;
+    }
+
+    .purple .company-details {
+      color: #513a75;
+    }
+
+    .contact-row {
+      display: flex;
+
+      align-items: center;
+
+      gap: 7px;
+    }
+
+    .contact-icon {
+      width: 13px;
+
+      text-align: center;
+
+      font-weight: 900;
+    }
+
+    /* =====================================================
+       RECEIPT TITLE
+    ===================================================== */
+
+    .receipt-title {
+      text-align: right;
+
+      padding-top: 2px;
+    }
+
+    .receipt-title h1 {
+      margin: 0;
+
+      font-size: 21px;
+
+      font-weight: 900;
+
+      color: #152033;
+
+      letter-spacing: 0.4px;
+    }
+
+    .receipt-message {
+      margin-top: 3px;
+
+      font-family:
+        "Brush Script MT",
+        "Segoe Script",
+        cursive;
+
+      font-size: 15px;
+
+      color: #17884d;
+    }
+
+    .blue .receipt-message {
+      color: #1169c7;
+    }
+
+    .orange .receipt-message {
+      color: #d14a1d;
+    }
+
+    .purple .receipt-message {
+      color: #7132b3;
+    }
+
+    .paid {
+      display: inline-flex;
+
+      align-items: center;
+
+      gap: 6px;
+
+      margin-top: 8px;
+
+      padding: 5px 13px;
+
+      border-radius: 20px;
+
+      background: #21a85a;
+
+      color: #ffffff;
+
+      font-size: 9px;
+
+      font-weight: 900;
+
+      letter-spacing: 0.4px;
+
+      box-shadow:
+        0 4px 8px rgba(20, 100, 50, 0.18);
+    }
+
+    .blue .paid {
+      background: #2f8de4;
+    }
+
+    .orange .paid {
+      background: #ef6b2e;
+    }
+
+    .purple .paid {
+      background: #7543c5;
+    }
+
+    .paid-dot {
+      width: 6px;
+
+      height: 6px;
+
+      border-radius: 50%;
+
+      background: #ffffff;
+    }
+
+    /* =====================================================
+       CONTENT
+    ===================================================== */
+
+    .content {
+      padding: 15px 18px 10px;
+    }
+
+    /* =====================================================
+       META CARDS
+    ===================================================== */
+
+    .meta-grid {
+      display: grid;
+
+      grid-template-columns: 1fr 1fr;
+
+      gap: 12px;
+
+      margin-bottom: 13px;
+    }
+
+    .meta-card {
+      padding: 9px 11px;
+
+      border: 1px solid #dbe5df;
+
+      border-radius: 8px;
+
+      background:
+        linear-gradient(
+          135deg,
+          #ffffff,
+          #f7fbf8
+        );
+    }
+
+    .blue .meta-card {
+      border-color: #cfe2f7;
+
+      background:
+        linear-gradient(
+          135deg,
+          #ffffff,
+          #f5faff
+        );
+    }
+
+    .orange .meta-card {
+      border-color: #f5d7c4;
+
+      background:
+        linear-gradient(
+          135deg,
+          #ffffff,
+          #fff9f5
+        );
+    }
+
+    .purple .meta-card {
+      border-color: #ddd0f5;
+
+      background:
+        linear-gradient(
+          135deg,
+          #ffffff,
+          #faf7ff
+        );
+    }
+
+    .meta-row {
+      display: flex;
+
+      justify-content: space-between;
+
+      min-height: 17px;
+    }
+
+    .meta-label {
+      font-size: 8px;
+
+      color: #65716c;
+    }
+
+    .meta-value {
+      max-width: 62%;
+
+      font-size: 8.5px;
+
+      font-weight: 700;
+
+      color: #172033;
+
+      text-align: right;
+
+      word-break: break-word;
+    }
+
+    .status-value {
+      display: inline-block;
+
+      padding: 2px 8px;
+
+      border-radius: 12px;
+
+      background: #d9f7e5;
+
+      color: #168047;
+
+      font-size: 8px;
+
+      font-weight: 800;
+    }
+
+    /* =====================================================
+       SECTIONS
+    ===================================================== */
+
+    .section {
+      margin-bottom: 11px;
+    }
+
+    .section-header {
+      display: flex;
+
+      align-items: center;
+
+      gap: 7px;
+
+      margin-bottom: 6px;
+    }
+
+    .section-icon {
+      width: 21px;
+
+      height: 21px;
+
+      flex-shrink: 0;
+
+      display: flex;
+
+      align-items: center;
+
+      justify-content: center;
+
+      border-radius: 6px;
+
+      background: #d7f5e3;
+
+      color: #137044;
+
+      font-size: 10px;
+
+      font-weight: 900;
+    }
+
+    .blue .section-icon {
+      background: #dceeff;
+
+      color: #1673c4;
+    }
+
+    .orange .section-icon {
+      background: #ffeadb;
+
+      color: #d14a1d;
+    }
+
+    .purple .section-icon {
+      background: #eee3ff;
+
+      color: #7140b8;
+    }
+
+    .section-title {
+      margin: 0;
+
+      font-size: 10px;
+
+      font-weight: 900;
+
+      color: #17613e;
+
+      text-transform: uppercase;
+
+      letter-spacing: 0.4px;
+    }
+
+    .blue .section-title {
+      color: #1570be;
+    }
+
+    .orange .section-title {
+      color: #c7471b;
+    }
+
+    .purple .section-title {
+      color: #6938a9;
+    }
+
+    .section-line {
+      flex: 1;
+
+      height: 1px;
+
+      background: #dce5df;
+    }
+
+    /* =====================================================
+       DETAILS
+    ===================================================== */
+
+    .details-card {
+      padding: 8px 11px;
+
+      border: 1px solid #dce6e0;
+
+      border-radius: 7px;
+
+      background: #ffffff;
+    }
+
+    .details-grid {
+      display: grid;
+
+      grid-template-columns: 1fr 1fr;
+
+      column-gap: 25px;
+
+      row-gap: 3px;
+    }
+
+    .details-row {
+      display: flex;
+
+      min-height: 17px;
+    }
+
+    .details-label {
+      width: 100px;
+
+      flex-shrink: 0;
+
+      font-size: 8px;
+
+      color: #68756f;
+    }
+
+    .details-value {
+      flex: 1;
+
+      font-size: 8.5px;
+
+      font-weight: 700;
+
+      color: #18212b;
+
+      word-break: break-word;
+    }
+
+    /* =====================================================
+       TICKET TABLE
+    ===================================================== */
+
+    .ticket-card {
+      overflow: hidden;
+
+      border: 1px solid #dce6e0;
+
+      border-radius: 7px;
+    }
+
+    table {
+      width: 100%;
+
+      border-collapse: collapse;
+
+      font-size: 8.5px;
+    }
+
+    thead {
+      background: #157044;
+    }
+
+    .blue thead {
+      background: #1976c8;
+    }
+
+    .orange thead {
+      background: #a83d20;
+    }
+
+    .purple thead {
+      background: #7042b5;
+    }
+
+    th {
+      padding: 7px 9px;
+
+      color: #ffffff;
+
+      font-size: 8px;
+
+      font-weight: 800;
+
+      text-align: left;
+    }
+
+    td {
+      padding: 7px 9px;
+
+      border-bottom: 1px solid #edf1ee;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #f7faf8;
+    }
+
+    .blue tbody tr:nth-child(even) {
+      background: #f5f9fd;
+    }
+
+    .orange tbody tr:nth-child(even) {
+      background: #fff8f3;
+    }
+
+    .purple tbody tr:nth-child(even) {
+      background: #faf7ff;
+    }
+
+    .ticket-name {
+      font-weight: 700;
+
+      color: #18212b;
+    }
+
+    .text-right {
+      text-align: right;
+    }
+
+    /* =====================================================
+       TRANSPORTATION INFO
+    ===================================================== */
+
+    .transportation-box {
+      margin-top: 8px;
+
+      padding: 8px 10px;
+
+      border: 1px solid #dce6e0;
+
+      border-radius: 7px;
+
+      background: #f8fcfa;
+    }
+
+    .transportation-grid {
+      display: grid;
+
+      grid-template-columns: 1fr 1fr 1fr;
+
+      gap: 12px;
+    }
+
+    .transportation-item {
+      display: flex;
+
+      flex-direction: column;
+
+      gap: 3px;
+    }
+
+    .transportation-label {
+      font-size: 7.5px;
+
+      color: #68756f;
+
+      text-transform: uppercase;
+
+      letter-spacing: 0.3px;
+    }
+
+    .transportation-value {
+      font-size: 8.5px;
+
+      font-weight: 700;
+
+      color: #172033;
+
+      word-break: break-word;
+    }
+
+    /* =====================================================
+       TOTAL
+    ===================================================== */
+
+    .amount-area {
+      display: flex;
+
+      justify-content: flex-end;
+
+      padding: 7px 8px;
+    }
+
+    .amount-summary {
+      width: 230px;
+    }
+
+    .amount-row {
+      display: flex;
+
+      justify-content: space-between;
+
+      padding: 3px 0;
+
+      font-size: 8.5px;
+
+      color: #59656e;
+    }
+
+    .amount-value {
+      font-weight: 700;
+
+      color: #26333d;
+    }
+
+    .amount-total {
+      display: flex;
+
+      justify-content: space-between;
+
+      align-items: center;
+
+      margin-top: 5px;
+
+      padding: 7px 9px;
+
+      border-radius: 7px;
+
+      background: #dff7e8;
+
+      border: 1px solid #b9eacb;
+
+      color: #11613b;
+    }
+
+    .blue .amount-total {
+      background: #dcecff;
+
+      border-color: #b9d9f7;
+
+      color: #125493;
+    }
+
+    .orange .amount-total {
+      background: #ffeadc;
+
+      border-color: #f4ccb5;
+
+      color: #963b20;
+    }
+
+    .purple .amount-total {
+      background: #eee3ff;
+
+      border-color: #d7c2f5;
+
+      color: #62349c;
+    }
+
+    .amount-total-label {
+      font-size: 10px;
+
+      font-weight: 900;
+    }
+
+    .amount-total-value {
+      font-size: 13px;
+
+      font-weight: 900;
+    }
+
+    /* =====================================================
+       PAYMENT INFORMATION
+    ===================================================== */
+
+    .payment-box {
+      padding: 8px 11px;
+
+      border-radius: 7px;
+
+      background: #f2fbf6;
+
+      border: 1px solid #ccebd8;
+
+      font-size: 8px;
+
+      line-height: 1.65;
+    }
+
+    .payment-grid {
+      display: grid;
+
+      grid-template-columns: 1fr 1fr;
+
+      gap: 4px 20px;
+    }
+
+    .payment-row {
+      display: flex;
+    }
+
+    .payment-label {
+      width: 100px;
+
+      flex-shrink: 0;
+
+      color: #68756f;
+    }
+
+    .payment-value {
+      flex: 1;
+
+      font-weight: 700;
+
+      color: #172033;
+
+      word-break: break-word;
+    }
+
+    /* =====================================================
+       FOOTER
+    ===================================================== */
+
+    .footer {
+      display: flex;
+
+      justify-content: space-between;
+
+      align-items: flex-end;
+
+      margin: 0 18px;
+
+      padding: 9px 5px 12px;
+
+      border-top: 1px solid #dce6e0;
+    }
+
+    .footer-message {
+      font-family:
+        "Brush Script MT",
+        "Segoe Script",
+        cursive;
+
+      font-size: 20px;
+
+      color: #147647;
+    }
+
+    .footer-subtitle {
+      margin-top: -2px;
+
+      font-size: 8px;
+
+      color: #52645b;
+    }
+
+    .footer-right {
+      text-align: right;
+
+      font-size: 8px;
+
+      line-height: 1.5;
+
+      color: #52645b;
+    }
+
+    .footer-brand {
+      font-weight: 900;
+
+      color: #146c42;
+    }
+
+    /* =====================================================
+       PRINT
+    ===================================================== */
+
+    @media print {
+
+      html,
+      body {
+        width: 210mm;
+
+        height: 297mm;
+
+        margin: 0;
+
+        padding: 0;
+
+        background: #ffffff;
+      }
+
+      body {
+        padding: 0;
+      }
+
+      .receipt {
+        width: 210mm;
+
+        min-height: 297mm;
+
+        max-width: none;
+
+        margin: 0;
+
+        border-radius: 0;
+
+        box-shadow: none;
+      }
+
+      * {
+        -webkit-print-color-adjust: exact !important;
+
+        print-color-adjust: exact !important;
+      }
+      .hero {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      .section,
+      .ticket-card,
+      .details-card,
+      .payment-box,
+      .transportation-box {
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="receipt">
+
+    <!-- =================================================
+         HERO
+    ================================================== -->
+
+    <div class="hero green">
+
+      <img
+        src="{{headerBackgroundDataUrl}}"
+        class="hero-background"
+        alt=""
+      />
+
+      <div class="hero-overlay"></div>
+
+      <div class="header-content">
+
+        <!-- BRAND -->
+
+        <div class="brand">
+
+          <div class="brand-name">
+            <img
+              src="{{headerLogoDataUrl}}"
+              class="company-logo"
+              alt="The Fitness Gone Wild"
+            />
+          </div>
+
+          <div class="brand-subtitle">
+            TREKKING • TRAVEL • EXPERIENCES
+          </div>
+
+          <div class="company-details">
+
+            <div class="contact-row">
+              <span class="contact-icon">●</span>
+              <span>{{companyAddress}}</span>
+            </div>
+
+            <div class="contact-row">
+              <span class="contact-icon">✉</span>
+              <span>{{companyEmail}}</span>
+            </div>
+
+            <div class="contact-row">
+              <span class="contact-icon">☎</span>
+              <span>{{companyPhone}}</span>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- RECEIPT TITLE -->
+
+        <div class="receipt-title">
+
+          <h1>
+            PAYMENT RECEIPT
+          </h1>
+
+          <div class="receipt-message">
+            Thank you for your booking!
+          </div>
+
+          <div class="paid">
+
+            <span class="paid-dot"></span>
+
+            PAID
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- =================================================
+         CONTENT
+    ================================================== -->
+
+    <div class="content">
+
+
+      <!-- =================================================
+           RECEIPT INFORMATION
+      ================================================== -->
+
+      <div class="meta-grid">
+
+        <div class="meta-card">
+
+          <div class="meta-row">
+
+            <span class="meta-label">
+              Receipt Number
+            </span>
+
+            <span class="meta-value">
+              {{receiptNumber}}
+            </span>
+
+          </div>
+
+
+          <div class="meta-row">
+
+            <span class="meta-label">
+              Payment Date
+            </span>
+
+            <span class="meta-value">
+              {{paymentDate}}
+            </span>
+
+          </div>
+
+
+          <div class="meta-row">
+
+            <span class="meta-label">
+              Payment Status
+            </span>
+
+            <span class="meta-value">
+
+              <span class="status-value">
+                {{paymentStatus}}
+              </span>
+
+            </span>
+
+          </div>
+
+        </div>
+
+
+        <div class="meta-card">
+
+          <div class="meta-row">
+
+            <span class="meta-label">
+              Order ID
+            </span>
+
+            <span class="meta-value">
+              {{merchantOrderId}}
+            </span>
+
+          </div>
+
+
+          <div class="meta-row">
+
+            <span class="meta-label">
+              Transaction ID
+            </span>
+
+            <span class="meta-value">
+              {{transactionId}}
+            </span>
+
+          </div>
+
+
+          <div class="meta-row">
+
+            <span class="meta-label">
+              Payment Method
+            </span>
+
+            <span class="meta-value">
+              {{paymentMethod}}
+            </span>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- =================================================
+           CUSTOMER
+      ================================================== -->
+
+      <div class="section">
+
+        <div class="section-header">
+
+          <div class="section-icon">
+            ♟
+          </div>
+
+          <div class="section-title">
+            Customer Details
+          </div>
+
+          <div class="section-line"></div>
+
+        </div>
+
+
+        <div class="details-card">
+
+          <div class="details-grid">
+
+            <div class="details-row">
+
+              <div class="details-label">
+                Name
+              </div>
+
+              <div class="details-value">
+                {{customerName}}
+              </div>
+
+            </div>
+
+
+            <div class="details-row">
+
+              <div class="details-label">
+                Email
+              </div>
+
+              <div class="details-value">
+                {{customerEmail}}
+              </div>
+
+            </div>
+
+
+            <div class="details-row">
+
+              <div class="details-label">
+                Mobile
+              </div>
+
+              <div class="details-value">
+                {{customerMobile}}
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- =================================================
+           TREK / BOOKING
+      ================================================== -->
+
+      <div class="section">
+
+        <div class="section-header">
+
+          <div class="section-icon">
+            T
+          </div>
+
+          <div class="section-title">
+            Trek / Booking Details
+          </div>
+
+          <div class="section-line"></div>
+
+        </div>
+
+
+        <div class="details-card">
+
+          <div class="details-grid">
+
+            <div class="details-row">
+
+              <div class="details-label">
+                Trek
+              </div>
+
+              <div class="details-value">
+                {{trekName}}
+              </div>
+
+            </div>
+
+
+            <div class="details-row">
+
+              <div class="details-label">
+                Trek Date
+              </div>
+
+              <div class="details-value">
+                {{trekDate}}
+              </div>
+
+            </div>
+
+
+            <div class="details-row">
+
+              <div class="details-label">
+                Pickup Location
+              </div>
+
+              <div class="details-value">
+                {{pickupLocation}}
+              </div>
+
+            </div>
+
+
+            <div class="details-row">
+
+              <div class="details-label">
+                Transportation Amount
+              </div>
+
+              <div class="details-value">
+                ₹{{transportationAmount}}
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- =================================================
+           TICKETS
+      ================================================== -->
+
+      <div class="section">
+
+        <div class="section-header">
+
+          <div class="section-icon">
+            ₹
+          </div>
+
+          <div class="section-title">
+            Ticket Details
+          </div>
+
+          <div class="section-line"></div>
+
+        </div>
+
+
+        <div class="ticket-card">
+
+          <table>
+
+            <thead>
+
+              <tr>
+
+                <th>
+                  Description
+                </th>
+
+                <th class="text-right">
+                  Quantity
+                </th>
+
+                <th class="text-right">
+                  Price
+                </th>
+
+                <th class="text-right">
+                  Amount
+                </th>
+
+              </tr>
+
+            </thead>
+
+
+            <tbody>
+
+              <tr>
+
+                <td class="ticket-name">
+                  Without Transportation
+                </td>
+
+                <td class="text-right">
+                  {{withoutTransportTickets}}
+                </td>
+
+                <td class="text-right">
+                  ₹{{withoutTransportPrice}}
+                </td>
+
+                <td class="text-right">
+                  ₹{{withoutTransportAmount}}
+                </td>
+
+              </tr>
+
+
+              <tr>
+
+                <td class="ticket-name">
+                  With Transportation
+                </td>
+
+                <td class="text-right">
+                  {{withTransportTickets}}
+                </td>
+
+                <td class="text-right">
+                  ₹{{withTransportPrice}}
+                </td>
+
+                <td class="text-right">
+                  ₹{{withTransportAmount}}
+                </td>
+
+              </tr>
+
+            </tbody>
+
+          </table>
+
+
+          <!-- AMOUNTS -->
+
+          <div class="amount-area">
+
+            <div class="amount-summary">
+
+              <div class="amount-row">
+
+                <span>
+                  Subtotal
+                </span>
+
+                <span class="amount-value">
+                  ₹{{subtotal}}
+                </span>
+
+              </div>
+
+
+              <div class="amount-row">
+
+                <span>
+                  GST (5%)
+                </span>
+
+                <span class="amount-value">
+                  ₹{{gst}}
+                </span>
+
+              </div>
+
+
+              <div class="amount-total">
+
+                <span class="amount-total-label">
+                  Total Paid
+                </span>
+
+                <span class="amount-total-value">
+                  ₹{{totalAmount}}
+                </span>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- =================================================
+           PAYMENT INFORMATION
+      ================================================== -->
+
+      <div class="section">
+
+        <div class="section-header">
+
+          <div class="section-icon">
+            ✓
+          </div>
+
+          <div class="section-title">
+            Payment Information
+          </div>
+
+          <div class="section-line"></div>
+
+        </div>
+
+
+        <div class="payment-box">
+
+          <div class="payment-grid">
+
+            <div class="payment-row">
+
+              <div class="payment-label">
+                Payment Status
+              </div>
+
+              <div class="payment-value">
+                {{paymentStatus}}
+              </div>
+
+            </div>
+
+
+            <div class="payment-row">
+
+              <div class="payment-label">
+                Payment Method
+              </div>
+
+              <div class="payment-value">
+                {{paymentMethod}}
+              </div>
+
+            </div>
+
+
+            <div class="payment-row">
+
+              <div class="payment-label">
+                Transaction ID
+              </div>
+
+              <div class="payment-value">
+                {{transactionId}}
+              </div>
+
+            </div>
+
+
+            <div class="payment-row">
+
+              <div class="payment-label">
+                Merchant Order ID
+              </div>
+
+              <div class="payment-value">
+                {{merchantOrderId}}
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+    </div>
+
+
+    <!-- =================================================
+         FOOTER
+    ================================================== -->
+
+    <div class="footer">
+
+      <div>
+
+        <div class="footer-message">
+          Thank you!
+        </div>
+
+        <div class="footer-subtitle">
+          For being a part of our journey
+        </div>
+
+      </div>
+
+
+      <div class="footer-right">
+
+        <div class="footer-brand">
+          Happy Trekking!
+        </div>
+
+        {{companyName}}
+
+      </div>
+
+    </div>
+
+
+  </div>
+
+</body>
+
+</html>
