@@ -240,34 +240,63 @@ exports.paymentSuccess = async (req, res) => {
       withoutTransportAmount,
     } = req.body;
 
+    // ------------------------------------
+    // 1. Validate merchant order ID
+    // ------------------------------------
     if (!merchantOrderId) {
       return res.status(400).json({
         success: false,
-        message:
-          'merchantOrderId is required',
+        message: 'merchantOrderId is required',
       });
     }
+
+    // ------------------------------------
+    // 2. Verify payment with PhonePe
+    // ------------------------------------
+    console.log('======================================');
+    console.log('PAYMENT SUCCESS API CALLED');
+    console.log('merchantOrderId:', merchantOrderId);
+
     const paymentResult =
       await phonepeComponent.checkPaymentStatus(
         merchantOrderId
       );
+
+    console.log(
+      'Payment verification result:',
+      paymentResult
+    );
+
     const paymentStatus =
       paymentResult?.status ||
       paymentResult?.state ||
       paymentResult?.data?.status ||
       paymentResult?.data?.state;
 
+    console.log(
+      'Final payment status:',
+      paymentStatus
+    );
+
+    // ------------------------------------
+    // 3. Check payment status
+    // ------------------------------------
     if (
       paymentStatus !== 'SUCCESS' &&
       paymentStatus !== 'COMPLETED'
     ) {
       return res.status(400).json({
         success: false,
-        message:
-          'Payment is not successful',
+        message: 'Payment is not successful',
         status: paymentStatus,
       });
     }
+
+    console.log('Payment verified successfully');
+
+    // ------------------------------------
+    // 4. Generate receipt details
+    // ------------------------------------
     const receiptNumber =
       `FGW-${Date.now()}-${crypto
         .randomBytes(3)
@@ -293,7 +322,6 @@ exports.paymentSuccess = async (req, res) => {
       (totalAmount - gst).toFixed(2)
     );
 
-    
     const transactionId =
       paymentResult
         ?.phonepeResponse
@@ -301,8 +329,7 @@ exports.paymentSuccess = async (req, res) => {
       merchantOrderId;
 
     const receiptData = {
-      companyName:
-        'Fitness Gone Wild',
+      companyName: 'Fitness Gone Wild',
 
       companyAddress:
         process.env.COMPANY_ADDRESS ||
@@ -328,33 +355,25 @@ exports.paymentSuccess = async (req, res) => {
           }
         ),
 
-      paymentStatus:
-        'SUCCESS',
+      paymentStatus: 'SUCCESS',
 
       merchantOrderId,
 
       transactionId,
 
-      paymentMethod:
-        'PhonePe',
+      paymentMethod: 'PhonePe',
 
-      customerName:
-        customerName || '',
+      customerName: customerName || '',
 
-      customerEmail:
-        customerEmail || '',
+      customerEmail: customerEmail || '',
 
-      customerMobile:
-        customerMobile || '',
+      customerMobile: customerMobile || '',
 
-      trekName:
-        trekName || '',
+      trekName: trekName || '',
 
-      trekDate:
-        trekDate || '',
+      trekDate: trekDate || '',
 
-      pickupLocation:
-        pickupLocation || '',
+      pickupLocation: pickupLocation || '',
 
       transportTickets:
         transportTickets || 0,
@@ -381,23 +400,98 @@ exports.paymentSuccess = async (req, res) => {
       totalAmount,
     };
 
-const receiptFile =
-  await generatePaymentReceiptFile(receiptData);
+    // ------------------------------------
+    // 5. Generate receipt HTML
+    // ------------------------------------
+    console.log(
+      'Generating payment receipt HTML...'
+    );
 
-const mailResult = await sendPaymentReceiptMail({
-  customerEmail,
-  customerName,
-  receiptNumber,
-  htmlFilePath: receiptFile.filePath,
-  htmlFileName: receiptFile.fileName,
-});
+    const receiptFile =
+      await generatePaymentReceiptFile(
+        receiptData
+      );
 
+    console.log(
+      'Payment receipt HTML generated:',
+      receiptFile.filePath
+    );
 
+    // ------------------------------------
+    // 6. Send email WITHOUT awaiting it
+    // ------------------------------------
+    sendPaymentReceiptMail({
+      customerEmail,
+      customerName,
+      receiptNumber,
+      htmlFilePath: receiptFile.filePath,
+      htmlFileName: receiptFile.fileName,
+    })
+      .then((mailResult) => {
+        console.log(
+          '======================================'
+        );
+
+        console.log(
+          'PAYMENT RECEIPT EMAIL SENT'
+        );
+
+        console.log(
+          'Message ID:',
+          mailResult.messageId
+        );
+
+        console.log(
+          '======================================'
+        );
+      })
+      .catch((mailError) => {
+        console.error(
+          '======================================'
+        );
+
+        console.error(
+          'PAYMENT RECEIPT EMAIL FAILED'
+        );
+
+        console.error(
+          'name:',
+          mailError.name
+        );
+
+        console.error(
+          'code:',
+          mailError.code
+        );
+
+        console.error(
+          'command:',
+          mailError.command
+        );
+
+        console.error(
+          'response:',
+          mailError.response
+        );
+
+        console.error(
+          'message:',
+          mailError.message
+        );
+
+        console.error(
+          '======================================'
+        );
+      });
+
+    // ------------------------------------
+    // 7. RETURN SUCCESS IMMEDIATELY
+    // ------------------------------------
     return res.status(200).json({
       success: true,
 
       message:
-        'Payment successful and receipt email sent',
+        'Payment successful',
 
       receiptNumber,
     });
@@ -405,13 +499,40 @@ const mailResult = await sendPaymentReceiptMail({
   } catch (error) {
 
     console.error(
+      '======================================'
+    );
+
+    console.error(
       'PAYMENT SUCCESS ERROR'
     );
 
-    console.error(error);
+    console.error(
+      'name:',
+      error.name
+    );
+
+    console.error(
+      'code:',
+      error.code
+    );
+
+    console.error(
+      'message:',
+      error.message
+    );
+
+    console.error(
+      'stack:',
+      error.stack
+    );
+
+    console.error(
+      '======================================'
+    );
 
     return res.status(500).json({
       success: false,
+
       message:
         error.message ||
         'Failed to process payment success',
