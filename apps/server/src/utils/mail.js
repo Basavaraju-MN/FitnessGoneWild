@@ -45,7 +45,7 @@ async function sendPaymentReceiptMail({
 
       <p>
         Thank you for your booking with
-        <strong>Fitness Gone Wild</strong>.
+        <strong>The Fitness Gone Wild</strong>.
       </p>
 
       <p>
@@ -58,7 +58,7 @@ async function sendPaymentReceiptMail({
 
       <p>
         Regards,<br>
-        Fitness Gone Wild
+        The Fitness Gone Wild
       </p>
     `,
 
