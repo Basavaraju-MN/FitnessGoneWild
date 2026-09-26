@@ -90,7 +90,7 @@ exports.createPayment = async ({
   // Use your deployed frontend URL in production.
   const frontendUrl =
     process.env.FRONTEND_URL ||
-    'http://localhost:5173';
+    'https://thefitnessgonewild.in';
 
   const redirectUrl =
     `${frontendUrl}/payment-result?merchantOrderId=${
