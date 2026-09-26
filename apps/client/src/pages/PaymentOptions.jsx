@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import '../styles/payment.css';
 
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, '');
-const API_BASE_URL = configuredApiBaseUrl || (import.meta.env.DEV ? 'http://localhost:5000/api' : '/api');
+const API_BASE_URL = configuredApiBaseUrl || (import.meta.env.DEV ? 'http://localhost:4000/api' : '/api');
 
 const paymentMethods = [
   {
@@ -34,17 +34,155 @@ function readPendingBooking() {
     return null;
   }
 }
+// Get the first available value from the booking object
+const getValue = (booking, keys, fallback = '') => {
+  for (const key of keys) {
+    const value = booking?.[key];
 
+    if (value !== undefined && value !== null && value !== '') {
+      return value;
+    }
+  }
+
+  return fallback;
+};
+
+// Convert checkbox value to true/false
+const isChecked = (value) => {
+  return (
+    value === true ||
+    value === 1 ||
+    value === '1' ||
+    value === 'true' ||
+    value === 'yes'
+  );
+};
+
+const getReceiptBookingDetails = (booking) => {
+  const customerMobile = getValue(booking, [
+    'customerMobile',
+    'mobile',
+    'mobileNumber',
+    'phone',
+    'phoneNumber',
+    'customerPhone',
+  ]);
+
+  const trekDate = getValue(booking, [
+    'trekDate',
+    'selectedTrekDate',
+    'bookingDate',
+    'selectedDate',
+    'date',
+  ]);
+
+  const transportChecked = isChecked(
+    getValue(
+      booking,
+      [
+        'transportation',
+        'withTransportation',
+        'includeTransportation',
+        'transportRequired',
+        'transportationSelected',
+      ],
+      false
+    )
+  );
+
+  const totalTickets = Number(
+    getValue(
+      booking,
+      [
+        'totalTickets',
+        'ticketQuantity',
+        'quantity',
+        'numberOfTickets',
+        'tickets',
+      ],
+      1
+    )
+  );
+
+  const ticketPrice = Number(
+    getValue(
+      booking,
+      [
+        'ticketPrice',
+        'price',
+        'trekPrice',
+        'perPersonPrice',
+      ],
+      0
+    )
+  );
+
+  const transportPrice = Number(
+    getValue(
+      booking,
+      [
+        'transportationPrice',
+        'transportPrice',
+        'transportationAmountPerPerson',
+      ],
+      0
+    )
+  );
+
+  const withoutTransportTickets = transportChecked
+    ? 0
+    : totalTickets;
+
+  const withTransportTickets = transportChecked
+    ? totalTickets
+    : 0;
+
+  const withoutTransportPrice = ticketPrice;
+
+  const withTransportPrice = ticketPrice + transportPrice;
+
+  const withoutTransportAmount =
+    withoutTransportTickets * withoutTransportPrice;
+
+  const withTransportAmount =
+    withTransportTickets * withTransportPrice;
+
+  return {
+    customerMobile,
+    trekDate,
+
+    transportation: transportChecked
+      ? 'With Transportation'
+      : 'Without Transportation',
+
+    withoutTransportTickets,
+    withoutTransportPrice,
+    withoutTransportAmount,
+
+    withTransportTickets,
+    withTransportPrice,
+    withTransportAmount,
+
+    transportationAmount: transportChecked
+      ? totalTickets * transportPrice
+      : 0,
+  };
+};
 export function PaymentMethodChooser({ booking, onBack }) {
   const [selectedMethod, setSelectedMethod] = useState('upi');
   const [isStartingPayment, setIsStartingPayment] = useState(false);
   const [error, setError] = useState('');
 
+  // ADD THIS LINE
+  const receiptDetails = getReceiptBookingDetails(booking);
+
   const total = Number(booking?.total || 0);
 
   const startPayment = async () => {
     if (!Number.isFinite(total) || total <= 0) {
-      setError('Your booking amount is invalid. Please return to the booking page and try again.');
+      setError(
+        'Your booking amount is invalid. Please return to the booking page and try again.'
+      );
       return;
     }
 
@@ -55,27 +193,76 @@ export function PaymentMethodChooser({ booking, onBack }) {
       const response = await fetch(`${API_BASE_URL}/create-payment`, {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
+
         body: JSON.stringify({
           amount: total,
+          totalAmount: total,
           user_id: booking?.userId || null,
           preferred_payment_method: selectedMethod,
+
+          customerName: getValue(booking, [
+            'customerName', 'name', 'fullName'
+          ]),
+          customerEmail: getValue(booking, [
+            'customerEmail', 'email'
+          ]),
+
+          // Important: send both names for compatibility
+          customerMobile: receiptDetails.customerMobile,
+          customerPhone: receiptDetails.customerMobile,
+
+          trekName: getValue(booking, [
+            'trekName', 'tripName'
+          ]),
+          trekDate: receiptDetails.trekDate,
+
+          pickupLocation: getValue(booking, [
+            'pickupLocation', 'selectedPickupLocation', 'boardingPoint'
+          ]),
+
+          transportation: receiptDetails.transportation,
+          transportationAmount: receiptDetails.transportationAmount,
+
+          withoutTransportTickets: receiptDetails.withoutTransportTickets,
+          withoutTransportPrice: receiptDetails.withoutTransportPrice,
+          withoutTransportAmount: receiptDetails.withoutTransportAmount,
+
+          withTransportTickets: receiptDetails.withTransportTickets,
+          withTransportPrice: receiptDetails.withTransportPrice,
+          withTransportAmount: receiptDetails.withTransportAmount,
+
+          subtotal: Number(booking?.subtotal || 0),
+          gst: Number(booking?.gst || 0)
         }),
       });
 
       const result = await response.json().catch(() => null);
+
       if (!response.ok || !result?.success) {
-        throw new Error(result?.message || 'Unable to start secure payment.');
+        throw new Error(
+          result?.message || 'Unable to start secure payment.'
+        );
       }
 
       const redirectUrl = result?.data?.redirectUrl;
+
       if (!redirectUrl) {
-        throw new Error('Payment provider did not return a checkout link.');
+        throw new Error(
+          'Payment provider did not return a checkout link.'
+        );
       }
 
       window.location.assign(redirectUrl);
+
     } catch (paymentError) {
-      setError(paymentError.message || 'Unable to start secure payment. Please try again.');
+      setError(
+        paymentError.message ||
+        'Unable to start secure payment. Please try again.'
+      );
+
       setIsStartingPayment(false);
     }
   };
@@ -94,7 +281,7 @@ export function PaymentMethodChooser({ booking, onBack }) {
           <p>Secure payment</p>
           <h1>Choose a payment method</h1>
         </div>
-        </header>
+      </header>
 
       <div className="payment-order-summary">
         <span>{booking.trekName}</span>

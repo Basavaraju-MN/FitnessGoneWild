@@ -1,11 +1,25 @@
-import { CheckCircle2, Clock3, XCircle } from 'lucide-react';
+
+import {
+  CheckCircle2,
+  Clock3,
+  XCircle,
+  Download,
+} from 'lucide-react';
+
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+
+import {
+  Link,
+  useNavigate,
+  useSearchParams,
+} from 'react-router-dom';
+
 import '../styles/payment.css';
 
-const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL
-  ?.trim()
-  .replace(/\/+$/, '');
+const configuredApiBaseUrl =
+  import.meta.env.VITE_API_BASE_URL
+    ?.trim()
+    .replace(/\/+$/, '');
 
 const API_BASE_URL =
   configuredApiBaseUrl ||
@@ -25,6 +39,18 @@ export default function PaymentResult() {
     error: '',
   });
 
+  const [showReceiptPopup, setShowReceiptPopup] =
+    useState(false);
+
+  const [receiptPdfBase64, setReceiptPdfBase64] =
+    useState('');
+
+  const [receiptFilename, setReceiptFilename] =
+    useState('Payment-Receipt.pdf');
+
+  const [receiptLoading, setReceiptLoading] =
+    useState(false);
+
   useEffect(() => {
     if (!merchantOrderId) {
       setState({
@@ -38,171 +64,257 @@ export default function PaymentResult() {
     let cancelled = false;
     let timeoutId;
 
-const checkStatus = async () => {
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/payment-status/${encodeURIComponent(
-        merchantOrderId
-      )}`,
-      {
-        credentials: 'include',
+    const checkStatus = async () => {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/payment-status/${encodeURIComponent(
+            merchantOrderId
+          )}`,
+          {
+            credentials: 'include',
+          }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok || !result?.success) {
+          throw new Error(
+            result?.message ||
+            'Unable to verify payment.'
+          );
+        }
+
+        if (cancelled) return;
+
+        const status = String(
+          result.data?.status || 'PROCESSING'
+        ).toUpperCase();
+
+        if (
+          status === 'SUCCESS' ||
+          status === 'COMPLETED'
+        ) {
+          setState({
+            status: 'SUCCESS',
+            error: '',
+          });
+
+          // Payment is verified by the backend.
+          // Now request the PDF from the backend.
+          await generateReceipt();
+
+          return;
+        }
+
+        if (
+          status === 'FAILED' ||
+          status === 'DECLINED' ||
+          status === 'CANCELLED'
+        ) {
+          setState({
+            status: 'FAILED',
+            error: '',
+          });
+
+          return;
+        }
+
+        setState({
+          status: 'PROCESSING',
+          error: '',
+        });
+
+        timeoutId = window.setTimeout(
+          checkStatus,
+          3000
+        );
+      } catch (error) {
+        console.error(
+          'Payment status check failed:',
+          error
+        );
+
+        if (!cancelled) {
+          setState({
+            status: 'UNKNOWN',
+            error:
+              error.message ||
+              'Unable to verify payment.',
+          });
+        }
       }
-    );
+    };
 
-    const result = await response.json();
+    const generateReceipt = async () => {
+      if (cancelled) return;
 
-    console.log('Payment status API response:', result);
+      setReceiptLoading(true);
 
-    if (!response.ok || !result?.success) {
-      throw new Error(
-        result?.message ||
-          'Unable to verify payment.'
-      );
-    }
+      try {
+        let pendingBooking = {};
 
-    if (cancelled) return;
+        try {
+          const storedBooking =
+            sessionStorage.getItem(
+              'pendingBooking'
+            );
 
-    const status =
-      result.data?.status || 'PROCESSING';
+          if (storedBooking) {
+            pendingBooking =
+              JSON.parse(storedBooking);
+          }
+        } catch (error) {
+          console.error(
+            'Unable to read pending booking:',
+            error
+          );
+        }
 
-    console.log('PhonePe payment status:', status);
+        const receiptResponse = await fetch(
+          `${API_BASE_URL}/payment-success`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+              merchantOrderId,
 
-    /*
-     * IMPORTANT:
-     * Check the exact value returned by your backend.
-     */
-    if (
-  status === 'SUCCESS' ||
-  status === 'COMPLETED'
-) {
-  console.log(
-    'Payment successful. Calling payment-success API...'
-  );
+              // Customer details
+              customerName:
+                pendingBooking.customerName ||
+                pendingBooking.name ||
+                '',
 
-  // Get booking details saved before going to PhonePe
-  let pendingBooking = null;
+              customerEmail:
+                pendingBooking.customerEmail ||
+                pendingBooking.email ||
+                '',
 
-  try {
-    const storedBooking =
-      sessionStorage.getItem('pendingBooking');
+              customerMobile:
+                pendingBooking.customerMobile ||
+                pendingBooking.mobile ||
+                pendingBooking.customerPhone ||
+                pendingBooking.phone ||
+                '',
 
-    console.log(
-      'pendingBooking raw:',
-      storedBooking
-    );
+              // Trek details
+              trekName:
+                pendingBooking.trekName ||
+                pendingBooking.tripName ||
+                '',
 
-    if (storedBooking) {
-      pendingBooking = JSON.parse(storedBooking);
-    }
+              trekDate:
+                pendingBooking.trekDate ||
+                pendingBooking.date ||
+                '',
 
-    console.log(
-      'Pending booking:',
-      pendingBooking
-    );
-  } catch (error) {
-    console.error(
-      'Unable to read pendingBooking:',
-      error
-    );
-  }
+              pickupLocation:
+                pendingBooking.pickupLocation || '',
 
-  try {
-    const receiptResponse = await fetch(
-      `${API_BASE_URL}/payment-success`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          merchantOrderId,
+              // Transportation
+              transportation:
+                pendingBooking.transportation || '',
 
-          customerName:
-            pendingBooking?.customerName ||
-            pendingBooking?.name ||
-            '',
+              transportationAmount: Number(
+                pendingBooking.transportationAmount || 0
+              ),
 
-          customerEmail:
-            pendingBooking?.customerEmail ||
-            pendingBooking?.email ||
-            '',
+              // Without transportation
+              withoutTransportTickets: Number(
+                pendingBooking.withoutTransportTickets ??
+                pendingBooking.withoutTransportationTickets ??
+                0
+              ),
 
-          trekName:
-            pendingBooking?.trekName ||
-            pendingBooking?.tripName ||
-            '',
+              withoutTransportPrice: Number(
+                pendingBooking.withoutTransportPrice || 0
+              ),
 
-          subtotal:
-            pendingBooking?.subtotal || 0,
+              withoutTransportAmount: Number(
+                pendingBooking.withoutTransportAmount || 0
+              ),
 
-          gst:
-            pendingBooking?.gst || 0,
+              // With transportation
+              withTransportTickets: Number(
+                pendingBooking.withTransportTickets ??
+                pendingBooking.withTransportationTickets ??
+                0
+              ),
 
-          totalAmount:
-            pendingBooking?.totalAmount ||
-            pendingBooking?.amount ||
-            0,
-        }),
+              withTransportPrice: Number(
+                pendingBooking.withTransportPrice || 0
+              ),
+
+              withTransportAmount: Number(
+                pendingBooking.withTransportAmount || 0
+              ),
+
+              // Payment breakdown
+              subtotal: Number(
+                pendingBooking.subtotal || 0
+              ),
+
+              gst: Number(
+                pendingBooking.gst || 0
+              ),
+
+              totalAmount: Number(
+                pendingBooking.total ??
+                pendingBooking.totalAmount ??
+                pendingBooking.amount ??
+                0
+              ),
+            }),
+          }
+        );
+
+        const receiptResult =
+          await receiptResponse.json();
+
+        if (
+          !receiptResponse.ok ||
+          !receiptResult.success
+        ) {
+          throw new Error(
+            receiptResult.message ||
+            'Unable to generate receipt.'
+          );
+        }
+
+        if (cancelled) return;
+
+        setReceiptPdfBase64(
+          receiptResult.receiptPdfBase64 || ''
+        );
+
+        setReceiptFilename(
+          receiptResult.receiptFilename ||
+          'Payment-Receipt.pdf'
+        );
+
+        setShowReceiptPopup(true);
+
+      } catch (error) {
+        console.error(
+          'Receipt generation failed:',
+          error
+        );
+
+        if (!cancelled) {
+          setState({
+            status: 'SUCCESS',
+            error:
+              'Payment successful, but receipt generation failed. Please contact support.',
+          });
+        }
+      } finally {
+        if (!cancelled) {
+          setReceiptLoading(false);
+        }
       }
-    );
-
-    const receiptResult =
-      await receiptResponse.json();
-
-    console.log(
-      'Payment-success API response:',
-      receiptResult
-    );
-
-    if (!receiptResponse.ok) {
-      console.error(
-        'Payment-success API failed:',
-        receiptResult
-      );
-    }
-  } catch (receiptError) {
-    console.error(
-      'Payment-success API call failed:',
-      receiptError
-    );
-  }
-
-  setState({
-    status: 'SUCCESS',
-    error: '',
-  });
-
-  return;
-}
-
-    setState({
-      status,
-      error: '',
-    });
-
-    if (status === 'PROCESSING') {
-      timeoutId = window.setTimeout(
-        checkStatus,
-        3000
-      );
-    }
-  } catch (error) {
-    console.error(
-      'Payment status check failed:',
-      error
-    );
-
-    if (!cancelled) {
-      setState({
-        status: 'UNKNOWN',
-        error:
-          error.message ||
-          'Unable to verify payment.',
-      });
-    }
-  }
-};
+    };
 
     checkStatus();
 
@@ -215,27 +327,93 @@ const checkStatus = async () => {
     };
   }, [merchantOrderId]);
 
-  useEffect(() => {
-    if (state.status !== 'SUCCESS') {
-      return undefined;
+  function downloadReceipt() {
+    if (!receiptPdfBase64) {
+      setState((previous) => ({
+        ...previous,
+        error: 'Receipt PDF is not available.',
+      }));
+
+      return;
     }
+
+    try {
+      const binaryString = window.atob(
+        receiptPdfBase64
+      );
+
+      const bytes = new Uint8Array(
+        binaryString.length
+      );
+
+      for (
+        let index = 0;
+        index < binaryString.length;
+        index++
+      ) {
+        bytes[index] =
+          binaryString.charCodeAt(index);
+      }
+
+      const pdfBlob = new Blob(
+        [bytes],
+        {
+          type: 'application/pdf',
+        }
+      );
+
+      const downloadUrl =
+        window.URL.createObjectURL(pdfBlob);
+
+      const link =
+        document.createElement('a');
+
+      link.href = downloadUrl;
+      link.download = receiptFilename;
+
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      window.setTimeout(() => {
+        window.URL.revokeObjectURL(
+          downloadUrl
+        );
+      }, 1000);
+
+      setShowReceiptPopup(false);
+
+      sessionStorage.removeItem(
+        'pendingBooking'
+      );
+
+      navigate('/', {
+        replace: true,
+      });
+    } catch (error) {
+      console.error(
+        'Receipt download failed:',
+        error
+      );
+
+      setState((previous) => ({
+        ...previous,
+        error: 'Unable to download receipt.',
+      }));
+    }
+  }
+
+  function closeReceiptPopup() {
+    setShowReceiptPopup(false);
 
     sessionStorage.removeItem(
       'pendingBooking'
     );
 
-    const timeoutId =
-      window.setTimeout(
-        () =>
-          navigate('/', {
-            replace: true,
-          }),
-        1500
-      );
-
-    return () =>
-      window.clearTimeout(timeoutId);
-  }, [navigate, state.status]);
+    navigate('/', {
+      replace: true,
+    });
+  }
 
   const isSuccess =
     state.status === 'SUCCESS';
@@ -256,45 +434,105 @@ const checkStatus = async () => {
       : 'Verifying your payment';
 
   const description = isSuccess
-    ? 'Your payment has been received. Taking you to the home page…'
+    ? 'Your payment has been received.'
     : isFailed
       ? 'No payment was collected. You can return to the trek page and try again.'
       : state.error ||
-        'Please wait while we confirm your payment with PhonePe.';
+      'Please wait while we confirm your payment with PhonePe.';
 
   return (
     <main className="payment-page">
       <section
-        className={`payment-card payment-result ${
-          isSuccess
+        className={`payment-card payment-result ${isSuccess
             ? 'success'
             : isFailed
               ? 'failed'
               : ''
-        }`}
+          }`}
       >
-        <Icon
-          className="payment-result-icon"
-          size={52}
-        />
+        {!showReceiptPopup && (
+          <>
+            <Icon
+              className="payment-result-icon"
+              size={52}
+            />
 
-        <h1>{heading}</h1>
+            <h1>{heading}</h1>
 
-        <p>{description}</p>
+            <p>{description}</p>
 
-        {merchantOrderId && (
-          <small>
-            Order reference:{' '}
-            {merchantOrderId}
-          </small>
+            {receiptLoading && (
+              <p>
+                Preparing your receipt...
+              </p>
+            )}
+
+            {merchantOrderId && (
+              <small>
+                Order reference:{' '}
+                {merchantOrderId}
+              </small>
+            )}
+
+            <Link
+              className="payment-continue"
+              to="/"
+            >
+              Return home
+            </Link>
+          </>
         )}
 
-        <Link
-          className="payment-continue"
-          to="/"
-        >
-          Return home
-        </Link>
+        {showReceiptPopup && (
+          <div
+            className="receipt-modal-overlay"
+          >
+            <div
+              className="receipt-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="receipt-title"
+            >
+              <CheckCircle2
+                size={56}
+                color="#16a34a"
+              />
+
+              <h2 id="receipt-title">
+                Payment Successful!
+              </h2>
+
+              <p>
+                Your payment has been
+                received successfully.
+              </p>
+
+              <p>
+                Do you want to download your
+                receipt PDF?
+              </p>
+
+              <div className="receipt-modal-actions">
+                <button
+                  type="button"
+                  className="receipt-no-btn"
+                  onClick={closeReceiptPopup}
+                >
+                  No
+                </button>
+
+                <button
+                  type="button"
+                  className="receipt-yes-btn"
+                  onClick={downloadReceipt}
+                >
+                  <Download size={18} />
+                  Yes, Download Receipt
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </section>
     </main>
   );
