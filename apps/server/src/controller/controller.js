@@ -204,6 +204,7 @@ exports.createPhonePePayment = async (req, res) => {
       preferred_payment_method,
     } = req.body;
 
+    // Validate payment amount
     if (!amount || Number(amount) <= 0) {
       return res.status(400).json({
         success: false,
@@ -211,32 +212,42 @@ exports.createPhonePePayment = async (req, res) => {
       });
     }
 
+    // Create PhonePe payment
     const result = await phonepeComponent.createPayment({
       amount: Number(amount),
 
       bookingDetails: {
         customerName,
         customerEmail,
-        customerPhone: customerPhone || customerMobile,
+
+        // Save customer mobile number
+        customerPhone: customerPhone || customerMobile || '',
+
         trekName,
         trekDate,
         pickupLocation,
+
         transportation,
         transportationAmount,
+
         withoutTransportTickets,
         withoutTransportPrice,
         withoutTransportAmount,
+
         withTransportTickets,
         withTransportPrice,
         withTransportAmount,
+
         subtotal,
         gst,
         totalAmount,
+
         user_id,
         preferred_payment_method,
       },
     });
 
+    // Return successful payment response
     return res.status(200).json({
       success: true,
       message: 'PhonePe payment created successfully',
@@ -244,21 +255,25 @@ exports.createPhonePePayment = async (req, res) => {
     });
 
   } catch (error) {
-  console.error('========== PHONEPE CREATE PAYMENT ERROR ==========');
-  console.error('Full error:', error);
-  console.error('Message:', error?.message);
-  console.error('Code:', error?.code);
-  console.error('Status:', error?.status);
-  console.error('HTTP Status:', error?.httpStatusCode);
-  console.error('Response:', error?.response?.data);
-  console.error('Stack:', error?.stack);
-  console.error('==================================================');
+    // Log complete PhonePe error in backend
+    console.error(
+      '========== PHONEPE CREATE PAYMENT ERROR =========='
+    );
 
-  return res.status(500).json({
-    success: false,
-    message: error?.message || 'Unable to create PhonePe payment.',
-  });
+    console.error('Message:', error?.message);
+    console.error('Code:', error?.code);
+    console.error('Status:', error?.status);
+    console.error('HTTP Status:', error?.httpStatusCode);
+    console.error('Tracking ID:', error?.trackingId);
+    console.error('Response:', error?.response?.data);
+    console.error('Full Error:', error);
+    console.error('Stack:', error?.stack);
 
+    console.error(
+      '=================================================='
+    );
+
+    // PhonePe client not found
     if (
       error?.code === 'OIM007' ||
       error?.httpStatusCode === 404
@@ -270,6 +285,7 @@ exports.createPhonePePayment = async (req, res) => {
       });
     }
 
+    // PhonePe authentication failure
     if (
       error?.httpStatusCode === 401 ||
       error?.code === '401'
@@ -281,9 +297,11 @@ exports.createPhonePePayment = async (req, res) => {
       });
     }
 
+    // Other payment errors
     return res.status(500).json({
       success: false,
       message:
+        error?.message ||
         'Unable to create PhonePe payment. Please try again.',
     });
   }
