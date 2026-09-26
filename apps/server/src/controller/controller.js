@@ -258,7 +258,6 @@ exports.createPhonePePayment = async (req, res) => {
     success: false,
     message: error?.message || 'Unable to create PhonePe payment.',
   });
-}
 
     if (
       error?.code === 'OIM007' ||
