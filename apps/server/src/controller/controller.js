@@ -244,12 +244,21 @@ exports.createPhonePePayment = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Create PhonePe Payment Error:', {
-      message: error.message,
-      code: error.code,
-      httpStatusCode: error.httpStatusCode,
-      trackingId: error.trackingId,
-    });
+  console.error('========== PHONEPE CREATE PAYMENT ERROR ==========');
+  console.error('Full error:', error);
+  console.error('Message:', error?.message);
+  console.error('Code:', error?.code);
+  console.error('Status:', error?.status);
+  console.error('HTTP Status:', error?.httpStatusCode);
+  console.error('Response:', error?.response?.data);
+  console.error('Stack:', error?.stack);
+  console.error('==================================================');
+
+  return res.status(500).json({
+    success: false,
+    message: error?.message || 'Unable to create PhonePe payment.',
+  });
+}
 
     if (
       error?.code === 'OIM007' ||
