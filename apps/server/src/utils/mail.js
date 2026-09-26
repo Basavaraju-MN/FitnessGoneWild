@@ -1,28 +1,18 @@
-const nodemailer = require('nodemailer');
+const fs = require('fs');
+const { Resend } = require('resend');
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-});
+const resend = new Resend(
+  process.env.RESEND_API_KEY
+);
 
 async function verifyMailConnection() {
-  try {
-    await transporter.verify();
-
-    console.log('Gmail mail transporter is ready');
-
-    return true;
-  } catch (error) {
-    console.error(
-      'Gmail transporter verification failed:',
-      error.message
-    );
-
+  if (!process.env.RESEND_API_KEY) {
+    console.error('RESEND_API_KEY is missing');
     return false;
   }
+
+  console.log('Resend API key is configured');
+  return true;
 }
 
 async function sendPaymentReceiptMail({
@@ -32,49 +22,79 @@ async function sendPaymentReceiptMail({
   htmlFilePath,
   htmlFileName,
 }) {
-  const mailOptions = {
-    from: process.env.GMAIL_USER,
+  try {
+    if (!customerEmail) {
+      throw new Error('Customer email is missing');
+    }
 
-    to: customerEmail,
+    if (!fs.existsSync(htmlFilePath)) {
+      throw new Error(
+        `Receipt file not found: ${htmlFilePath}`
+      );
+    }
 
-    subject:
-      `Payment Receipt - ${receiptNumber}`,
+    const receiptBuffer =
+      await fs.promises.readFile(htmlFilePath);
 
-    html: `
-      <p>Dear ${customerName || 'Customer'},</p>
+    const { data, error } = await resend.emails.send({
+      from: 'The Fitness Gone Wild <onboarding@resend.dev>',
 
-      <p>
-        Thank you for your booking with
-        <strong>The Fitness Gone Wild</strong>.
-      </p>
+      to: [customerEmail],
 
-      <p>
-        Your payment was successful.
-      </p>
+      subject: `Payment Receipt - ${receiptNumber}`,
 
-      <p>
-        Please find your payment receipt attached.
-      </p>
+      html: `
+        <p>Dear ${customerName || 'Customer'},</p>
 
-      <p>
-        Regards,<br>
-        The Fitness Gone Wild
-      </p>
-    `,
+        <p>
+          Thank you for your booking with
+          <strong>The Fitness Gone Wild</strong>.
+        </p>
 
-    attachments: [
-      {
-        filename: htmlFileName,
-        path: htmlFilePath,
-        contentType: 'text/html',
-      },
-    ],
-  };
+        <p>Your payment was successful.</p>
 
-  return await transporter.sendMail(mailOptions);
+        <p>
+          Please find your payment receipt attached.
+        </p>
+
+        <p>
+          Regards,<br>
+          The Fitness Gone Wild
+        </p>
+      `,
+
+      attachments: [
+        {
+          filename: htmlFileName,
+          content: receiptBuffer.toString('base64'),
+        },
+      ],
+    });
+
+    if (error) {
+      console.error('Resend API error:', error);
+      throw new Error(error.message);
+    }
+
+    console.log(
+      'Receipt email accepted by Resend:',
+      data.id
+    );
+
+    return data;
+
+  } catch (error) {
+    console.error(
+      'Receipt email failed:',
+      error.message
+    );
+
+    throw error;
+  }
 }
+
 module.exports = {
-  transporter,
+  resend,
   verifyMailConnection,
   sendPaymentReceiptMail,
 };
