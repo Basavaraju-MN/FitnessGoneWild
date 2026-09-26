@@ -31,6 +31,92 @@
   overflow-y: auto;
 }
 
+.receipt-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.65);
+}
+
+.receipt-modal {
+  width: 100%;
+  max-width: 460px;
+  padding: 36px 28px;
+  text-align: center;
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.receipt-modal h2 {
+  margin: 18px 0 12px;
+  color: #111827;
+  font-size: 25px;
+  font-weight: 700;
+}
+
+.receipt-modal p {
+  margin: 10px 0;
+  color: #64748b;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.receipt-modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.receipt-no-btn,
+.receipt-yes-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 12px 22px;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.receipt-no-btn {
+  color: #334155;
+  background: #e2e8f0;
+}
+
+.receipt-yes-btn {
+  color: #fff;
+  background: #16a34a;
+}
+
+.receipt-yes-btn:hover {
+  background: #15803d;
+}
+
+.receipt-no-btn:hover {
+  background: #cbd5e1;
+}
+
+@media (max-width: 480px) {
+  .receipt-modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .receipt-no-btn,
+  .receipt-yes-btn {
+    width: 100%;
+  }
+}
+
 .payment-back { display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; color: #166b5a; font: inherit; cursor: pointer; }
 .payment-heading { display: flex; gap: 13px; align-items: center; margin: 24px 0; }
 .payment-heading p { margin: 0 0 3px; color: #5c6a66; font-size: 13px; }

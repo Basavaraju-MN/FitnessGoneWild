@@ -163,10 +163,7 @@ app.get('/api/health', async (req, res) => {
     });
   }
 });
-const {
-  verifyMailConnection,
-} = require('./utils/mail');
-verifyMailConnection();
+
 app.use('/api', trekRoutes);
 
 app.use(

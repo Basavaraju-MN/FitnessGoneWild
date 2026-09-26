@@ -1,14 +1,12 @@
 
 const crypto = require('crypto');
 
+const { generatePaymentReceiptPdf, } = require('../utils/paymentReceipt');
+const paymentDbOps = require('../db/paymentDbops');
 const phonepeComponent = require('../components/payment/phonepeComponent');
 const component = require('../components/trekDetails');
 const brochureComponent = require('../components/broucher/broucher')
-const {  generatePaymentReceiptFile,} = require('../utils/paymentReceipt');
-
-const {
-  sendPaymentReceiptMail,
-} = require('../utils/mail');
+const { generatePaymentReceiptFile, } = require('../utils/paymentReceipt');
 
 exports.getTrekCategories = async (req, res) => {
   try {
@@ -181,68 +179,135 @@ exports.downloadBroucher = async (req, res) => {
 };
 
 exports.createPhonePePayment = async (req, res) => {
-    try {
-        const { amount } = req.body;
-        const result = await phonepeComponent.createPayment({ amount});
-        return res.status(200).json({ success: true, message: 'PhonePe payment created successfully', data: result });
-    } catch (error) {
-        console.error('Create PhonePe Payment Error:', error);
-        if (error?.httpStatusCode === 401 || error?.code === '401') {
-            return res.status(502).json({
-                success: false,
-                message: 'PhonePe rejected the configured credentials. Verify the client ID, client secret, client version, and environment in the server .env file.',
-            });
-        }
-        return res.status(500).json({ success: false, message: error.message || 'Unable to create PhonePe payment' });
+  try {
+    const {
+      amount,
+      customerName,
+      customerEmail,
+      customerMobile,
+      customerPhone,
+      trekName,
+      trekDate,
+      pickupLocation,
+      transportation,
+      transportationAmount,
+      withoutTransportTickets,
+      withoutTransportPrice,
+      withoutTransportAmount,
+      withTransportTickets,
+      withTransportPrice,
+      withTransportAmount,
+      subtotal,
+      gst,
+      totalAmount,
+      user_id,
+      preferred_payment_method,
+    } = req.body;
+
+    if (!amount || Number(amount) <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'A valid payment amount is required',
+      });
     }
+
+    const result = await phonepeComponent.createPayment({
+      amount: Number(amount),
+
+      bookingDetails: {
+        customerName,
+        customerEmail,
+        customerPhone: customerPhone || customerMobile,
+        trekName,
+        trekDate,
+        pickupLocation,
+        transportation,
+        transportationAmount,
+        withoutTransportTickets,
+        withoutTransportPrice,
+        withoutTransportAmount,
+        withTransportTickets,
+        withTransportPrice,
+        withTransportAmount,
+        subtotal,
+        gst,
+        totalAmount,
+        user_id,
+        preferred_payment_method,
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'PhonePe payment created successfully',
+      data: result,
+    });
+
+  } catch (error) {
+    console.error('Create PhonePe Payment Error:', {
+      message: error.message,
+      code: error.code,
+      httpStatusCode: error.httpStatusCode,
+      trackingId: error.trackingId,
+    });
+
+    if (
+      error?.code === 'OIM007' ||
+      error?.httpStatusCode === 404
+    ) {
+      return res.status(502).json({
+        success: false,
+        message:
+          'PhonePe could not find the configured client. Verify the PhonePe Client ID and environment.',
+      });
+    }
+
+    if (
+      error?.httpStatusCode === 401 ||
+      error?.code === '401'
+    ) {
+      return res.status(502).json({
+        success: false,
+        message:
+          'PhonePe rejected the configured credentials. Verify the Client ID, Client Secret, Client Version, and environment.',
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message:
+        'Unable to create PhonePe payment. Please try again.',
+    });
+  }
 };
 
 exports.checkPhonePePaymentStatus = async (req, res) => {
-    try {
-        const { merchantOrderId } = req.params;
-        const result = await phonepeComponent.checkPaymentStatus(merchantOrderId);
-        return res.status(200).json({ success: true, data: result });
-    } catch (error) {
-        console.error('PhonePe Status Error:', error);
-        return res.status(500).json({ success: false, message: error.message || 'Unable to check PhonePe payment' });
-    }
+  try {
+    const { merchantOrderId } = req.params;
+    const result = await phonepeComponent.checkPaymentStatus(merchantOrderId);
+    return res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    console.error('PhonePe Status Error:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Unable to check PhonePe payment' });
+  }
 };
 
 exports.phonePeWebhook = async (req, res) => {
-    try {
-        const authorization = req.headers.authorization || '';
-        const rawBody = req.rawBody || '';
-        const result = await phonepeComponent.processWebhook({ authorization, rawBody });
-        return res.status(200).json({ success: true, message: 'Webhook processed successfully', data: result });
-    } catch (error) {
-        console.error('PhonePe Webhook Error:', error);
-        return res.status(401).json({ success: false, message: error.message || 'Invalid PhonePe webhook' });
-    }
+  try {
+    const authorization = req.headers.authorization || '';
+    const rawBody = req.rawBody || '';
+    const result = await phonepeComponent.processWebhook({ authorization, rawBody });
+    return res.status(200).json({ success: true, message: 'Webhook processed successfully', data: result });
+  } catch (error) {
+    console.error('PhonePe Webhook Error:', error);
+    return res.status(401).json({ success: false, message: error.message || 'Invalid PhonePe webhook' });
+  }
 };
 
 exports.paymentSuccess = async (req, res) => {
   try {
-    const {
-      merchantOrderId,
-      customerName,
-      customerEmail,
-      customerMobile,
-      trekName,
-      trekDate,
-      pickupLocation,
+    const { merchantOrderId } = req.body;
 
-      transportTickets,
-      transportPrice,
-      transportAmount,
-
-      withoutTransportTickets,
-      withoutTransportPrice,
-      withoutTransportAmount,
-    } = req.body;
-
-    // ------------------------------------
-    // 1. Validate merchant order ID
-    // ------------------------------------
     if (!merchantOrderId) {
       return res.status(400).json({
         success: false,
@@ -250,292 +315,332 @@ exports.paymentSuccess = async (req, res) => {
       });
     }
 
-    // ------------------------------------
-    // 2. Verify payment with PhonePe
-    // ------------------------------------
-    console.log('======================================');
-    console.log('PAYMENT SUCCESS API CALLED');
-    console.log('merchantOrderId:', merchantOrderId);
+    // 1. Get the transaction from MySQL
+    const transaction =
+      await paymentDbOps.getTransactionByOrderId(
+        merchantOrderId
+      );
 
-    const paymentResult =
+    if (!transaction) {
+      return res.status(404).json({
+        success: false,
+        message: 'Payment transaction not found',
+      });
+    }
+
+    // 2. Get saved booking details
+    let bookingDetails =
+      transaction.booking_details ||
+      transaction.bookingDetails ||
+      {};
+
+    if (typeof bookingDetails === 'string') {
+      try {
+        bookingDetails = JSON.parse(bookingDetails);
+      } catch (error) {
+        console.error(
+          'Error parsing booking details:',
+          error
+        );
+
+        bookingDetails = {};
+      }
+    }
+
+    bookingDetails = bookingDetails || {};
+
+    // 3. Verify payment directly with PhonePe
+    const paymentResponse =
       await phonepeComponent.checkPaymentStatus(
         merchantOrderId
       );
 
-    console.log(
-      'Payment verification result:',
-      paymentResult
-    );
-
-    const paymentStatus =
-      paymentResult?.status ||
-      paymentResult?.state ||
-      paymentResult?.data?.status ||
-      paymentResult?.data?.state;
-
-    console.log(
-      'Final payment status:',
-      paymentStatus
-    );
-
-    // ------------------------------------
-    // 3. Check payment status
-    // ------------------------------------
-    if (
-      paymentStatus !== 'SUCCESS' &&
-      paymentStatus !== 'COMPLETED'
-    ) {
+    if (paymentResponse.status !== 'SUCCESS') {
       return res.status(400).json({
         success: false,
         message: 'Payment is not successful',
-        status: paymentStatus,
+        paymentStatus: paymentResponse.status,
       });
     }
 
-    console.log('Payment verified successfully');
+    const phonepeData =
+      paymentResponse.phonepeResponse || {};
 
-    // ------------------------------------
-    // 4. Generate receipt details
-    // ------------------------------------
+    // 4. Get customer details
+    const customerName =
+      bookingDetails.customerName ||
+      bookingDetails.name ||
+      '';
+
+    const customerEmail =
+      bookingDetails.customerEmail ||
+      bookingDetails.email ||
+      '';
+
+const customerPhone =
+  bookingDetails.customerMobile ||
+  bookingDetails.customerPhone ||
+  bookingDetails.mobileNumber ||
+  bookingDetails.mobile ||
+  bookingDetails.phoneNumber ||
+  bookingDetails.phone ||
+  '';
+
+    // 5. Get selected trek details
+    const trekName =
+      bookingDetails.trekName ||
+      bookingDetails.tripName ||
+      '';
+
+    const trekDate =
+      bookingDetails.trekDate ||
+      bookingDetails.selectedTrekDate ||
+      bookingDetails.selectedDate ||
+      bookingDetails.bookingDate ||
+      '';
+
+    const pickupLocation =
+      bookingDetails.pickupLocation ||
+      bookingDetails.selectedPickupLocation ||
+      bookingDetails.boardingPoint ||
+      '';
+
+    // 6. Get ticket quantities
+    const withoutTransportTickets = Number(
+      bookingDetails.withoutTransportTickets || 0
+    );
+
+    const withTransportTickets = Number(
+      bookingDetails.withTransportTickets || 0
+    );
+
+    const tickets =
+      withoutTransportTickets + withTransportTickets;
+
+    // 7. Get stored prices and amounts
+    const subtotal = Number(
+      bookingDetails.subtotal || 0
+    );
+
+    const gst = Number(
+      bookingDetails.gst || 0
+    );
+
+    const transportationAmount = Number(
+      bookingDetails.transportationAmount || 0
+    );
+
+    let withoutTransportPrice = Number(
+      bookingDetails.withoutTransportPrice || 0
+    );
+
+    let withTransportPrice = Number(
+      bookingDetails.withTransportPrice || 0
+    );
+
+    let withoutTransportAmount = Number(
+      bookingDetails.withoutTransportAmount || 0
+    );
+
+    let withTransportAmount = Number(
+      bookingDetails.withTransportAmount || 0
+    );
+
+    // 8. Calculate missing ticket amounts
+    //
+    // The subtotal is assumed to include ticket charges
+    // and transportation charges.
+    //
+    // Remove transportation from subtotal to get the
+    // base ticket subtotal.
+    const ticketSubtotal = Math.max(
+      0,
+      subtotal - transportationAmount
+    );
+
+    const totalTicketQuantity =
+      withoutTransportTickets + withTransportTickets;
+
+    // If both row amounts are missing, distribute the
+    // base ticket subtotal based on ticket quantities.
+    if (
+      withoutTransportAmount <= 0 &&
+      withTransportAmount <= 0
+    ) {
+      if (totalTicketQuantity > 0) {
+        if (
+          withoutTransportTickets > 0 &&
+          withTransportTickets > 0
+        ) {
+          withoutTransportAmount =
+            (ticketSubtotal *
+              withoutTransportTickets) /
+            totalTicketQuantity;
+
+          withTransportAmount =
+            (ticketSubtotal *
+              withTransportTickets) /
+            totalTicketQuantity;
+
+          // Add transportation to the with-transport row.
+          withTransportAmount += transportationAmount;
+        } else if (withoutTransportTickets > 0) {
+          withoutTransportAmount = ticketSubtotal;
+        } else if (withTransportTickets > 0) {
+          withTransportAmount =
+            ticketSubtotal + transportationAmount;
+        }
+      }
+    } else {
+      // If one row amount is already stored, preserve it
+      // and calculate the missing row from the remainder.
+      if (
+        withoutTransportTickets > 0 &&
+        withoutTransportAmount <= 0
+      ) {
+        withoutTransportAmount = Math.max(
+          0,
+          subtotal -
+            transportationAmount -
+            Math.max(
+              0,
+              withTransportAmount - transportationAmount
+            )
+        );
+      }
+
+      if (
+        withTransportTickets > 0 &&
+        withTransportAmount <= 0
+      ) {
+        withTransportAmount = Math.max(
+          0,
+          subtotal - withoutTransportAmount
+        );
+      }
+    }
+
+    // 9. Calculate per-ticket prices if missing
+    if (
+      withoutTransportTickets > 0 &&
+      withoutTransportPrice <= 0
+    ) {
+      withoutTransportPrice =
+        withoutTransportAmount /
+        withoutTransportTickets;
+    }
+
+    if (
+      withTransportTickets > 0 &&
+      withTransportPrice <= 0
+    ) {
+      withTransportPrice =
+        withTransportAmount /
+        withTransportTickets;
+    }
+
+    // 10. Determine transportation selection
+    const transportation =
+      bookingDetails.transportation ||
+      (withTransportTickets > 0
+        ? 'With Transportation'
+        : 'Without Transportation');
+
+    // 11. Get actual payment amount from transaction.
+    // MySQL transaction amount is stored in paise.
+    const paidAmount =
+      Number(transaction.amount || 0) / 100;
+
+    // 12. Generate receipt number
     const receiptNumber =
       `FGW-${Date.now()}-${crypto
         .randomBytes(3)
         .toString('hex')
         .toUpperCase()}`;
 
-    const amountInPaise = Number(
-      paymentResult
-        ?.phonepeResponse
-        ?.amount || 0
-    );
-
-    const totalAmount = Number(
-      (amountInPaise / 100).toFixed(2)
-    );
-
-    // GST 5% included in total
-    const gst = Number(
-      (totalAmount * 5 / 105).toFixed(2)
-    );
-
-    const subtotal = Number(
-      (totalAmount - gst).toFixed(2)
-    );
-
-    const transactionId =
-      paymentResult
-        ?.phonepeResponse
-        ?.orderId ||
-      merchantOrderId;
-
+    // 13. Build final receipt data
     const receiptData = {
-      companyName: 'Fitness Gone Wild',
-
-      companyAddress:
-        process.env.COMPANY_ADDRESS ||
-        'Bengaluru, Karnataka, India',
-
-      companyEmail:
-        process.env.GMAIL_USER || '',
-
-      companyPhone:
-        process.env.COMPANY_PHONE || '',
-
       receiptNumber,
+      merchantOrderId,
 
-      paymentDate:
-        new Date().toLocaleString(
-          'en-IN',
-          {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-          }
-        ),
+      companyName: 'The Fitness Gone Wild',
+
+      customerName,
+      customerEmail,
+      customerPhone,
+
+      trekName,
+      trekDate,
+      pickupLocation,
+
+      tickets,
+      transportation,
+
+      transportationAmount:
+        subtotal.toFixed(2),
+
+      withoutTransportTickets,
+      withoutTransportPrice:
+        withoutTransportPrice.toFixed(2),
+      withoutTransportAmount:
+        withoutTransportAmount.toFixed(2),
+
+      withTransportTickets,
+      withTransportPrice:
+        withTransportPrice.toFixed(2),
+      withTransportAmount:
+        withTransportAmount.toFixed(2),
+
+      subtotal: subtotal.toFixed(2),
+      gst: gst.toFixed(2),
+      totalAmount: paidAmount.toFixed(2),
 
       paymentStatus: 'SUCCESS',
 
-      merchantOrderId,
+      paymentMethod:
+        phonepeData.paymentInstrument?.type ||
+        'PhonePe',
 
-      transactionId,
-
-      paymentMethod: 'PhonePe',
-
-      customerName: customerName || '',
-
-      customerEmail: customerEmail || '',
-
-      customerMobile: customerMobile || '',
-
-      trekName: trekName || '',
-
-      trekDate: trekDate || '',
-
-      pickupLocation: pickupLocation || '',
-
-      transportTickets:
-        transportTickets || 0,
-
-      transportPrice:
-        transportPrice || 0,
-
-      transportAmount:
-        transportAmount || 0,
-
-      withoutTransportTickets:
-        withoutTransportTickets || 0,
-
-      withoutTransportPrice:
-        withoutTransportPrice || 0,
-
-      withoutTransportAmount:
-        withoutTransportAmount || 0,
-
-      subtotal,
-
-      gst,
-
-      totalAmount,
+      paymentDate: new Date().toLocaleString(
+        'en-IN',
+        {
+          timeZone: 'Asia/Kolkata',
+        }
+      ),
     };
 
-    // ------------------------------------
-    // 5. Generate receipt HTML
-    // ------------------------------------
+    // Debug: verify all fields before generating PDF
     console.log(
-      'Generating payment receipt HTML...'
+      'Final receipt data:',
+      JSON.stringify(receiptData, null, 2)
     );
 
-    const receiptFile =
-      await generatePaymentReceiptFile(
-        receiptData
-      );
+    // 14. Generate PDF
+    const pdfBuffer =
+      await generatePaymentReceiptPdf(receiptData);
 
-    console.log(
-      'Payment receipt HTML generated:',
-      receiptFile.filePath
-    );
-
-    // ------------------------------------
-    // 6. Send email WITHOUT awaiting it
-    // ------------------------------------
-    sendPaymentReceiptMail({
-      customerEmail,
-      customerName,
-      receiptNumber,
-      htmlFilePath: receiptFile.filePath,
-      htmlFileName: receiptFile.fileName,
-    })
-      .then((mailResult) => {
-        console.log(
-          '======================================'
-        );
-
-        console.log(
-          'PAYMENT RECEIPT EMAIL SENT'
-        );
-
-        console.log(
-          'Message ID:',
-          mailResult.messageId
-        );
-
-        console.log(
-          '======================================'
-        );
-      })
-      .catch((mailError) => {
-        console.error(
-          '======================================'
-        );
-
-        console.error(
-          'PAYMENT RECEIPT EMAIL FAILED'
-        );
-
-        console.error(
-          'name:',
-          mailError.name
-        );
-
-        console.error(
-          'code:',
-          mailError.code
-        );
-
-        console.error(
-          'command:',
-          mailError.command
-        );
-
-        console.error(
-          'response:',
-          mailError.response
-        );
-
-        console.error(
-          'message:',
-          mailError.message
-        );
-
-        console.error(
-          '======================================'
-        );
-      });
-
-    // ------------------------------------
-    // 7. RETURN SUCCESS IMMEDIATELY
-    // ------------------------------------
+    // 15. Return PDF to frontend
     return res.status(200).json({
       success: true,
-
-      message:
-        'Payment successful',
-
+      message: 'Payment successful',
       receiptNumber,
+      merchantOrderId,
+
+      receiptPdfBase64:
+        pdfBuffer.toString('base64'),
+
+      receiptFilename:
+        `Payment-Receipt-${receiptNumber}.pdf`,
     });
-
   } catch (error) {
-
     console.error(
-      '======================================'
-    );
-
-    console.error(
-      'PAYMENT SUCCESS ERROR'
-    );
-
-    console.error(
-      'name:',
-      error.name
-    );
-
-    console.error(
-      'code:',
-      error.code
-    );
-
-    console.error(
-      'message:',
-      error.message
-    );
-
-    console.error(
-      'stack:',
-      error.stack
-    );
-
-    console.error(
-      '======================================'
+      'Payment success error:',
+      error
     );
 
     return res.status(500).json({
       success: false,
-
-      message:
-        error.message ||
-        'Failed to process payment success',
+      message: 'Unable to process payment receipt',
     });
   }
 };
