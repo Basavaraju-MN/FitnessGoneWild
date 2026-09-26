@@ -26,7 +26,7 @@ export default function Hero() {
       setCurrentSlide((prev) =>
         (prev + 1) % heroSlides.length
       );
-    }, 5000);
+    }, 4000);
 
     return () => clearInterval(interval);
   }, []);
