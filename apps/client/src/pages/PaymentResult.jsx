@@ -27,6 +27,13 @@ const API_BASE_URL =
     ? 'http://localhost:4000/api'
     : '/api');
 
+const STATUS_CHECK_INTERVAL_MS = 3000;
+
+// About 2 minutes of retries before showing an error.
+const MAX_FAILED_STATUS_CHECKS = 40;
+
+const MAX_RECEIPT_ATTEMPTS = 5;
+
 export default function PaymentResult() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -59,6 +66,7 @@ export default function PaymentResult() {
 
     let cancelled = false;
     let timeoutId;
+    let failedAttempts = 0;
 
     const checkStatus = async () => {
       try {
@@ -122,7 +130,7 @@ export default function PaymentResult() {
 
         timeoutId = window.setTimeout(
           checkStatus,
-          3000
+          STATUS_CHECK_INTERVAL_MS
         );
       } catch (error) {
         console.error(
@@ -130,14 +138,32 @@ export default function PaymentResult() {
           error
         );
 
-        if (!cancelled) {
+        if (cancelled) return;
+
+        // Temporary failures (PhonePe delay, server waking up)
+        // are common right after the redirect, so keep retrying
+        // before giving up.
+        if (failedAttempts < MAX_FAILED_STATUS_CHECKS) {
+          failedAttempts += 1;
+
           setState({
-            status: 'UNKNOWN',
-            error:
-              error.message ||
-              'Unable to verify payment.',
+            status: 'PROCESSING',
+            error: '',
           });
+
+          timeoutId = window.setTimeout(
+            checkStatus,
+            STATUS_CHECK_INTERVAL_MS
+          );
+
+          return;
         }
+
+        setState({
+          status: 'UNKNOWN',
+          error:
+            'We could not confirm your payment yet. If money was deducted, please contact us with your order reference.',
+        });
       }
     };
 
@@ -166,7 +192,7 @@ export default function PaymentResult() {
           );
         }
 
-        const receiptResponse = await fetch(
+        const requestReceipt = () => fetch(
           `${API_BASE_URL}/payment-success`,
           {
             method: 'POST',
@@ -266,17 +292,48 @@ export default function PaymentResult() {
           }
         );
 
-        const receiptResult =
-          await receiptResponse.json();
+        // The receipt endpoint re-verifies the payment with
+        // PhonePe, which can fail briefly, so retry a few times.
+        let receiptResult;
 
-        if (
-          !receiptResponse.ok ||
-          !receiptResult.success
+        for (
+          let attempt = 1;
+          attempt <= MAX_RECEIPT_ATTEMPTS;
+          attempt++
         ) {
-          throw new Error(
-            receiptResult.message ||
-            'Unable to generate receipt.'
-          );
+          try {
+            const receiptResponse =
+              await requestReceipt();
+
+            receiptResult =
+              await receiptResponse.json();
+
+            if (
+              !receiptResponse.ok ||
+              !receiptResult.success
+            ) {
+              throw new Error(
+                receiptResult.message ||
+                'Unable to generate receipt.'
+              );
+            }
+
+            break;
+          } catch (error) {
+            if (
+              cancelled ||
+              attempt === MAX_RECEIPT_ATTEMPTS
+            ) {
+              throw error;
+            }
+
+            await new Promise((resolve) => {
+              timeoutId = window.setTimeout(
+                resolve,
+                STATUS_CHECK_INTERVAL_MS
+              );
+            });
+          }
         }
 
         if (cancelled) return;

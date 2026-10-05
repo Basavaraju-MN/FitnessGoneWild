@@ -197,10 +197,37 @@ exports.checkPaymentStatus = async (merchantOrderId) => {
     parseBookingDetails(transaction);
 
   // 3. Verify payment status directly with PhonePe.
-  const response =
-    await phonePeClient.getOrderStatus(
-      merchantOrderId
+  // PhonePe can fail briefly right after the customer is
+  // redirected back, so fall back to the saved status
+  // (which the webhook may already have updated) and let
+  // the frontend poll again instead of returning an error.
+  let response;
+
+  try {
+    response =
+      await phonePeClient.getOrderStatus(
+        merchantOrderId
+      );
+  } catch (error) {
+    console.error(
+      `PhonePe order status check failed for ${merchantOrderId}:`,
+      error?.message || error?.code || error,
+      error?.httpStatusCode || '',
+      error?.data || ''
     );
+
+    const savedStatus = String(
+      transaction.status || 'PROCESSING'
+    ).toUpperCase();
+
+    return {
+      merchantOrderId,
+      status: savedStatus,
+      phonepeState: null,
+      phonepeResponse: null,
+      bookingDetails,
+    };
+  }
 
   const state = response.state;
   let status = getPaymentStatus(state);
