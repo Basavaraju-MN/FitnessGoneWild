@@ -52,9 +52,51 @@ const getPaymentStatus = (state) => {
  * Saves the booking details in the transaction table
  * before redirecting the customer to PhonePe.
  */
+const DEFAULT_FRONTEND_URL = 'https://thefitnessgonewild.in';
+
+const LOCALHOST_ORIGIN_PATTERN =
+  /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+
+function normalizeOrigin(value) {
+  return String(value || '').trim().replace(/\/+$/, '');
+}
+
+// Only redirect to known sites so the payment return URL
+// cannot be pointed at an arbitrary domain.
+function resolveFrontendUrl(requestOrigin) {
+  const configuredUrls = [
+    process.env.FRONTEND_URL,
+    process.env.CLIENT_URL,
+  ]
+    .filter(Boolean)
+    .flatMap((value) => value.split(','))
+    .map(normalizeOrigin)
+    .filter(Boolean);
+
+  const trustedOrigins = new Set([
+    ...configuredUrls,
+    'https://thefitnessgonewild.in',
+    'https://www.thefitnessgonewild.in',
+    'https://fitnessgonewild.onrender.com',
+  ]);
+
+  const origin = normalizeOrigin(requestOrigin);
+
+  if (
+    origin &&
+    (trustedOrigins.has(origin) ||
+      LOCALHOST_ORIGIN_PATTERN.test(origin))
+  ) {
+    return origin;
+  }
+
+  return configuredUrls[0] || DEFAULT_FRONTEND_URL;
+}
+
 exports.createPayment = async ({
   amount,
   bookingDetails,
+  frontendOrigin,
 }) => {
   if (
     amount === undefined ||
@@ -87,10 +129,9 @@ exports.createPayment = async ({
     .replace(/-/g, '')
     .substring(0, 12)}`;
 
-  // Use your deployed frontend URL in production.
-  const frontendUrl =
-    process.env.FRONTEND_URL ||
-    'https://thefitnessgonewild.in';
+  // Send the customer back to the site they paid from
+  // (localhost in development, the live domain in production).
+  const frontendUrl = resolveFrontendUrl(frontendOrigin);
 
   const redirectUrl =
     `${frontendUrl}/payment-result?merchantOrderId=${

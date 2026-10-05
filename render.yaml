@@ -24,7 +24,7 @@ services:
       - key: DB_CONNECTION_LIMIT
         value: "10"
       - key: CLIENT_URL
-        value: https://fitnessgonewild.in
+        value: https://thefitnessgonewild.in,https://www.thefitnessgonewild.in
       - key: PHONEPE_CLIENT_ID
         sync: false
       - key: PHONEPE_CLIENT_SECRET
@@ -33,8 +33,8 @@ services:
         value: "1"
       - key: PHONEPE_ENV
         value: SANDBOX
-      - key: PHONEPE_REDIRECT_URL
-        value: https://fitnessgonewild.in/payment-result
+      - key: FRONTEND_URL
+        value: https://thefitnessgonewild.in
       - key: PHONEPE_WEBHOOK_USERNAME
         sync: false
       - key: PHONEPE_WEBHOOK_PASSWORD

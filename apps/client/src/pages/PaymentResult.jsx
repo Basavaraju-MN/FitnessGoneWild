@@ -3,13 +3,13 @@ import {
   CheckCircle2,
   Clock3,
   XCircle,
-  Download,
+  Camera,
+  Printer,
 } from 'lucide-react';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import {
-  Link,
   useNavigate,
   useSearchParams,
 } from 'react-router-dom';
@@ -39,17 +39,13 @@ export default function PaymentResult() {
     error: '',
   });
 
-  const [showReceiptPopup, setShowReceiptPopup] =
-    useState(false);
-
-  const [receiptPdfBase64, setReceiptPdfBase64] =
+  const [receiptHtml, setReceiptHtml] =
     useState('');
-
-  const [receiptFilename, setReceiptFilename] =
-    useState('Payment-Receipt.pdf');
 
   const [receiptLoading, setReceiptLoading] =
     useState(false);
+
+  const receiptFrameRef = useRef(null);
 
   useEffect(() => {
     if (!merchantOrderId) {
@@ -100,7 +96,7 @@ export default function PaymentResult() {
           });
 
           // Payment is verified by the backend.
-          // Now request the PDF from the backend.
+          // Now request the receipt from the backend.
           await generateReceipt();
 
           return;
@@ -285,16 +281,9 @@ export default function PaymentResult() {
 
         if (cancelled) return;
 
-        setReceiptPdfBase64(
-          receiptResult.receiptPdfBase64 || ''
+        setReceiptHtml(
+          receiptResult.receiptHtml || ''
         );
-
-        setReceiptFilename(
-          receiptResult.receiptFilename ||
-          'Payment-Receipt.pdf'
-        );
-
-        setShowReceiptPopup(true);
 
       } catch (error) {
         console.error(
@@ -327,85 +316,22 @@ export default function PaymentResult() {
     };
   }, [merchantOrderId]);
 
-  function downloadReceipt() {
-    if (!receiptPdfBase64) {
-      setState((previous) => ({
-        ...previous,
-        error: 'Receipt PDF is not available.',
-      }));
+  // Grow the iframe to fit the receipt so the whole
+  // receipt is visible for a screenshot.
+  function resizeReceiptFrame() {
+    const frame = receiptFrameRef.current;
+    const frameDocument = frame?.contentDocument;
 
-      return;
-    }
+    if (!frame || !frameDocument) return;
 
-    try {
-      const binaryString = window.atob(
-        receiptPdfBase64
-      );
-
-      const bytes = new Uint8Array(
-        binaryString.length
-      );
-
-      for (
-        let index = 0;
-        index < binaryString.length;
-        index++
-      ) {
-        bytes[index] =
-          binaryString.charCodeAt(index);
-      }
-
-      const pdfBlob = new Blob(
-        [bytes],
-        {
-          type: 'application/pdf',
-        }
-      );
-
-      const downloadUrl =
-        window.URL.createObjectURL(pdfBlob);
-
-      const link =
-        document.createElement('a');
-
-      link.href = downloadUrl;
-      link.download = receiptFilename;
-
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-
-      window.setTimeout(() => {
-        window.URL.revokeObjectURL(
-          downloadUrl
-        );
-      }, 1000);
-
-      setShowReceiptPopup(false);
-
-      sessionStorage.removeItem(
-        'pendingBooking'
-      );
-
-      navigate('/', {
-        replace: true,
-      });
-    } catch (error) {
-      console.error(
-        'Receipt download failed:',
-        error
-      );
-
-      setState((previous) => ({
-        ...previous,
-        error: 'Unable to download receipt.',
-      }));
-    }
+    frame.style.height = `${frameDocument.documentElement.scrollHeight}px`;
   }
 
-  function closeReceiptPopup() {
-    setShowReceiptPopup(false);
+  function printReceipt() {
+    receiptFrameRef.current?.contentWindow?.print();
+  }
 
+  function returnHome() {
     sessionStorage.removeItem(
       'pendingBooking'
     );
@@ -450,89 +376,71 @@ export default function PaymentResult() {
               : ''
           }`}
       >
-        {!showReceiptPopup && (
+        <Icon
+          className="payment-result-icon"
+          size={52}
+        />
+
+        <h1>{heading}</h1>
+
+        <p>{description}</p>
+
+        {isSuccess && state.error && (
+          <p>{state.error}</p>
+        )}
+
+        {receiptLoading && (
+          <p>
+            Preparing your receipt...
+          </p>
+        )}
+
+        {receiptHtml && (
           <>
-            <Icon
-              className="payment-result-icon"
-              size={52}
+            <div className="receipt-screenshot-notice">
+              <Camera size={20} />
+
+              <span>
+                Please take a screenshot of this
+                receipt and keep it for your
+                reference.
+              </span>
+            </div>
+
+            <iframe
+              ref={receiptFrameRef}
+              className="receipt-frame"
+              title="Payment receipt"
+              srcDoc={receiptHtml}
+              sandbox="allow-same-origin allow-modals"
+              onLoad={resizeReceiptFrame}
             />
 
-            <h1>{heading}</h1>
-
-            <p>{description}</p>
-
-            {receiptLoading && (
-              <p>
-                Preparing your receipt...
-              </p>
-            )}
-
-            {merchantOrderId && (
-              <small>
-                Order reference:{' '}
-                {merchantOrderId}
-              </small>
-            )}
-
-            <Link
-              className="payment-continue"
-              to="/"
+            <button
+              type="button"
+              className="receipt-print-btn"
+              onClick={printReceipt}
             >
-              Return home
-            </Link>
+              <Printer size={18} />
+              Print / Save receipt
+            </button>
           </>
         )}
 
-        {showReceiptPopup && (
-          <div
-            className="receipt-modal-overlay"
-          >
-            <div
-              className="receipt-modal"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="receipt-title"
-            >
-              <CheckCircle2
-                size={56}
-                color="#16a34a"
-              />
-
-              <h2 id="receipt-title">
-                Payment Successful!
-              </h2>
-
-              <p>
-                Your payment has been
-                received successfully.
-              </p>
-
-              <p>
-                Do you want to download your
-                receipt PDF?
-              </p>
-
-              <div className="receipt-modal-actions">
-                <button
-                  type="button"
-                  className="receipt-no-btn"
-                  onClick={closeReceiptPopup}
-                >
-                  No
-                </button>
-
-                <button
-                  type="button"
-                  className="receipt-yes-btn"
-                  onClick={downloadReceipt}
-                >
-                  <Download size={18} />
-                  Yes, Download Receipt
-                </button>
-              </div>
-            </div>
-          </div>
+        {merchantOrderId && (
+          <small>
+            Order reference:{' '}
+            {merchantOrderId}
+          </small>
         )}
+
+        <button
+          type="button"
+          className="payment-continue"
+          onClick={returnHome}
+        >
+          Return home
+        </button>
       </section>
     </main>
   );
