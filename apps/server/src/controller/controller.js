@@ -1,12 +1,27 @@
 
 const crypto = require('crypto');
 
-const { generatePaymentReceiptPdf, } = require('../utils/paymentReceipt');
+const { generatePaymentReceiptHtml, } = require('../utils/paymentReceipt');
 const paymentDbOps = require('../db/paymentDbops');
 const phonepeComponent = require('../components/payment/phonepeComponent');
 const component = require('../components/trekDetails');
 const brochureComponent = require('../components/broucher/broucher')
-const { generatePaymentReceiptFile, } = require('../utils/paymentReceipt');
+
+// Site the customer is paying from. Falls back to the Referer
+// when a browser or proxy does not send the Origin header.
+function getRequestOrigin(req) {
+  const origin = req.get('origin');
+
+  if (origin && origin !== 'null') {
+    return origin;
+  }
+
+  try {
+    return new URL(req.get('referer')).origin;
+  } catch {
+    return '';
+  }
+}
 
 exports.getTrekCategories = async (req, res) => {
   try {
@@ -215,6 +230,9 @@ exports.createPhonePePayment = async (req, res) => {
     // Create PhonePe payment
     const result = await phonepeComponent.createPayment({
       amount: Number(amount),
+
+      // Lets PhonePe return the customer to localhost or the live site
+      frontendOrigin: getRequestOrigin(req),
 
       bookingDetails: {
         customerName,
@@ -635,28 +653,23 @@ const customerPhone =
       ),
     };
 
-    // Debug: verify all fields before generating PDF
+    // Debug: verify all fields before rendering receipt
     console.log(
       'Final receipt data:',
       JSON.stringify(receiptData, null, 2)
     );
 
-    // 14. Generate PDF
-    const pdfBuffer =
-      await generatePaymentReceiptPdf(receiptData);
+    // 14. Render receipt HTML
+    const receiptHtml =
+      await generatePaymentReceiptHtml(receiptData);
 
-    // 15. Return PDF to frontend
+    // 15. Return receipt to frontend so it can be shown in the browser
     return res.status(200).json({
       success: true,
       message: 'Payment successful',
       receiptNumber,
       merchantOrderId,
-
-      receiptPdfBase64:
-        pdfBuffer.toString('base64'),
-
-      receiptFilename:
-        `Payment-Receipt-${receiptNumber}.pdf`,
+      receiptHtml,
     });
   } catch (error) {
     console.error(

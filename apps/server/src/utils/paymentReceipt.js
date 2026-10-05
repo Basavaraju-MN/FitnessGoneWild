@@ -1,6 +1,5 @@
 const fs = require('fs');
 const path = require('path');
-const wkhtmltopdf = require('wkhtmltopdf');
 
 const TEMPLATE_PATH = path.join(
   __dirname,
@@ -13,12 +12,6 @@ const HEADER_LOGO_PATH = path.join(
   'templates',
   'fitness-gone-wild-logo.png'
 );
-
-const WKHTMLTOPDF_PATH =
-  process.env.WKHTMLTOPDF_PATH ||
-  'C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltopdf.exe';
-
-wkhtmltopdf.command = WKHTMLTOPDF_PATH;
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -68,42 +61,6 @@ async function generatePaymentReceiptHtml(data) {
   );
 }
 
-async function generatePaymentReceiptPdf(data) {
-  const html = await generatePaymentReceiptHtml(data);
-
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-
-    const pdfStream = wkhtmltopdf(
-      html,
-      {
-        pageSize: 'A4',
-        orientation: 'Portrait',
-        marginTop: '10mm',
-        marginBottom: '10mm',
-        marginLeft: '10mm',
-        marginRight: '10mm',
-        printMediaType: true,
-        background: true,
-        enableLocalFileAccess: true,
-      }
-    );
-
-    pdfStream.on('data', (chunk) => {
-      chunks.push(chunk);
-    });
-
-    pdfStream.on('end', () => {
-      resolve(Buffer.concat(chunks));
-    });
-
-    pdfStream.on('error', (error) => {
-      reject(error);
-    });
-  });
-}
-
 module.exports = {
   generatePaymentReceiptHtml,
-  generatePaymentReceiptPdf,
 };
