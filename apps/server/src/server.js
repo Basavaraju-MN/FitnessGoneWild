@@ -117,6 +117,9 @@ app.use(
       'Accept',
       'Origin',
     ],
+
+    // Lets the client read the brochure file name.
+    exposedHeaders: ['Content-Disposition'],
   })
 );
 

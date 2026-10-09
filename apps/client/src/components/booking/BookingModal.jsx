@@ -1,16 +1,55 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import '../../styles/bookingmodal.css';
 import '../../styles/payment.css';
 import { PaymentMethodChooser } from '../../pages/PaymentOptions';
-
-const PICKUP_LOCATIONS = [
-  'Indiranagar',
-  'Domlur',
-  'Yeshwanthpura',
-  'Goraguntepalya',
-];
+import { getPickupPoints } from '../../api/treks';
+import { isWithTransportOnly } from '../../utils/tripPricing';
+import useTrekImages from '../../hooks/useTrekImages';
 
 const GST_RATE = 0.05;
+
+// Advance to reserve a slot, per ticket. GST is charged on the advance.
+const ADVANCE_PER_TICKET = 1500;
+
+// YYYY-MM-DD in local time. toISOString() uses UTC, which in India
+// gives the previous day for a local midnight date.
+function toLocalId(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+// Customised trips can be 1, 2 or 3 days long
+const CUSTOM_DAY_OPTIONS = [1, 2, 3];
+
+// A trip date range. Weekend departures are Fri-Sun (3 days);
+// customised trips start on any date for 1-3 days.
+function buildDateRange(start, days, isCustom = false) {
+  const end = new Date(start);
+  end.setDate(start.getDate() + days - 1);
+
+  const startId = toLocalId(start);
+
+  return {
+    id: isCustom ? `custom-${startId}-${days}` : startId,
+    startId,
+    start,
+    end,
+    days,
+    isCustom,
+  };
+}
+
+function buildWeekend(friday) {
+  return buildDateRange(friday, 3);
+}
+
+function formatRange(range) {
+  return range.days > 1
+    ? `${formatDateWithDay(range.start)} - ${formatDate(range.end)}`
+    : formatDateWithDay(range.start);
+}
 
 function getUpcomingWeekends(count = 8) {
   const weekends = [];
@@ -37,14 +76,7 @@ function getUpcomingWeekends(count = 8) {
       firstFriday.getDate() + i * 7
     );
 
-    const sunday = new Date(friday);
-    sunday.setDate(friday.getDate() + 2);
-
-    weekends.push({
-      id: friday.toISOString().split('T')[0],
-      friday,
-      sunday,
-    });
+    weekends.push(buildWeekend(friday));
   }
 
   return weekends;
@@ -74,16 +106,75 @@ export default function BookingModal({
     []
   );
 
+  // First trek photo in whichever format exists (jpg/png/webp)
+  const [trekImage] = useTrekImages(trek?.slug);
+
   const [step, setStep] = useState(1);
 
   const [selectedWeekend, setSelectedWeekend] =
     useState(weekends[0] || null);
+
+  // Customised trip: any start date from the calendar, 1-3 days
+  const [customStart, setCustomStart] = useState(null);
+  const [customDays, setCustomDays] = useState(1);
+
+  const dateInputRef = useRef(null);
+
+  const todayId = toLocalId(new Date());
+
+  const openCalendar = () => {
+    const input = dateInputRef.current;
+    if (!input) return;
+
+    try {
+      input.showPicker();
+    } catch {
+      // Older browsers without showPicker()
+      input.focus();
+      input.click();
+    }
+  };
+
+  const handleCalendarPick = (value) => {
+    if (!value) return;
+
+    const [year, month, day] = value.split('-').map(Number);
+    const start = new Date(year, month - 1, day);
+
+    setCustomStart(start);
+    setSelectedWeekend(buildDateRange(start, customDays, true));
+    setError('');
+  };
+
+  // Discard the customised date and go back to the first weekend
+  const handleDiscardCustom = () => {
+    setCustomStart(null);
+    setCustomDays(1);
+
+    if (selectedWeekend?.isCustom) {
+      setSelectedWeekend(weekends[0] || null);
+    }
+
+    setError('');
+  };
+
+  const handleCustomDays = (days) => {
+    setCustomDays(days);
+
+    if (customStart) {
+      setSelectedWeekend(buildDateRange(customStart, days, true));
+    }
+  };
 
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
   const [email, setEmail] = useState('');
   const [pickupLocation, setPickupLocation] =
     useState('');
+
+  // Pickup points for this trek, from the pickup_points table
+  const [pickupPoints, setPickupPoints] = useState([]);
+  const [pickupLoading, setPickupLoading] = useState(true);
 
   const [transportTickets, setTransportTickets] =
     useState(0);
@@ -94,8 +185,53 @@ export default function BookingModal({
   const [termsAccepted, setTermsAccepted] =
     useState(false);
 
+  // 'full' = pay the whole amount, 'advance' = reserve the slot
+  const [paymentType, setPaymentType] = useState('full');
+
+  // Price breakdown is hidden until "View Details" is clicked
+  const [showPriceDetails, setShowPriceDetails] = useState(false);
+
+  useEffect(() => {
+    if (!showPriceDetails) return undefined;
+
+    const handleKey = (event) => {
+      if (event.key === 'Escape') setShowPriceDetails(false);
+    };
+
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [showPriceDetails]);
+
   const [error, setError] = useState('');
   const [paymentBooking, setPaymentBooking] = useState(null);
+
+  useEffect(() => {
+    if (!trek?.id) {
+      setPickupLoading(false);
+      return undefined;
+    }
+
+    const controller = new AbortController();
+
+    setPickupLoading(true);
+    setPickupLocation('');
+
+    getPickupPoints(trek.id, { signal: controller.signal })
+      .then((points) => setPickupPoints(points))
+      .catch((err) => {
+        if (!controller.signal.aborted) {
+          console.error('Failed to load pickup points:', err);
+          setPickupPoints([]);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setPickupLoading(false);
+        }
+      });
+
+    return () => controller.abort();
+  }, [trek?.id]);
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -121,8 +257,11 @@ export default function BookingModal({
       price
     );
 
+  // Backpacking trips are sold only with transportation
+  const transportOnly = isWithTransportOnly(trek);
+
   const withoutTransportationAmount =
-    withoutTransportTickets * price;
+    (transportOnly ? 0 : withoutTransportTickets) * price;
 
   const transportationAmount =
     transportTickets *
@@ -135,6 +274,29 @@ export default function BookingModal({
   const gst = subtotal * GST_RATE;
 
   const total = subtotal + gst;
+
+  const totalTickets =
+    transportTickets + (transportOnly ? 0 : withoutTransportTickets);
+
+  const advanceSubtotal =
+    ADVANCE_PER_TICKET * totalTickets;
+
+  // Advance only makes sense when it is less than the full price
+  const canPayAdvance =
+    totalTickets > 0 && advanceSubtotal < subtotal;
+
+  const isAdvance =
+    paymentType === 'advance' && canPayAdvance;
+
+  const advanceGst = advanceSubtotal * GST_RATE;
+
+  const advanceTotal = advanceSubtotal + advanceGst;
+
+  // What is charged now and what is left to pay later
+  const payableNow = isAdvance ? advanceTotal : total;
+
+  // Rounded to paise to avoid values like 523.9499999
+  const balanceDue = Math.round((total - payableNow) * 100) / 100;
 
   const handleDateChange = (weekend) => {
     setSelectedWeekend(weekend);
@@ -166,7 +328,7 @@ export default function BookingModal({
       return;
     }
 
-    if (!pickupLocation) {
+    if (pickupPoints.length > 0 && !pickupLocation) {
       setError('Please select a pickup location.');
       return;
     }
@@ -187,7 +349,7 @@ export default function BookingModal({
       return;
     }
 
-    if (transportTickets + withoutTransportTickets < 1) {
+    if (totalTickets < 1) {
       setError('Please select at least one ticket.');
       return;
     }
@@ -195,16 +357,30 @@ export default function BookingModal({
     const booking = {
       trekId: trek.id,
       trekName: trek.name,
-      selectedDate: selectedWeekend.id,
+      selectedDate: selectedWeekend.startId,
+      trekDate: selectedWeekend.isCustom
+        ? `${formatRange(selectedWeekend)} (Customised, ${selectedWeekend.days} day${selectedWeekend.days > 1 ? 's' : ''})`
+        : formatRange(selectedWeekend),
+      tripStartDate: selectedWeekend.startId,
+      tripEndDate: toLocalId(selectedWeekend.end),
+      tripDays: selectedWeekend.days,
+      isCustomTrip: selectedWeekend.isCustom,
       name,
       mobile,
       email,
       pickupLocation,
       transportTickets,
-      withoutTransportTickets,
+      withoutTransportTickets: transportOnly ? 0 : withoutTransportTickets,
+      withTransportPrice: transportationPrice || price,
+      withoutTransportPrice: price,
       subtotal,
       gst,
-      total,
+      // Amount charged now (full total or advance)
+      total: payableNow,
+      tripTotal: total,
+      paymentType: isAdvance ? 'advance' : 'full',
+      advanceAmount: isAdvance ? advanceTotal : 0,
+      balanceDue,
     };
 
     sessionStorage.setItem('pendingBooking', JSON.stringify(booking));
@@ -298,7 +474,7 @@ export default function BookingModal({
               {/* TREK SUMMARY */}
               <div className="booking-trek-summary">
                 <img
-                  src={`/images/${trek.slug}1.jpg`}
+                  src={trekImage}
                   alt={trek.name}
                   onError={(event) => {
                     event.currentTarget.onerror = null;
@@ -314,7 +490,10 @@ export default function BookingModal({
 
                   <strong>
                     ₹
-                    {price.toLocaleString('en-IN')}
+                    {(transportOnly
+                      ? transportationPrice || price
+                      : price
+                    ).toLocaleString('en-IN')}
                     <small> / person</small>
                   </strong>
                 </div>
@@ -326,29 +505,27 @@ export default function BookingModal({
                 <div className="booking-section-title">
                   <span>Select Date</span>
 
-                  <label className="all-dates">
+                  <button
+                    type="button"
+                    className="all-dates"
+                    onClick={openCalendar}
+                  >
                     <span>▣</span>
-                    All Dates
-                    <input
-                      type="date"
-                      onChange={(event) => {
-                        const selected =
-                          event.target.value;
+                    Customise dates
+                  </button>
 
-                        const weekend =
-                          weekends.find(
-                            (item) =>
-                              item.id === selected
-                          );
-
-                        if (weekend) {
-                          setSelectedWeekend(
-                            weekend
-                          );
-                        }
-                      }}
-                    />
-                  </label>
+                  <input
+                    ref={dateInputRef}
+                    type="date"
+                    className="all-dates-input"
+                    min={todayId}
+                    value={customStart ? toLocalId(customStart) : ''}
+                    onChange={(event) =>
+                      handleCalendarPick(event.target.value)
+                    }
+                    tabIndex={-1}
+                    aria-hidden="true"
+                  />
                 </div>
 
                 <div className="date-list">
@@ -369,21 +546,64 @@ export default function BookingModal({
                         )
                       }
                     >
-                      {formatDateWithDay(
-                        weekend.friday
-                      )}{' '}
-                      -{' '}
-                      {formatDate(
-                        weekend.sunday
-                      )}
+                      {formatRange(weekend)}
                     </button>
                   ))}
 
                 </div>
 
+                {/* CUSTOMISED TRIP */}
+                {customStart && (
+                  <div
+                    className={`custom-trip ${selectedWeekend?.isCustom ? 'selected' : ''}`}
+                  >
+                    <button
+                      type="button"
+                      className="custom-trip-date"
+                      onClick={() =>
+                        setSelectedWeekend(
+                          buildDateRange(customStart, customDays, true)
+                        )
+                      }
+                    >
+                      <small>Customised trip</small>
+                      {formatRange(
+                        buildDateRange(customStart, customDays, true)
+                      )}
+                    </button>
+
+                    <div className="custom-trip-days">
+                      {CUSTOM_DAY_OPTIONS.map((days) => (
+                        <button
+                          type="button"
+                          key={days}
+                          className={
+                            selectedWeekend?.isCustom && customDays === days
+                              ? 'active'
+                              : ''
+                          }
+                          onClick={() => handleCustomDays(days)}
+                        >
+                          {days} day{days > 1 ? 's' : ''}
+                        </button>
+                      ))}
+
+                      <button
+                        type="button"
+                        className="custom-trip-discard"
+                        onClick={handleDiscardCustom}
+                        aria-label="Remove customised date"
+                      >
+                        ✕ Remove
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <p className="date-help">
-                  Departure Friday night and return
-                  Sunday night.
+                  {selectedWeekend?.isCustom
+                    ? `Customised trip for ${selectedWeekend.days} day${selectedWeekend.days > 1 ? 's' : ''}.`
+                    : 'Departure Friday night and return Sunday night. Need other dates? Use Customise dates.'}
                 </p>
 
               </div>
@@ -433,6 +653,7 @@ export default function BookingModal({
 
                 <select
                   value={pickupLocation}
+                  disabled={pickupLoading || pickupPoints.length === 0}
                   onChange={(event) =>
                     setPickupLocation(
                       event.target.value
@@ -440,19 +661,23 @@ export default function BookingModal({
                   }
                 >
                   <option value="">
-                    Select pickup location
+                    {pickupLoading
+                      ? 'Loading pickup points...'
+                      : pickupPoints.length === 0
+                        ? 'No pickup points for this trek'
+                        : 'Select pickup location'}
                   </option>
 
-                  {PICKUP_LOCATIONS.map(
-                    (location) => (
-                      <option
-                        key={location}
-                        value={location}
-                      >
-                        {location}
-                      </option>
-                    )
-                  )}
+                  {pickupPoints.map((point) => (
+                    <option
+                      key={point.id}
+                      value={point.name}
+                    >
+                      {point.address
+                        ? `${point.name} – ${point.address}`
+                        : point.name}
+                    </option>
+                  ))}
                 </select>
 
               </div>
@@ -484,7 +709,7 @@ export default function BookingModal({
               <div className="booking-trek-summary">
 
                 <img
-                  src={`/images/${trek.slug}1.jpg`}
+                  src={trekImage}
                   alt={trek.name}
                 />
 
@@ -498,9 +723,11 @@ export default function BookingModal({
                   <p>
                     ▣{' '}
                     {selectedWeekend
-                      ? `${formatDateWithDay(
-                        selectedWeekend.friday
-                      )}, 07:00 PM`
+                      ? selectedWeekend.isCustom
+                        ? `${formatRange(selectedWeekend)} (Customised)`
+                        : `${formatDateWithDay(
+                          selectedWeekend.start
+                        )}, 07:00 PM`
                       : ''}
                   </p>
                 </div>
@@ -564,101 +791,89 @@ export default function BookingModal({
 
                 </div>
 
-                {/* WITHOUT TRANSPORT */}
-                <div className="ticket-row">
+                {/* WITHOUT TRANSPORT: not offered for transport-only trips */}
+                {!transportOnly && (
+                  <div className="ticket-row">
 
-                  <div>
-                    <span>
-                      Without Transportation
-                    </span>
+                    <div>
+                      <span>
+                        Without Transportation
+                      </span>
 
-                    <strong>
-                      ₹
-                      {price.toLocaleString(
-                        'en-IN'
-                      )}
-                    </strong>
-                  </div>
+                      <strong>
+                        ₹
+                        {price.toLocaleString(
+                          'en-IN'
+                        )}
+                      </strong>
+                    </div>
 
-                  <div className="ticket-controls">
+                    <div className="ticket-controls">
 
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setWithoutTransportTickets(
-                          Math.max(
-                            0,
-                            withoutTransportTickets -
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setWithoutTransportTickets(
+                            Math.max(
+                              0,
+                              withoutTransportTickets -
+                              1
+                            )
+                          )
+                        }
+                      >
+                        −
+                      </button>
+
+                      <span>
+                        {withoutTransportTickets}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setWithoutTransportTickets(
+                            withoutTransportTickets +
                             1
                           )
-                        )
-                      }
-                    >
-                      −
-                    </button>
+                        }
+                      >
+                        +
+                      </button>
 
-                    <span>
-                      {withoutTransportTickets}
-                    </span>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setWithoutTransportTickets(
-                          withoutTransportTickets +
-                          1
-                        )
-                      }
-                    >
-                      +
-                    </button>
+                    </div>
 
                   </div>
-
-                </div>
-
-              </div>
-
-              {/* PRICE */}
-              <div className="booking-price-summary">
-
-                <div>
-                  <span>Subtotal</span>
-                  <strong>
-                    ₹
-                    {subtotal.toLocaleString(
-                      'en-IN'
-                    )}
-                  </strong>
-                </div>
-
-                <div>
-                  <span>GST (5%)</span>
-                  <strong>
-                    ₹
-                    {gst.toLocaleString(
-                      'en-IN',
-                      {
-                        maximumFractionDigits: 2,
-                      }
-                    )}
-                  </strong>
-                </div>
-
-                <div className="total-row">
-                  <span>Total</span>
-                  <strong>
-                    ₹
-                    {total.toLocaleString(
-                      'en-IN',
-                      {
-                        maximumFractionDigits: 2,
-                      }
-                    )}
-                  </strong>
-                </div>
+                )}
 
               </div>
+
+              {/* RESERVE SLOT: toggle shown once tickets are selected */}
+              {canPayAdvance && (
+                <label
+                  className={`reserve-toggle ${isAdvance ? 'active' : ''}`}
+                >
+                  <span className="reserve-toggle-text">
+                    Reserve your slot
+                    <small>
+                      Pay ₹{ADVANCE_PER_TICKET.toLocaleString('en-IN')} × {totalTickets} ticket
+                      {totalTickets > 1 ? 's' : ''} + 5% GST now
+                      {' '}(₹{advanceTotal.toLocaleString('en-IN', { maximumFractionDigits: 2 })}),
+                      balance before the trek
+                    </small>
+                  </span>
+
+                  <input
+                    type="checkbox"
+                    role="switch"
+                    checked={isAdvance}
+                    onChange={(event) =>
+                      setPaymentType(event.target.checked ? 'advance' : 'full')
+                    }
+                  />
+                  <span className="reserve-switch" aria-hidden="true" />
+                </label>
+              )}
 
               {/* TERMS */}
               <div className="booking-terms">
@@ -702,12 +917,85 @@ export default function BookingModal({
               {/* PAYMENT */}
               <div className="booking-payment-footer">
 
+                {/* BILL SUMMARY: opens above the footer */}
+                {showPriceDetails && (
+                  <div
+                    className="bill-summary-popover"
+                    role="dialog"
+                    aria-label="Bill Summary"
+                  >
+                    <div className="bill-summary-header">
+                      <h4>Bill Summary</h4>
+                      <button
+                        type="button"
+                        className="bill-summary-close"
+                        onClick={() => setShowPriceDetails(false)}
+                        aria-label="Close bill summary"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    <div className="booking-price-summary">
+                      <div>
+                        <span>Subtotal</span>
+                        <strong>
+                          ₹
+                          {subtotal.toLocaleString(
+                            'en-IN'
+                          )}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span>GST (5%)</span>
+                        <strong>
+                          ₹
+                          {gst.toLocaleString(
+                            'en-IN',
+                            {
+                              maximumFractionDigits: 2,
+                            }
+                          )}
+                        </strong>
+                      </div>
+
+                      {isAdvance && (
+                        <>
+                          <div>
+                            <span>Trip total</span>
+                            <strong>₹{total.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</strong>
+                          </div>
+
+                          <div>
+                            <span>Balance (pay before the trek)</span>
+                            <strong>₹{balanceDue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</strong>
+                          </div>
+                        </>
+                      )}
+
+                      <div className="total-row">
+                        <span>{isAdvance ? 'Advance (incl. GST)' : 'Total'}</span>
+                        <strong>
+                          ₹
+                          {payableNow.toLocaleString(
+                            'en-IN',
+                            {
+                              maximumFractionDigits: 2,
+                            }
+                          )}
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div>
-                  <span>Total payable</span>
+                  <span>{isAdvance ? 'Pay now to reserve' : 'Total payable'}</span>
 
                   <strong>
                     ₹
-                    {total.toLocaleString(
+                    {payableNow.toLocaleString(
                       'en-IN',
                       {
                         maximumFractionDigits: 2,
@@ -718,8 +1006,12 @@ export default function BookingModal({
                   <button
                     type="button"
                     className="view-details-button"
+                    aria-expanded={showPriceDetails}
+                    onClick={() =>
+                      setShowPriceDetails((shown) => !shown)
+                    }
                   >
-                    View Details
+                    {showPriceDetails ? 'Hide Details' : 'View Details'}
                   </button>
                 </div>
 
@@ -740,7 +1032,12 @@ export default function BookingModal({
 
         {/* SECURED */}
         <div className="booking-secured">
-          🛡 secured by: logout.studio
+          <span>🛡 Secured by</span>
+          <img
+            src="/images/logo.png"
+            alt="The Fitness Gone Wild"
+          />
+          <strong>The Fitness Gone Wild</strong>
         </div>
 
       </div>
@@ -770,11 +1067,21 @@ export default function BookingModal({
 
           <p>
             Your payment of ₹
-            {total.toLocaleString('en-IN', {
+            {payableNow.toLocaleString('en-IN', {
               maximumFractionDigits: 2,
             })}{' '}
             has been received successfully.
           </p>
+
+          {isAdvance && (
+            <p>
+              Your slot is reserved. Balance of ₹
+              {balanceDue.toLocaleString('en-IN', {
+                maximumFractionDigits: 2,
+              })}{' '}
+              is to be paid before the trek.
+            </p>
+          )}
 
           <p>
             Your payment receipt has been sent to{' '}

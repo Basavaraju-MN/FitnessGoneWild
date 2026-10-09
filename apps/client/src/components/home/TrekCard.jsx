@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import '../../styles/trekcard.css'
+import { API_BASE_URL, getDownloadFileName } from '../../api/treks';
+import useTrekImages, { FALLBACK_IMAGE } from '../../hooks/useTrekImages';
+import {
+  getDisplayPrice,
+  showsDifficulty,
+  showsDistance,
+} from '../../utils/tripPricing';
 
 const formatDisplayPrice = (price) => {
   const numericPrice = Number(price || 0);
@@ -9,9 +16,6 @@ const formatDisplayPrice = (price) => {
     maximumFractionDigits: 2,
   }).format(numericPrice);
 };
-
-const getWithoutTransportPrice = (trip) =>
-  Number(trip?.without_transport_price ?? trip?.price ?? 0);
 
 const getPriceNote = (trip) => {
   const rawNote = trip?.price_note || 'per person';
@@ -45,24 +49,17 @@ export default function TrekCard({ trek, onClick }) {
 
   const cardRef = useRef(null);
 
-  const API_BASE_URL =
-    import.meta.env.VITE_API_BASE_URL ||
-    'http://localhost:4000/api';
 
-  const images = [
-    `/images/${trek.slug}1.jpg`,
-    `/images/${trek.slug}2.jpg`,
-    `/images/${trek.slug}3.jpg`,
-    `/images/${trek.slug}4.jpg`,
-    `/images/${trek.slug}5.jpg`,
-  ];
+  // Only the images that exist, in order 1 to 5. Checked once the
+  // card is near the screen.
+  const images = useTrekImages(trek.slug, isVisible);
 
   /*
    * Reset image when trek changes.
    */
   useEffect(() => {
     setCurrentImage(0);
-  }, [trek.slug]);
+  }, [trek.slug, images.length]);
 
   /*
    * Detect when card is visible.
@@ -259,17 +256,10 @@ export default function TrekCard({ trek, onClick }) {
       const contentDisposition =
         response.headers.get('Content-Disposition');
 
-      let fileName = 'brochure.pdf';
-
-      if (contentDisposition) {
-        const match = contentDisposition.match(
-          /filename="([^"]+)"/
-        );
-
-        if (match) {
-          fileName = match[1];
-        }
-      }
+      const fileName = getDownloadFileName(
+        contentDisposition,
+        `${trek.name || 'brochure'}.pdf`
+      );
 
       /*
        * Create temporary download URL.
@@ -314,20 +304,11 @@ export default function TrekCard({ trek, onClick }) {
   };
 
   /*
-   * Image fallback.
-   *
-   * If kudremukh3.jpg doesn't exist,
-   * fall back to the first image.
+   * Image fallback when even the first image is missing.
    */
   const handleImageError = (event) => {
-    const fallbackImage = images[0];
-
-    if (event.currentTarget.src.endsWith(fallbackImage)) {
-      event.currentTarget.onerror = null;
-      return;
-    }
-
-    event.currentTarget.src = fallbackImage;
+    event.currentTarget.onerror = null;
+    event.currentTarget.src = FALLBACK_IMAGE;
   };
 
   return (
@@ -351,7 +332,7 @@ export default function TrekCard({ trek, onClick }) {
 
         <div className="thumb">
           <img
-            src={images[currentImage]}
+            src={images[currentImage] ?? images[0]}
             alt={trek.name}
             loading="lazy"
             decoding="async"
@@ -442,15 +423,15 @@ export default function TrekCard({ trek, onClick }) {
 
           <div className="info">
             <span>{trek.duration_label}</span>
-            <span>{trek.difficulty}</span>
-            <span>{trek.distance_label}</span>
+            {showsDifficulty(trek) && <span>{trek.difficulty}</span>}
+            {showsDistance(trek) && <span>{trek.distance_label}</span>}
           </div>
 
           <div className="price">
             <strong>
               ₹
               {formatDisplayPrice(
-                getWithoutTransportPrice(trek)
+                getDisplayPrice(trek)
               )}
             </strong>
 

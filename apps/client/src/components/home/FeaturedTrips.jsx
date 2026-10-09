@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { getFeaturedTrips, saveTripInterest } from '../../api/treks';
 import SectionHeader from '../common/SectionHeader';
+import useTrekImages, { FALLBACK_IMAGE } from '../../hooks/useTrekImages';
+import '../../styles/trekcard.css';
+import { getDisplayPrice, showsDifficulty } from '../../utils/tripPricing';
 
 const formatPrice = (price) => {
   const numericPrice = Number(price || 0);
@@ -9,6 +12,61 @@ const formatPrice = (price) => {
     maximumFractionDigits: 2,
   }).format(numericPrice)}`;
 };
+
+// Photo slideshow at the top of a featured trip card. Shows only the
+// images that exist; dots appear only when there is more than one.
+function FeaturedTripImage({ slug, name }) {
+  const images = useTrekImages(slug);
+  const [currentImage, setCurrentImage] = useState(0);
+
+  useEffect(() => {
+    setCurrentImage(0);
+  }, [slug, images.length]);
+
+  useEffect(() => {
+    if (images.length <= 1) {
+      return undefined;
+    }
+
+    const timer = setTimeout(() => {
+      setCurrentImage((previous) => (previous + 1) % images.length);
+    }, 3500);
+
+    return () => clearTimeout(timer);
+  }, [images.length, currentImage]);
+
+  return (
+    <div className="thumb trip-thumb">
+      <img
+        src={images[currentImage] ?? images[0]}
+        alt={name}
+        loading="lazy"
+        decoding="async"
+        onError={(event) => {
+          event.currentTarget.onerror = null;
+          event.currentTarget.src = FALLBACK_IMAGE;
+        }}
+      />
+
+      {images.length > 1 && (
+        <div className="trek-slider-dots">
+          {images.map((image, index) => (
+            <button
+              key={image}
+              type="button"
+              className={`trek-slider-dot ${currentImage === index ? 'active' : ''}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                setCurrentImage(index);
+              }}
+              aria-label={`Go to image ${index + 1}`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function FeaturedTrips({ onTrekSelect }) {
   const [trips, setTrips] = useState([]);
@@ -76,13 +134,11 @@ export default function FeaturedTrips({ onTrekSelect }) {
   const featuredTrips = (trips || []).map((trip, index) => {
     const metaParts = [
       trip.duration_label || trip.duration || trip.days,
-      trip.difficulty || trip.level,
+      showsDifficulty(trip) ? trip.difficulty : null,
       trip.departure_time || trip.departure || trip.departure_label,
     ].filter(Boolean);
 
-    const numericPrice = Number(
-      trip.without_transport_price ?? trip.price ?? 0
-    );
+    const numericPrice = getDisplayPrice(trip);
 
     return {
       ...trip,
@@ -115,6 +171,8 @@ export default function FeaturedTrips({ onTrekSelect }) {
             onClick={() => onTrekSelect?.(trip)}
             style={{ cursor: 'pointer' }}
           >
+            <FeaturedTripImage slug={trip.slug} name={trip.name} />
+
             <span className="trip-rank">{trip.rank}</span>
             <h3>{trip.name}</h3>
             <p className="trip-meta">{trip.meta}</p>

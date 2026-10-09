@@ -23,6 +23,8 @@ router.get('/why-us', controller.getWhyUs);
 
 router.get('/faq', controller.getFaq);
 
+router.get('/pickup-points', controller.getPickupPoints);
+
 router.post('/trip-interest', controller.createTripInterest);
 
 router.post('/brochure-download', controller.downloadBroucher)

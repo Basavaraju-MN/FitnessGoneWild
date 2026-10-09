@@ -26,6 +26,7 @@ function getRequestOrigin(req) {
 exports.getTrekCategories = async (req, res) => {
   try {
     const result = await component.getTrekCategories();
+    if (!result.success) throw new Error(result.message);
     return res.status(200).json({
       success: true,
       message: 'Trek categories fetched successfully',
@@ -43,6 +44,7 @@ exports.getTrekDetails = async (req, res) => {
   const categoryId = req.query.category_id;
   try {
     const result = await component.getTrekDetails(categoryId);
+    if (!result.success) throw new Error(result.message);
     return res.status(200).json({
       success: true,
       message: 'Trek details fetched successfully',
@@ -59,6 +61,7 @@ exports.getTrekDetails = async (req, res) => {
 exports.getFeaturedTrips = async (req, res) => {
   try {
     const result = await component.getFeaturedTrips();
+    if (!result.success) throw new Error(result.message);
     return res.status(200).json({
       success: true,
       message: 'Featured trips fetched successfully',
@@ -75,6 +78,7 @@ exports.getFeaturedTrips = async (req, res) => {
 exports.getReviews = async (req, res) => {
   try {
     const result = await component.getReviews();
+    if (!result.success) throw new Error(result.message);
     return res.status(200).json({
       success: true,
       message: 'Reviews fetched successfully',
@@ -91,6 +95,7 @@ exports.getReviews = async (req, res) => {
 exports.getWhyUs = async (req, res) => {
   try {
     const result = await component.getWhyUs();
+    if (!result.success) throw new Error(result.message);
     return res.status(200).json({
       success: true,
       message: 'Why us items fetched successfully',
@@ -107,6 +112,7 @@ exports.getWhyUs = async (req, res) => {
 exports.getFaq = async (req, res) => {
   try {
     const result = await component.getFaq();
+    if (!result.success) throw new Error(result.message);
     return res.status(200).json({
       success: true,
       message: 'FAQ items fetched successfully',
@@ -116,6 +122,32 @@ exports.getFaq = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Error fetching FAQ items',
+    });
+  }
+};
+
+exports.getPickupPoints = async (req, res) => {
+  const tripId = Number(req.query.trip_id);
+
+  if (!tripId) {
+    return res.status(400).json({
+      success: false,
+      message: 'trip_id is required',
+    });
+  }
+
+  try {
+    const result = await component.getPickupPoints(tripId);
+    if (!result.success) throw new Error(result.message);
+    return res.status(200).json({
+      success: true,
+      message: 'Pickup points fetched successfully',
+      data: result.data || [],
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching pickup points',
     });
   }
 };
@@ -176,9 +208,18 @@ exports.downloadBroucher = async (req, res) => {
       brochure.file_data.length
     );
 
+    let fileName = String(brochure.file_name || 'brochure').trim();
+    if (!/\.pdf$/i.test(fileName)) {
+      fileName += '.pdf';
+    }
+
+    // filename* keeps spaces and non-ASCII characters intact;
+    // filename is the ASCII-only fallback for older browsers.
+    const asciiFileName = fileName.replace(/[^\x20-\x7E]|["\\]/g, '_');
+
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename="${brochure.file_name}"`
+      `attachment; filename="${asciiFileName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`
     );
 
     return res.send(brochure.file_data);
@@ -215,6 +256,14 @@ exports.createPhonePePayment = async (req, res) => {
       subtotal,
       gst,
       totalAmount,
+      paymentType,
+      tripTotal,
+      balanceDue,
+      trekId,
+      tripStartDate,
+      tripEndDate,
+      tripDays,
+      isCustomTrip,
       user_id,
       preferred_payment_method,
     } = req.body;
@@ -259,6 +308,16 @@ exports.createPhonePePayment = async (req, res) => {
         subtotal,
         gst,
         totalAmount,
+
+        paymentType: paymentType === 'advance' ? 'advance' : 'full',
+        tripTotal,
+        balanceDue,
+
+        trekId,
+        tripStartDate,
+        tripEndDate,
+        tripDays,
+        isCustomTrip,
 
         user_id,
         preferred_payment_method,
@@ -608,6 +667,9 @@ const customerPhone =
       merchantOrderId,
 
       companyName: 'The Fitness Gone Wild',
+      companyAddress: 'Rajajinagar, Bengaluru',
+      companyEmail: 'gonewildfitness@gmail.com',
+      companyPhone: '+91 87623 50551',
 
       customerName,
       customerEmail,
@@ -638,6 +700,18 @@ const customerPhone =
       subtotal: subtotal.toFixed(2),
       gst: gst.toFixed(2),
       totalAmount: paidAmount.toFixed(2),
+
+      paymentTypeLabel:
+        bookingDetails.paymentType === 'advance'
+          ? 'Advance (slot reserved)'
+          : 'Full payment',
+      tripTotal: (
+        Number(bookingDetails.tripTotal) || subtotal + gst
+      ).toFixed(2),
+      balanceDue: Math.max(
+        0,
+        (Number(bookingDetails.tripTotal) || subtotal + gst) - paidAmount
+      ).toFixed(2),
 
       paymentStatus: 'SUCCESS',
 

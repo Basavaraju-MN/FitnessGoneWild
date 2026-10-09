@@ -157,20 +157,41 @@
   margin-bottom: 14px;
 }
 
-.all-dates {
+.booking-section-title {
   position: relative;
-  color: #333;
-  text-decoration: underline;
-  cursor: pointer;
-  font-size: 13px;
 }
 
-.all-dates input {
-  position: absolute;
-  opacity: 0;
-  width: 100%;
-  inset: 0;
+.all-dates {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  background: transparent;
+  color: #333;
+  text-decoration: underline;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
+}
+
+.all-dates:hover {
+  background: transparent;
+  color: #0f3d36;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Hidden date field; the calendar opens from the All Dates button */
+.all-dates-input {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  border: 0;
+  padding: 0;
+  pointer-events: none;
 }
 
 .date-list {
@@ -373,6 +394,12 @@
 }
 
 .booking-payment-footer {
+  /* Stays at the bottom of the scrolling body so Bill Summary
+     can open above it without adding to the scroll height */
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  background: #fff;
   border-top: 1px solid #ddd;
   margin-top: 20px;
   padding: 16px 0;
@@ -396,11 +423,21 @@
   display: block;
   border: none;
   background: transparent;
+  color: #0f3d36;
+  font-weight: 600;
   text-decoration: underline;
   padding: 0;
   margin-top: 5px;
   font-size: 12px;
   cursor: pointer;
+}
+
+/* Undo the site-wide button hover (amber background, lift) */
+.view-details-button:hover {
+  background: transparent;
+  color: #e4881f;
+  transform: none;
+  box-shadow: none;
 }
 
 .pay-now-button {
@@ -418,9 +455,23 @@
 .booking-secured {
   border-top: 1px solid #eee;
   padding: 10px;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   font-size: 12px;
   color: #555;
+}
+
+.booking-secured img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.booking-secured strong {
+  color: #0f3d36;
 }
 
 @media (max-width: 650px) {
@@ -461,4 +512,254 @@
   .date-option {
     min-width: 160px;
   }
+}
+
+/* =========================================
+   RESERVE SLOT TOGGLE (advance payment)
+========================================= */
+
+.reserve-toggle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1.5px solid #dde4de;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.reserve-toggle.active {
+  border-color: #0f3d36;
+  background: #f3f8f5;
+}
+
+.reserve-toggle-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  font-weight: 600;
+}
+
+.reserve-toggle-text small {
+  font-weight: 400;
+  font-size: 0.8rem;
+  color: #56655f;
+}
+
+/* Real checkbox stays for keyboard/screen readers, visually hidden */
+.reserve-toggle input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.reserve-switch {
+  position: relative;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  background: #c9d3ce;
+  transition: background 0.2s ease;
+}
+
+.reserve-switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease;
+}
+
+.reserve-toggle input:checked + .reserve-switch {
+  background: #0f3d36;
+}
+
+.reserve-toggle input:checked + .reserve-switch::after {
+  transform: translateX(20px);
+}
+
+.reserve-toggle input:focus-visible + .reserve-switch {
+  outline: 2px solid #e4881f;
+  outline-offset: 2px;
+}
+
+/* =========================================
+   CUSTOMISED TRIP (1-3 days)
+========================================= */
+
+.custom-trip {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px dashed #b9c9c2;
+  border-radius: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.custom-trip.selected {
+  border: 1px solid #006b57;
+  background: #f3f8f5;
+}
+
+.custom-trip-date {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0;
+  background: transparent;
+  color: #006b57;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.custom-trip-date small {
+  font-size: 11px;
+  font-weight: 500;
+  color: #777;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.custom-trip-date:hover {
+  background: transparent;
+  transform: none;
+  box-shadow: none;
+}
+
+.custom-trip-days {
+  display: flex;
+  gap: 8px;
+}
+
+.custom-trip-days button {
+  padding: 8px 14px;
+  border: 1px solid #dde4de;
+  border-radius: 8px;
+  background: #fff;
+  color: #333;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.custom-trip-days button.active {
+  border-color: #006b57;
+  background: #e5f2ee;
+  color: #006b57;
+  font-weight: 600;
+}
+
+.custom-trip-days button:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.custom-trip-days {
+  flex-wrap: wrap;
+}
+
+.custom-trip-days .custom-trip-discard {
+  border-color: transparent;
+  background: transparent;
+  color: #b42318;
+}
+
+.custom-trip-days .custom-trip-discard:hover {
+  background: #fdecea;
+}
+
+
+/* =========================================
+   BILL SUMMARY (opens above the footer)
+========================================= */
+
+.bill-summary-popover {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 8px);
+  max-height: 55vh;
+  overflow-y: auto;
+  padding: 14px 16px 6px;
+  background: #fff;
+  border: 1px solid #dde4de;
+  border-radius: 12px;
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.12);
+  animation: bill-summary-up 0.18s ease-out;
+}
+
+@keyframes bill-summary-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bill-summary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.bill-summary-header h4 {
+  margin: 0;
+  font-size: 15px;
+  color: #0f3d36;
+}
+
+.bill-summary-close {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  background: #f1f4f2;
+  color: #333;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.bill-summary-close:hover {
+  background: #e2e8e4;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Inside the popover the summary needs no top spacing/divider */
+.bill-summary-popover .booking-price-summary {
+  margin-top: 0;
+  border-top: none;
+  padding-top: 0;
+}
+
+/* Footer text styles must not leak into the summary rows */
+.bill-summary-popover .booking-price-summary span {
+  display: inline;
+  font-size: 14px;
+}
+
+.bill-summary-popover .booking-price-summary strong {
+  display: inline;
+  margin-top: 0;
+  font-size: 14px;
+}
+
+.bill-summary-popover .booking-price-summary .total-row span,
+.bill-summary-popover .booking-price-summary .total-row strong {
+  font-size: 16px;
 }

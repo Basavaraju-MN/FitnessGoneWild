@@ -129,17 +129,35 @@ const getReceiptBookingDetails = (booking) => {
     )
   );
 
-  const withoutTransportTickets = transportChecked
-    ? 0
-    : totalTickets;
+  // The booking popup sends both ticket counts and prices; older
+  // bookings only had a single count and a transport flag.
+  const withoutTransportTickets = Number(
+    getValue(
+      booking,
+      ['withoutTransportTickets'],
+      transportChecked ? 0 : totalTickets
+    )
+  );
 
-  const withTransportTickets = transportChecked
-    ? totalTickets
-    : 0;
+  const withTransportTickets = Number(
+    getValue(
+      booking,
+      ['withTransportTickets', 'transportTickets'],
+      transportChecked ? totalTickets : 0
+    )
+  );
 
-  const withoutTransportPrice = ticketPrice;
+  const withoutTransportPrice = Number(
+    getValue(booking, ['withoutTransportPrice'], ticketPrice)
+  );
 
-  const withTransportPrice = ticketPrice + transportPrice;
+  const withTransportPrice = Number(
+    getValue(
+      booking,
+      ['withTransportPrice'],
+      ticketPrice + transportPrice
+    )
+  );
 
   const withoutTransportAmount =
     withoutTransportTickets * withoutTransportPrice;
@@ -151,9 +169,12 @@ const getReceiptBookingDetails = (booking) => {
     customerMobile,
     trekDate,
 
-    transportation: transportChecked
-      ? 'With Transportation'
-      : 'Without Transportation',
+    transportation:
+      withTransportTickets > 0 && withoutTransportTickets > 0
+        ? 'With & Without Transportation'
+        : withTransportTickets > 0
+          ? 'With Transportation'
+          : 'Without Transportation',
 
     withoutTransportTickets,
     withoutTransportPrice,
@@ -163,9 +184,7 @@ const getReceiptBookingDetails = (booking) => {
     withTransportPrice,
     withTransportAmount,
 
-    transportationAmount: transportChecked
-      ? totalTickets * transportPrice
-      : 0,
+    transportationAmount: withTransportAmount,
   };
 };
 export function PaymentMethodChooser({ booking, onBack }) {
@@ -235,7 +254,19 @@ export function PaymentMethodChooser({ booking, onBack }) {
           withTransportAmount: receiptDetails.withTransportAmount,
 
           subtotal: Number(booking?.subtotal || 0),
-          gst: Number(booking?.gst || 0)
+          gst: Number(booking?.gst || 0),
+
+          // Trek and trip dates (YYYY-MM-DD)
+          trekId: booking?.trekId || null,
+          tripStartDate: booking?.tripStartDate || booking?.selectedDate || null,
+          tripEndDate: booking?.tripEndDate || null,
+          tripDays: Number(booking?.tripDays || 0) || null,
+          isCustomTrip: Boolean(booking?.isCustomTrip),
+
+          // Full payment or advance to reserve the slot
+          paymentType: booking?.paymentType || 'full',
+          tripTotal: Number(booking?.tripTotal || total),
+          balanceDue: Number(booking?.balanceDue || 0),
         }),
       });
 
