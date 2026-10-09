@@ -81,6 +81,9 @@ const sqlqueries = {
   createCustomer: `INSERT INTO customers (name, phone, email, city, trip_id, created_at) VALUES (?, ?, ?, ?, ?, NOW())`,
   downloadBroucher: ` SELECT id, trip_id, file_name, file_data, file_size, mime_type FROM brochures WHERE trip_id = ?`,
   updateDownloadCount: `UPDATE brochures SET download_count = download_count + 1 WHERE trip_id = ?`,
+  getTripById: `SELECT id, slug, name FROM trips WHERE id = ? LIMIT 1`,
+  // Counts a download; creates the brochures row for file-only brochures
+  countBrochureDownload: `INSERT INTO brochures (trip_id, file_name, file_size, mime_type, download_count) VALUES (?, ?, 0, 'application/pdf', 1) ON DUPLICATE KEY UPDATE download_count = download_count + 1`,
   phonepeSql : {
     createTransaction: `INSERT INTO phonepe_transactions (merchant_order_id, user_id, amount, currency, status, redirect_url) VALUES (?, ?, ?, ?, 'PROCESSING', ?)`,
     getTransactionByOrderId: `SELECT * FROM phonepe_transactions WHERE merchant_order_id = ? LIMIT 1`,
