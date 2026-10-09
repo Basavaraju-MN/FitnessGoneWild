@@ -5,15 +5,7 @@ class Cmds {
 
   async getTrekCategories() {
     const rows = await executeQuery(sqlQueries.getTrekCategories);
-    if (rows.length === 0) {
-      throw utils.getErrorObject(
-        'Trek categories not found',
-        appConstants.HTTP_STATUS_CODES.NOT_FOUND,
-        'Error in getTrekCategories - no categories found',
-        appConstants.HTTP_STATUS_CODES.ZERO_ROWS
-      );
-    }
-    return rows;
+    return rows || [];
   }
 
   async getTrekDetails(categoryId) {
@@ -26,6 +18,11 @@ class Cmds {
     return rows || [];
   }
 
+  async getPickupPoints(tripId) {
+    const rows = await executeQuery(sqlQueries.getPickupPoints, [tripId]);
+    return rows || [];
+  }
+
   async createTripInterest({ trip_id, type = 'interested', source = 'website' }) {
     if (!trip_id) {
       throw new Error('trip_id is required');
@@ -35,7 +32,7 @@ class Cmds {
     return result || [];
   }
 
-  async createCustomer({ name, phone, email = null, city = null }) {
+  async createCustomer({ name, phone, email = null, city = null, trip_id = null }) {
     if (!name || !phone) {
       throw new Error('name and phone are required');
     }
@@ -45,6 +42,7 @@ class Cmds {
       phone,
       email || null,
       city || null,
+      trip_id || null,
     ]);
 
     return result || [];
@@ -67,15 +65,7 @@ class Cmds {
 
   async getBrochureById(trip_id) {
     const rows = await executeQuery(sqlQueries.downloadBroucher, [trip_id]);
-    if (rows.length === 0) {
-      throw utils.getErrorObject(
-        'Trek details not found',
-        appConstants.HTTP_STATUS_CODES.NOT_FOUND,
-        'Error in getTrekDetails - no details found',
-        appConstants.HTTP_STATUS_CODES.ZERO_ROWS
-      );
-    }
-    return rows[0];
+    return rows[0] || null;
   }
 
   async updateDownloadCount(trip_id) {

@@ -1,6 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import '../../styles/trekdetails.css';
 import BookingModal from '../booking/BookingModal';
+import useTrekImages, { FALLBACK_IMAGE } from '../../hooks/useTrekImages';
+import {
+  getDisplayPrice,
+  getWithTransportPrice,
+  getWithoutTransportPrice,
+  isWithTransportOnly,
+  showsDifficulty,
+  showsDistance,
+} from '../../utils/tripPricing';
+import { API_BASE_URL, getDownloadFileName } from '../../api/treks';
 
 export default function TrekDetails({ trek, onBack }) {
   const [currentImage, setCurrentImage] = useState(0);
@@ -15,17 +25,27 @@ export default function TrekDetails({ trek, onBack }) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [brochureError, setBrochureError] = useState('');
 
-  const API_BASE_URL =
-    import.meta.env.VITE_API_BASE_URL ||
-    'http://localhost:4000/api';
 
-  const images = [
-    `/images/${trek.slug}1.jpg`,
-    `/images/${trek.slug}2.jpg`,
-    `/images/${trek.slug}3.jpg`,
-    `/images/${trek.slug}4.jpg`,
-    `/images/${trek.slug}5.jpg`,
-  ];
+  // Only the images that exist, in order 1 to 5
+  const images = useTrekImages(trek.slug);
+
+  useEffect(() => {
+    setCurrentImage(0);
+  }, [trek.slug, images.length]);
+
+  // Automatic slideshow, only when there is more than one image.
+  // Restarts the timer after a manual arrow or dot click.
+  useEffect(() => {
+    if (images.length <= 1) {
+      return undefined;
+    }
+
+    const timer = setTimeout(() => {
+      setCurrentImage((previous) => (previous + 1) % images.length);
+    }, 4000);
+
+    return () => clearTimeout(timer);
+  }, [images.length, currentImage]);
 
   const normalizeList = (value) => {
     if (Array.isArray(value)) {
@@ -50,22 +70,22 @@ export default function TrekDetails({ trek, onBack }) {
     trek.excludes || trek.exclusions || trek.exclusion || []
   );
 
-  const withoutTransportPrice = Number(
-    trek.without_transport_price ??
-      trek.price ??
-      0
-  );
+  const withoutTransportPrice = getWithoutTransportPrice(trek);
 
-  const withTransportPrice = Number(
-    trek.with_transport_price ??
-      trek.transportation_price ??
-      withoutTransportPrice
-  );
+  const withTransportPrice = getWithTransportPrice(trek);
+
+  // Backpacking trips are sold only with transportation
+  const transportOnly = isWithTransportOnly(trek);
+
+  // Duration and Starting Price always show; Difficulty and Distance
+  // depend on the category
+  const infoBoxCount =
+    2 + (showsDifficulty(trek) ? 1 : 0) + (showsDistance(trek) ? 1 : 0);
 
   const formattedPrice = new Intl.NumberFormat('en-IN', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(withoutTransportPrice);
+  }).format(getDisplayPrice(trek));
 
   /* ============================= */
   /* IMAGE SLIDER */
@@ -87,10 +107,7 @@ export default function TrekDetails({ trek, onBack }) {
 
   const handleImageError = (event) => {
     event.currentTarget.onerror = null;
-
-    if (currentImage !== 0) {
-      setCurrentImage(0);
-    }
+    event.currentTarget.src = FALLBACK_IMAGE;
   };
 
   /* ============================= */
@@ -113,6 +130,8 @@ export default function TrekDetails({ trek, onBack }) {
   /* ============================= */
   /* BOOK NOW */
   /* ============================= */
+
+  const isFeatured = Number(trek.is_featured) === 1;
 
   const handleBookNow = () => {
     setShowBookingModal(true);
@@ -184,7 +203,7 @@ export default function TrekDetails({ trek, onBack }) {
           body: JSON.stringify({
             trip_id: trek.id,
             name: trimmedName,
-            mobile: trimmedMobile,
+            phone: trimmedMobile,
           }),
         }
       );
@@ -214,18 +233,10 @@ export default function TrekDetails({ trek, onBack }) {
           'Content-Disposition'
         );
 
-      let fileName = 'brochure.pdf';
-
-      if (contentDisposition) {
-        const match =
-          contentDisposition.match(
-            /filename="([^"]+)"/
-          );
-
-        if (match) {
-          fileName = match[1];
-        }
-      }
+      const fileName = getDownloadFileName(
+        contentDisposition,
+        `${trek.name || 'brochure'}.pdf`
+      );
 
       const downloadUrl =
         window.URL.createObjectURL(blob);
@@ -289,7 +300,7 @@ export default function TrekDetails({ trek, onBack }) {
         <section className="trek-details-gallery">
 
           <img
-            src={images[currentImage]}
+            src={images[currentImage] ?? images[0]}
             alt={trek.name}
             className="trek-details-image"
             onError={handleImageError}
@@ -355,7 +366,9 @@ export default function TrekDetails({ trek, onBack }) {
             </p>
           )}
 
-          <div className="details-info-grid">
+          <div
+            className={`details-info-grid details-info-grid-${infoBoxCount}`}
+          >
 
             <div className="details-info-item">
               <span>Duration</span>
@@ -364,19 +377,23 @@ export default function TrekDetails({ trek, onBack }) {
               </strong>
             </div>
 
-            <div className="details-info-item">
-              <span>Difficulty</span>
-              <strong>
-                {trek.difficulty || '-'}
-              </strong>
-            </div>
+            {showsDifficulty(trek) && (
+              <div className="details-info-item">
+                <span>Difficulty</span>
+                <strong>
+                  {trek.difficulty}
+                </strong>
+              </div>
+            )}
 
-            <div className="details-info-item">
-              <span>Distance</span>
-              <strong>
-                {trek.distance_label || '-'}
-              </strong>
-            </div>
+            {showsDistance(trek) && (
+              <div className="details-info-item">
+                <span>Distance</span>
+                <strong>
+                  {trek.distance_label}
+                </strong>
+              </div>
+            )}
 
             <div className="details-info-item">
               <span>Starting Price</span>
@@ -495,15 +512,17 @@ export default function TrekDetails({ trek, onBack }) {
 
                 <div className="pricing-main">
 
-                  <div className="pricing-option">
-                    <span>Without Transportation</span>
-                    <strong>
-                      ₹{new Intl.NumberFormat('en-IN', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      }).format(withoutTransportPrice)}
-                    </strong>
-                  </div>
+                  {!transportOnly && (
+                    <div className="pricing-option">
+                      <span>Without Transportation</span>
+                      <strong>
+                        ₹{new Intl.NumberFormat('en-IN', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        }).format(withoutTransportPrice)}
+                      </strong>
+                    </div>
+                  )}
 
                   <div className="pricing-option">
                     <span>With Transportation</span>
@@ -634,13 +653,16 @@ export default function TrekDetails({ trek, onBack }) {
             WhatsApp
           </button>
 
-          <button
-            type="button"
-            className="trek-action-book"
-            onClick={handleBookNow}
-          >
-            Book Now
-          </button>
+          {/* No Book Now for featured trips (is_featured = 1) */}
+          {!isFeatured && (
+            <button
+              type="button"
+              className="trek-action-book"
+              onClick={handleBookNow}
+            >
+              Book Now
+            </button>
+          )}
 
         </div>
 

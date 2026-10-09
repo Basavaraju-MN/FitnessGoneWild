@@ -10,6 +10,7 @@ const getTrekCategories = async () => {
     } catch (error) {
         result.success = false;
         result.message = 'Error fetching trek categories';
+        console.error('Error fetching trek categories:', error?.message || error);
     }
     return result;
 }
@@ -24,6 +25,7 @@ const getTrekDetails = async (categoryId) => {
     } catch (error) {
         result.success = false;
         result.message = 'Error fetching trek details';
+        console.error('Error fetching trek details:', error?.message || error);
     }
     return result;
 }
@@ -38,6 +40,7 @@ const getFeaturedTrips = async () => {
     } catch (error) {
         result.success = false;
         result.message = 'Error fetching featured trips';
+        console.error('Error fetching featured trips:', error?.message || error);
     }
     return result;
 }
@@ -52,6 +55,7 @@ const getReviews = async () => {
     } catch (error) {
         result.success = false;
         result.message = 'Error fetching reviews';
+        console.error('Error fetching reviews:', error?.message || error);
     }
     return result;
 }
@@ -66,6 +70,7 @@ const getWhyUs = async () => {
     } catch (error) {
         result.success = false;
         result.message = 'Error fetching why us items';
+        console.error('Error fetching why us items:', error?.message || error);
     }
     return result;
 }
@@ -80,6 +85,7 @@ const getFaq = async () => {
     } catch (error) {
         result.success = false;
         result.message = 'Error fetching FAQ items';
+        console.error('Error fetching FAQ items:', error?.message || error);
     }
     return result;
 }
@@ -98,7 +104,23 @@ const createTripInterest = async ({ trip_id, type = 'interested', source = 'webs
     return result;
 }
 
+const getPickupPoints = async (tripId) => {
+    const result = {};
+    try {
+        const data = await dbCmds.getPickupPoints(tripId);
+        result.success = true;
+        result.message = 'Pickup points fetched successfully';
+        result.data = data;
+    } catch (error) {
+        result.success = false;
+        result.message = 'Error fetching pickup points';
+        console.error('Error fetching pickup points:', error?.message || error);
+    }
+    return result;
+}
+
 module.exports = {
+    getPickupPoints,
     getTrekCategories,
     getTrekDetails,
     getFeaturedTrips,

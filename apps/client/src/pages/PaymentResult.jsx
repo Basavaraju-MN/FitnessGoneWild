@@ -288,6 +288,11 @@ export default function PaymentResult() {
                 pendingBooking.amount ??
                 0
               ),
+
+              // Full payment or advance
+              paymentType: pendingBooking.paymentType || 'full',
+              tripTotal: Number(pendingBooking.tripTotal || 0),
+              balanceDue: Number(pendingBooking.balanceDue || 0),
             }),
           }
         );

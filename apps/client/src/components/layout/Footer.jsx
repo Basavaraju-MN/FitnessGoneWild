@@ -26,8 +26,13 @@ export default function Footer() {
             src="/images/logo.png"
             alt="The Fitness Gone Wild"
             style={{
-              height: '72px',
-              width: '110px',
+              // Light box behind the logo so its dark colours show on the
+              // dark footer (size includes the padding, logo stays 110×72)
+              height: '88px',
+              width: '134px',
+              padding: '8px 12px',
+              background: '#F7F5EC',
+              borderRadius: '12px',
               objectFit: 'contain',
               display: 'block',
               marginBottom: '12px',
@@ -63,10 +68,18 @@ export default function Footer() {
         <div>
           <h4>Reach us</h4>
           <ul>
-            <li><a href="tel:+919876543210">+91 98765 43210</a></li>
-            <li><a href="mailto:hello@fitnessgonewild.in">hello@fitnessgonewild.in</a></li>
-            <li>Indiranagar, Bengaluru</li>
-            <li><a href="#">Instagram</a> · <a href="#">YouTube</a></li>
+            <li><a href="tel:+918762350551">+91 87623 50551</a></li>
+            <li><a href="mailto:gonewildfitness@gmail.com">gonewildfitness@gmail.com</a></li>
+            <li>Rajajinagar, Bengaluru</li>
+            <li>
+              <a
+                href="https://instagram.com/thefitnessgonewild"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Instagram
+              </a>
+            </li>
           </ul>
         </div>
       </div>

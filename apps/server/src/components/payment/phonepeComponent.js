@@ -2,6 +2,7 @@ const { randomUUID } = require('crypto');
 const { StandardCheckoutPayRequest } = require('@phonepe-pg/pg-sdk-node');
 
 const paymentDbOps = require('../../db/paymentDbops');
+const bookingDbOps = require('../../db/bookingDbops');
 const { phonePeClient } = require('../../config/config');
 
 /**
@@ -28,6 +29,26 @@ const parseBookingDetails = (transaction) => {
     !Array.isArray(bookingDetails)
     ? bookingDetails
     : {};
+};
+
+/**
+ * Create the booking (bookings table) for a successful payment and
+ * count its people on the departure. Never fails the payment flow:
+ * a problem here is logged and retried on the next status check.
+ */
+const recordBooking = async (merchantOrderId, status) => {
+  if (status !== 'SUCCESS') return;
+
+  try {
+    const transaction =
+      await paymentDbOps.getTransactionByOrderId(merchantOrderId);
+    await bookingDbOps.recordBooking(transaction);
+  } catch (error) {
+    console.error(
+      `Failed to create booking for ${merchantOrderId}:`,
+      error?.message || error
+    );
+  }
 };
 
 /**
@@ -255,6 +276,8 @@ exports.checkPaymentStatus = async (merchantOrderId) => {
     paymentTimestamp: response.paymentTimestamp,
   });
 
+  await recordBooking(merchantOrderId, status);
+
   // 6. Return saved booking details along with payment status.
   return {
     merchantOrderId,
@@ -359,6 +382,8 @@ exports.processWebhook = async ({
       paymentMethod: payload.paymentInstrument?.type,
       paymentTimestamp: payload.paymentTimestamp,
     });
+
+    await recordBooking(merchantOrderId, status);
 
     await paymentDbOps.updateWebhookLog(
       webhookId,

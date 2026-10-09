@@ -11,7 +11,7 @@ const queries = {
 async function createTransaction(merchantOrderId, amount, currency, redirectUrl, bookingDetails) {
   return executeQuery(queries.createTransaction, [
     merchantOrderId, amount, currency, redirectUrl, JSON.stringify(bookingDetails)
-  ]);c
+  ]);
 }
 
 async function getTransactionByOrderId(merchantOrderId) {

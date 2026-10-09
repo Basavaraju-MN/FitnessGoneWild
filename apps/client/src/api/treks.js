@@ -1,9 +1,31 @@
 const configuredApiBaseUrl =
   import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, '');
 
-const API_BASE_URL =
+export const API_BASE_URL =
   configuredApiBaseUrl ||
   (import.meta.env.DEV ? 'http://localhost:4000/api' : '/api');
+
+// Reads the file name from a Content-Disposition header,
+// preferring the UTF-8 filename* form over the plain one.
+export function getDownloadFileName(contentDisposition, fallback) {
+  if (contentDisposition) {
+    const encoded = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+    if (encoded) {
+      try {
+        return decodeURIComponent(encoded[1].trim());
+      } catch {
+        // Fall through to the plain filename
+      }
+    }
+
+    const plain = contentDisposition.match(/filename="?([^";]+)"?/i);
+    if (plain) {
+      return plain[1].trim();
+    }
+  }
+
+  return fallback;
+}
 
 async function parseResponse(response) {
   let result;
@@ -27,34 +49,58 @@ async function parseResponse(response) {
   return result;
 }
 
-export async function getTrekCategories() {
-  const response = await fetch(`${API_BASE_URL}/trek-category`, {
-    credentials: 'include',
-  });
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  const result = await parseResponse(response);
-  return result.data;
-}
+// GET with retries: the server can be slow to wake up or briefly lose
+// its database connection, so retry network errors and 5xx responses.
+async function getWithRetry(path, { retries = 2, signal } = {}) {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      const response = await fetch(`${API_BASE_URL}${path}`, {
+        credentials: 'include',
+        signal,
+      });
 
-export async function getTreksByCategory(categoryId) {
-  const response = await fetch(
-    `${API_BASE_URL}/get-all-trek-details?category_id=${encodeURIComponent(categoryId)}`,
-    {
-      credentials: 'include',
+      if (response.status >= 500 && attempt < retries) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+
+      const result = await parseResponse(response);
+      return result.data;
+    } catch (error) {
+      if (error?.name === 'AbortError' || attempt >= retries) {
+        throw error;
+      }
+
+      await wait(800 * (attempt + 1));
     }
-  );
-
-  const result = await parseResponse(response);
-  return result.data;
+  }
 }
 
-export async function getFeaturedTrips() {
-  const response = await fetch(`${API_BASE_URL}/featured-trips`, {
-    credentials: 'include',
-  });
+export async function getTrekCategories(options) {
+  const data = await getWithRetry('/trek-category', options);
+  return Array.isArray(data) ? data : [];
+}
 
-  const result = await parseResponse(response);
-  return result.data;
+export async function getTreksByCategory(categoryId, options) {
+  const data = await getWithRetry(
+    `/get-all-trek-details?category_id=${encodeURIComponent(categoryId)}`,
+    options
+  );
+  return Array.isArray(data) ? data : [];
+}
+
+export async function getFeaturedTrips(options) {
+  const data = await getWithRetry('/featured-trips', options);
+  return Array.isArray(data) ? data : [];
+}
+
+export async function getPickupPoints(tripId, options) {
+  const data = await getWithRetry(
+    `/pickup-points?trip_id=${encodeURIComponent(tripId)}`,
+    options
+  );
+  return Array.isArray(data) ? data : [];
 }
 
 export async function getReviews() {

@@ -17,16 +17,6 @@ async function getBrochure({ trip_id, name, phone, email = null, city = null }) 
         };
     }
 
-    try {
-        await dbops.createCustomer({ name, phone, email, city });
-    } catch (error) {
-        return {
-            success: false,
-            statusCode: 500,
-            message: error.message || 'Unable to save customer details',
-        };
-    }
-
     const brochure = await dbops.getBrochureById(
         trip_id
     );
@@ -44,6 +34,18 @@ async function getBrochure({ trip_id, name, phone, email = null, city = null }) 
             success: false,
             statusCode: 404,
             message: 'Brochure file not found',
+        };
+    }
+
+    // Save the lead with the trip whose brochure they downloaded.
+    // Every download adds a new row, so repeat downloads are kept.
+    try {
+        await dbops.createCustomer({ name, phone, email, city, trip_id });
+    } catch (error) {
+        return {
+            success: false,
+            statusCode: 500,
+            message: error.message || 'Unable to save customer details',
         };
     }
 
