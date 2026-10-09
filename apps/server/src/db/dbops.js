@@ -72,5 +72,14 @@ class Cmds {
     await executeQuery(sqlQueries.updateDownloadCount, [trip_id]);
   }
 
+  async getTripById(trip_id) {
+    const rows = await executeQuery(sqlQueries.getTripById, [trip_id]);
+    return rows[0] || null;
+  }
+
+  async countBrochureDownload(trip_id, fileName) {
+    await executeQuery(sqlQueries.countBrochureDownload, [trip_id, fileName]);
+  }
+
 }
 module.exports = new Cmds();

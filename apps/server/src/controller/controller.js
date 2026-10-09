@@ -198,17 +198,7 @@ exports.downloadBroucher = async (req, res) => {
 
     const brochure = result.data;
 
-    res.setHeader(
-      'Content-Type',
-      brochure.mime_type || 'application/pdf'
-    );
-
-    res.setHeader(
-      'Content-Length',
-      brochure.file_data.length
-    );
-
-    let fileName = String(brochure.file_name || 'brochure').trim();
+    let fileName = String(brochure.fileName || 'brochure').trim();
     if (!/\.pdf$/i.test(fileName)) {
       fileName += '.pdf';
     }
@@ -217,12 +207,29 @@ exports.downloadBroucher = async (req, res) => {
     // filename is the ASCII-only fallback for older browsers.
     const asciiFileName = fileName.replace(/[^\x20-\x7E]|["\\]/g, '_');
 
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="${asciiFileName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`
-    );
+    const headers = {
+      'Content-Type': brochure.mimeType || 'application/pdf',
+      'Content-Disposition':
+        `attachment; filename="${asciiFileName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`,
+    };
 
-    return res.send(brochure.file_data);
+    // PDF from the brochures folder (streamed, works for large files)
+    if (brochure.filePath) {
+      return res.sendFile(brochure.filePath, { headers }, (error) => {
+        if (error && !res.headersSent) {
+          console.error('Brochure file send error:', error);
+          res.status(500).json({
+            success: false,
+            message: 'Error fetching brochure',
+          });
+        }
+      });
+    }
+
+    // Older brochure stored in the database
+    res.set(headers);
+    res.setHeader('Content-Length', brochure.fileData.length);
+    return res.send(brochure.fileData);
 
   } catch (error) {
     console.error('getBrochure error:', error);
