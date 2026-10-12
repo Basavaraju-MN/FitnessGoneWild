@@ -1,5 +1,6 @@
 const mysql = require('mysql2');
-const { db } = require('../config/config');
+// Shared with the admin portal, which uses this same pool
+const { db } = require('../config/database');
 
 const pool = mysql.createPool({
   host: db.host,
@@ -30,7 +31,13 @@ const RETRYABLE_ERROR_CODES = new Set([
   'EPIPE',
   'ECONNREFUSED',
   'PROTOCOL_SEQUENCE_TIMEOUT',
+  // Hostinger limits simultaneous connections per database user
+  'ER_CON_COUNT_ERROR',
+  'ER_TOO_MANY_USER_CONNECTIONS',
+  'ER_USER_LIMIT_REACHED',
 ]);
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const executeQuery = async (sql, params = [], retries = 2) => {
   if (!sql) return [];
@@ -41,6 +48,7 @@ const executeQuery = async (sql, params = [], retries = 2) => {
   } catch (error) {
     if (retries > 0 && RETRYABLE_ERROR_CODES.has(error?.code)) {
       console.warn(`Query retry after ${error.code}`);
+      await wait(300 * (3 - retries)); // short pause, longer on the second retry
       return executeQuery(sql, params, retries - 1);
     }
 

@@ -2,9 +2,6 @@ const path = require('path');
 
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
-// Same database settings as the website (apps/server/src/config/database.js)
-const { db } = require('../server/src/config/database');
-
 const isProduction = process.env.NODE_ENV === 'production';
 
 // ADMIN_JWT_SECRET on Render; JWT_SECRET in the local .env
@@ -17,14 +14,6 @@ if (!jwtSecret) {
 module.exports = {
   isProduction,
   port: Number(process.env.PORT || 4100),
-
-  db: {
-    host: db.host,
-    port: db.port,
-    user: db.user,
-    password: db.password,
-    database: db.database,
-  },
 
   jwtSecret,
   sessionHours: 12,

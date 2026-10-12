@@ -1,24 +1,10 @@
-const mysql = require('mysql2');
-const { db } = require('./config');
-
-const pool = mysql
-  .createPool({
-    ...db,
-    waitForConnections: true,
-    connectionLimit: 10,
-    timezone: '+05:30',
-    dateStrings: true,
-    // Remote MySQL drops idle connections
-    enableKeepAlive: true,
-    keepAliveInitialDelay: 10000,
-    maxIdle: 2,
-    idleTimeout: 60000,
-  })
-  .promise();
+// The admin uses the website's own connection pool (apps/server/src/db/connection.js):
+// one pool to the database instead of two, and its retries when the
+// database drops a connection or is briefly at its connection limit.
+const { pool, executeQuery } = require('../server/src/db/connection');
 
 async function query(sql, params = []) {
-  const [rows] = await pool.query(sql, params);
-  return rows;
+  return executeQuery(sql, params);
 }
 
 async function queryOne(sql, params = []) {
@@ -26,4 +12,7 @@ async function queryOne(sql, params = []) {
   return rows[0] || null;
 }
 
-module.exports = { pool, query, queryOne };
+// Close the pool (used by scripts that should exit when done)
+const end = () => pool.promise().end();
+
+module.exports = { query, queryOne, end };

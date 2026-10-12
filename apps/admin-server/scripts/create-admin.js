@@ -1,7 +1,7 @@
 // Creates (or resets) an admin login.
 // Usage: pnpm --filter admin-server create-admin <username> <email> <password> ["Full Name"]
 const bcrypt = require('bcryptjs');
-const { pool, query, queryOne } = require('../db');
+const { end, query, queryOne } = require('../db');
 
 async function main() {
   const [username, email, password, fullName = 'Administrator'] = process.argv.slice(2);
@@ -33,11 +33,11 @@ async function main() {
     console.log(`Created admin "${username}".`);
   }
 
-  await pool.end();
+  await end();
 }
 
 main().catch(async (error) => {
   console.error('Failed:', error.message);
-  await pool.end();
+  await end();
   process.exit(1);
 });
