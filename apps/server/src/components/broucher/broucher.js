@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const dbops = require('../../db/dbops');
+const { sendBrochureDownloadAlert } = require('../../utils/mail');
 
 // Brochure PDFs live on disk, one folder per trek named by its slug:
 //   apps/server/brochures/<slug>/<any name>.pdf
@@ -89,8 +90,10 @@ async function getBrochure({ trip_id, name, phone, email = null, city = null }) 
 
     // Save the lead with the trip whose brochure they downloaded.
     // Every download adds a new row, so repeat downloads are kept.
+    let customerId = null;
     try {
-        await dbops.createCustomer({ name, phone, email, city, trip_id });
+        const customer = await dbops.createCustomer({ name, phone, email, city, trip_id });
+        customerId = customer?.insertId || null;
     } catch (error) {
         return {
             success: false,
@@ -98,6 +101,16 @@ async function getBrochure({ trip_id, name, phone, email = null, city = null }) 
             message: error.message || 'Unable to save customer details',
         };
     }
+
+    // Lead for the admin portal; never block the download for it
+    try {
+        await dbops.createBrochureDownload({ customer_id: customerId, trip_id, name, phone, email });
+    } catch (error) {
+        console.error('Brochure lead save failed:', error?.message || error);
+    }
+
+    // Email the admin in the background; the download does not wait for it
+    sendBrochureDownloadAlert({ name, phone, email, tripName: trip.name });
 
     // The count is nice to have; never block the download for it
     try {

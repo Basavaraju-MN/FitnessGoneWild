@@ -20,6 +20,12 @@ const CLIENT_DIST_PATH = path.resolve(
   '../../client/dist'
 );
 
+// Admin portal build (apps/admin), served at /admin
+const ADMIN_DIST_PATH = path.resolve(
+  __dirname,
+  '../../admin/dist'
+);
+
 app.set('trust proxy', 1);
 
 /* =========================================================
@@ -165,6 +171,30 @@ app.get('/api/health', async (req, res) => {
       database: 'disconnected',
     });
   }
+});
+
+/* =========================================================
+   ADMIN PORTAL
+   API at /api/admin (apps/admin-server), app at /admin.
+   If the admin cannot start (e.g. ADMIN_JWT_SECRET missing),
+   the website keeps running without it.
+   ========================================================= */
+
+try {
+  const { createAdminRouter } = require('../../admin-server/app');
+  app.use('/api/admin', createAdminRouter());
+  console.log('Admin API mounted at /api/admin');
+} catch (error) {
+  console.error('Admin API not mounted:', error.message);
+}
+
+app.use('/admin', express.static(ADMIN_DIST_PATH));
+
+// The admin is a single-page app: any /admin URL loads its index.html
+app.get(/^\/admin(\/.*)?$/, (req, res, next) => {
+  res.sendFile(path.join(ADMIN_DIST_PATH, 'index.html'), (error) => {
+    if (error) next();
+  });
 });
 
 app.use('/api', trekRoutes);

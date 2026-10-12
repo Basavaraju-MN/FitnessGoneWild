@@ -1,4 +1,5 @@
 const { executeQuery } = require('./connection');
+const { sendBookingAlert } = require('../utils/mail');
 
 const queries = {
   // Scheduled departures match on trip + start date; custom trips also on end date
@@ -13,6 +14,7 @@ const queries = {
 
   // merchant_order_id is UNIQUE, so the same payment is booked only once
   createBooking: `INSERT INTO bookings (booking_ref, departure_id, customer_id, trip_id, pickup_point_id, people, with_transport_people, without_transport_people, travel_mode, trek_start_date, trek_end_date, trip_days, is_custom_trip, amount, amount_paid, advance_amount, balance_amount, payment_type, status, payment_status, merchant_order_id, payment_transaction_id, phonepe_order_id, payment_method, paid_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', ?, ?, ?, ?, ?, NOW())`,
+  getBookingRef: `SELECT booking_ref FROM bookings WHERE id = ?`,
   // Readable reference from the row id, e.g. TFGW-2026-0042
   setBookingRef: `UPDATE bookings SET booking_ref = CONCAT('TFGW-', YEAR(booked_at), '-', LPAD(id, 4, '0')) WHERE id = ?`,
 };
@@ -162,6 +164,30 @@ async function recordBooking(transaction) {
 
   await executeQuery(queries.setBookingRef, [result.insertId]);
   await executeQuery(queries.addSeatsBooked, [people, departureId]);
+
+  // Email the admin in the background (the admin bell picks it up too)
+  executeQuery(queries.getBookingRef, [result.insertId])
+    .then((rows) =>
+      sendBookingAlert({
+        bookingRef: rows[0]?.booking_ref,
+        name: details.customerName,
+        phone,
+        email: details.customerEmail,
+        tripName: details.trekName,
+        startDate,
+        endDate,
+        isCustomTrip: Boolean(details.isCustomTrip),
+        people,
+        withTransport,
+        withoutTransport,
+        pickupLocation: details.pickupLocation,
+        tripTotal,
+        amountPaid,
+        balance,
+        isAdvance,
+      })
+    )
+    .catch((error) => console.error('Booking alert failed:', error?.message || error));
 
   return result.insertId;
 }

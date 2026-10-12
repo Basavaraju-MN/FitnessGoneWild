@@ -3,8 +3,11 @@
   "private": true,
   "packageManager": "pnpm@9.6.0",
   "scripts": {
-    "dev": "pnpm -r --parallel run dev",
-    "build": "turbo run build",
+    "dev": "pnpm --filter client --filter server --filter admin --filter admin-server --parallel run dev",
+    "dev:site": "pnpm --filter client --filter server --parallel run dev",
+    "dev:admin": "pnpm --filter admin --filter admin-server --parallel run dev",
+    "build": "turbo run build --filter=client --filter=admin",
+    "build:admin": "pnpm --filter admin run build",
     "start": "pnpm --filter server start"
   },
   "devDependencies": {
