@@ -1,4 +1,5 @@
 const dbCmds = require('../db/dbops');
+const { sendTripInterestAlert } = require('../utils/mail');
 
 const getTrekCategories = async () => {
     const result = {};
@@ -90,6 +91,18 @@ const getFaq = async () => {
     return result;
 }
 
+async function notifyInterest(tripId) {
+    try {
+        const [trip, total] = await Promise.all([
+            dbCmds.getTripById(tripId),
+            dbCmds.countTripInterested(tripId),
+        ]);
+        if (trip) await sendTripInterestAlert({ tripId, tripName: trip.name, total });
+    } catch (error) {
+        console.error('Interest alert failed:', error?.message || error);
+    }
+}
+
 const createTripInterest = async ({ trip_id, type = 'interested', source = 'website' }) => {
     const result = {};
     try {
@@ -97,6 +110,11 @@ const createTripInterest = async ({ trip_id, type = 'interested', source = 'webs
         result.success = true;
         result.message = 'Trip interest saved successfully';
         result.data = { trip_id, type, source, insertId: data?.insertId || null };
+
+        // Tell the admin by email (in the background, never blocks the click)
+        if (type === 'interested') {
+            notifyInterest(trip_id);
+        }
     } catch (error) {
         result.success = false;
         result.message = 'Error saving trip interest';
