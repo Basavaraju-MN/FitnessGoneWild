@@ -9,32 +9,8 @@ const {
   Env,
 } = require('@phonepe-pg/pg-sdk-node');
 
-// DB_* environment variables take priority. Without them,
-// development uses the local MySQL and production uses Hostinger.
-const dbDefaults = isProduction
-  ? {
-    host: 'srv875.hstgr.io',
-    user: 'u441995167_fitnessGone',
-    password: 'FitnessGoneWild@123',
-    database: 'u441995167_fitnessGone',
-  }
-  : {
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'fgonewild',
-  };
-
-const db = {
-  host: process.env.DB_HOST || dbDefaults.host,
-  port: Number(process.env.DB_PORT || 3306),
-  user: process.env.DB_USER || dbDefaults.user,
-  password: process.env.DB_PASSWORD ?? dbDefaults.password,
-  database: process.env.DB_NAME || dbDefaults.database,
-  connectionLimit: Number(process.env.DB_CONNECTION_LIMIT || 10),
-  timezone: '+05:30',
-  dateStrings: true,
-};
+// Database settings live in database.js (also used by the admin portal)
+const { db } = require('./database');
 
 const clientOrigins = (
   process.env.CLIENT_URL || 'http://localhost:5173'
