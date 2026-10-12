@@ -34,6 +34,23 @@ Admin: http://localhost:5175 · Website: http://localhost:5173
 The website server also serves the built admin at http://localhost:4000/admin
 (after `pnpm run build`), exactly like production.
 
+## Code structure (same layers as the website server)
+
+| File | What it does |
+|---|---|
+| `routes/routes.js` | Which URL goes to which controller function, and which roles may call it |
+| `controller/controller.js` | **One file.** Reads the request, calls the component, sends the JSON reply |
+| `components/<screen>/<screen>Manager.js` | Business rules for one screen: checks, calculations, the order things happen (e.g. `components/booking/bookingManager.js`) |
+| `components/common/rules.js` | Rules shared by several screens (statuses, payment methods, roles) |
+| `db/dbops.js` | One small function per database query |
+| `db/sqlqueries.js` | **All SQL**, grouped by section |
+| `db/connection.js` | Uses the website's connection pool (`apps/server/src/db/connection.js`) |
+| `middleware/auth.js` | Login check and role check |
+| `utils/http.js` | Error type, form helpers, activity log |
+
+To trace a request, e.g. `POST /api/admin/bookings/12/payments`:
+`routes.js` → `controller.addBookingPayment` → `bookingManager.addBookingPayment` → `dbops.createBookingPayment` / `dbops.updateBookingPayment` → `sqlqueries.createBookingPayment` / `updateBookingPayment`.
+
 ## Roles
 
 | Role | Sections |

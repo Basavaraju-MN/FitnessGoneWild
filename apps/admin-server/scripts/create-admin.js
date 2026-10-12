@@ -1,7 +1,7 @@
 // Creates (or resets) an admin login.
 // Usage: pnpm --filter admin-server create-admin <username> <email> <password> ["Full Name"]
 const bcrypt = require('bcryptjs');
-const { end, query, queryOne } = require('../db');
+const { executeQuery, end } = require('../db/connection');
 
 async function main() {
   const [username, email, password, fullName = 'Administrator'] = process.argv.slice(2);
@@ -17,16 +17,16 @@ async function main() {
   }
 
   const hash = await bcrypt.hash(password, 10);
-  const existing = await queryOne('SELECT id FROM admin_users WHERE username = ? OR email = ?', [username, email]);
+  const [existing] = await executeQuery('SELECT id FROM admin_users WHERE username = ? OR email = ?', [username, email]);
 
   if (existing) {
-    await query(
+    await executeQuery(
       "UPDATE admin_users SET password_hash = ?, role = 'admin', is_active = 1 WHERE id = ?",
       [hash, existing.id]
     );
     console.log(`Updated "${username}": password reset, role admin, active.`);
   } else {
-    await query(
+    await executeQuery(
       "INSERT INTO admin_users (username, full_name, email, password_hash, role, is_active) VALUES (?, ?, ?, ?, 'admin', 1)",
       [username, fullName, email.toLowerCase(), hash]
     );
