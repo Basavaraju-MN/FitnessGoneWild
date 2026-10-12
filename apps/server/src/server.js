@@ -185,7 +185,17 @@ try {
   app.use('/api/admin', createAdminRouter());
   console.log('Admin API mounted at /api/admin');
 } catch (error) {
-  console.error('Admin API not mounted:', error.message);
+  console.error('Admin API not mounted:', error);
+
+  // Say why, instead of a generic "API endpoint not found",
+  // so the admin login page shows the real problem.
+  const reason = String(error?.message || error).split('\n')[0];
+  app.use('/api/admin', (req, res) => {
+    res.status(503).json({
+      success: false,
+      message: `Admin portal is not available: ${reason}`,
+    });
+  });
 }
 
 app.use('/admin', express.static(ADMIN_DIST_PATH));
