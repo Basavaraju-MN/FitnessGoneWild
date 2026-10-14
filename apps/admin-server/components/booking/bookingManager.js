@@ -1,6 +1,7 @@
 // Bookings screen: list, details, offline bookings, balance payments.
 // Called by controller/controller.js; reads and writes through db/dbops.js.
 const dbops = require('../../db/dbops');
+const refundManager = require('../refund/refundManager');
 const {
   badRequest,
   notFound,
@@ -22,13 +23,19 @@ async function getBooking(id) {
   const booking = await dbops.getBookingById(id);
   if (!booking) throw notFound('Booking not found');
 
-  const payments = await dbops.getBookingPayments(booking.id);
-  return { ...booking, payments };
+  const [payments, refunds] = await Promise.all([
+    dbops.getBookingPayments(booking.id),
+    refundManager.getRefundsForBooking(booking),
+  ]);
+  return { ...booking, payments, ...refunds };
 }
 
+// Customers are added when they book; earlier leads with the same phone are linked
 async function findOrCreateCustomer({ name, phone, email, tripId }) {
-  return (await dbops.getCustomerIdByPhone(phone)) ||
-    dbops.createCustomer({ name, phone, email, tripId });
+  const customerId = (await dbops.getCustomerIdByPhone(phone)) ||
+    (await dbops.createCustomer({ name, phone, email, tripId }));
+  await dbops.linkLeadsToCustomer(customerId, phone).catch(() => {});
+  return customerId;
 }
 
 // Booking taken by phone / WhatsApp / walk-in

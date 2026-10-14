@@ -5,8 +5,7 @@ const { badRequest } = require('../../utils/http');
 const ROLES = ['admin', 'sales', 'operations'];
 const PAYMENT_METHODS = ['cash', 'upi', 'bank_transfer', 'card', 'phonepe', 'other'];
 const BOOKING_STATUSES = ['pending', 'confirmed', 'cancelled', 'completed'];
-const ENQUIRY_STATUSES = ['new', 'contacted', 'interested', 'booked', 'closed'];
-const ENQUIRY_SOURCES = ['website', 'whatsapp', 'phone', 'instagram', 'walkin'];
+const ENQUIRY_SOURCES = ['website', 'brochure', 'whatsapp', 'phone', 'instagram', 'walkin'];
 const FOLLOW_UP_STATUSES = ['not_contacted', 'contacted', 'interested', 'converted', 'not_interested'];
 
 // Bookings that count (hold seats, show in totals)
@@ -28,7 +27,6 @@ module.exports = {
   ROLES,
   PAYMENT_METHODS,
   BOOKING_STATUSES,
-  ENQUIRY_STATUSES,
   ENQUIRY_SOURCES,
   FOLLOW_UP_STATUSES,
   isActiveBooking,

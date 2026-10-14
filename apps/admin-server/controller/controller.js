@@ -11,11 +11,13 @@ const coordinationManager = require('../components/coordination/coordinationMana
 const bookingManager = require('../components/booking/bookingManager');
 const customerManager = require('../components/customer/customerManager');
 const enquiryManager = require('../components/enquiry/enquiryManager');
-const brochureManager = require('../components/brochure/brochureManager');
 const paymentManager = require('../components/payment/paymentManager');
 const masterManager = require('../components/master/masterManager');
 const userManager = require('../components/user/userManager');
 const settingManager = require('../components/setting/settingManager');
+const reviewManager = require('../components/review/reviewManager');
+const activityManager = require('../components/activity/activityManager');
+const refundManager = require('../components/refund/refundManager');
 
 // Session cookie: the admin is on the same site as its API
 // (thefitnessgonewild.in/admin and /api/admin; localhost ports locally)
@@ -140,6 +142,42 @@ exports.updateTrip = async (req, res, next) => {
   }
 };
 
+exports.uploadTripImage = async (req, res, next) => {
+  try {
+    const data = await packageManager.uploadTripImage(req.admin, idParam(req), req.body || {});
+    return res.status(200).json({ success: true, message: 'Photo saved successfully', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.deleteTripImage = async (req, res, next) => {
+  try {
+    const data = await packageManager.deleteTripImage(req.admin, idParam(req), Number(req.params.number));
+    return res.status(200).json({ success: true, message: 'Photo removed successfully', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.uploadTripBrochure = async (req, res, next) => {
+  try {
+    const data = await packageManager.uploadTripBrochure(req.admin, idParam(req), req.body || {});
+    return res.status(200).json({ success: true, message: 'Brochure saved successfully', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.deleteTripBrochure = async (req, res, next) => {
+  try {
+    const data = await packageManager.deleteTripBrochure(req.admin, idParam(req));
+    return res.status(200).json({ success: true, message: 'Brochure removed successfully', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 /* =====================================================================
    TRIP COORDINATION (departures)
    ===================================================================== */
@@ -233,6 +271,50 @@ exports.addBookingPayment = async (req, res, next) => {
 };
 
 /* =====================================================================
+   REFUNDS
+   ===================================================================== */
+
+exports.getRefunds = async (req, res, next) => {
+  try {
+    const data = await refundManager.getRefunds();
+    return res.status(200).json({ success: true, message: 'Refunds fetched successfully', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.createRefund = async (req, res, next) => {
+  try {
+    const data = await refundManager.createRefund(req.admin, idParam(req), req.body || {});
+    return res.status(200).json({ success: true, message: 'Refund started successfully', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.checkRefund = async (req, res, next) => {
+  try {
+    const data = await refundManager.checkRefund(idParam(req));
+    return res.status(200).json({ success: true, message: 'Refund status checked', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/* =====================================================================
+   ACTIVITY LOG
+   ===================================================================== */
+
+exports.getActivity = async (req, res, next) => {
+  try {
+    const data = await activityManager.getActivity(req.query.type);
+    return res.status(200).json({ success: true, message: 'Activity fetched successfully', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/* =====================================================================
    CUSTOMERS
    ===================================================================== */
 
@@ -289,28 +371,6 @@ exports.updateEnquiry = async (req, res, next) => {
   try {
     const data = await enquiryManager.updateEnquiry(req.admin, idParam(req), req.body || {});
     return res.status(200).json({ success: true, message: 'Enquiry updated successfully', data });
-  } catch (error) {
-    return next(error);
-  }
-};
-
-/* =====================================================================
-   BROCHURE DOWNLOADS
-   ===================================================================== */
-
-exports.getBrochureDownloads = async (req, res, next) => {
-  try {
-    const { rows, stats } = await brochureManager.getBrochureDownloads();
-    return res.status(200).json({ success: true, message: 'Brochure downloads fetched successfully', data: rows, stats });
-  } catch (error) {
-    return next(error);
-  }
-};
-
-exports.updateBrochureDownload = async (req, res, next) => {
-  try {
-    const data = await brochureManager.updateBrochureDownload(req.admin, idParam(req), req.body || {});
-    return res.status(200).json({ success: true, message: 'Lead updated successfully', data });
   } catch (error) {
     return next(error);
   }
@@ -417,6 +477,88 @@ exports.updateSettings = async (req, res, next) => {
   try {
     const data = await settingManager.updateSettings(req.admin, req.body?.settings);
     return res.status(200).json({ success: true, message: 'Settings saved successfully', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/* =====================================================================
+   REVIEWS (website + Google Business Profile)
+   ===================================================================== */
+
+exports.getReviews = async (req, res, next) => {
+  try {
+    const data = await reviewManager.getReviews();
+    return res.status(200).json({ success: true, message: 'Reviews fetched successfully', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.updateReview = async (req, res, next) => {
+  try {
+    const data = await reviewManager.updateReview(req.admin, idParam(req), req.body || {});
+    return res.status(200).json({ success: true, message: 'Review updated successfully', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.getGoogleStatus = async (req, res, next) => {
+  try {
+    const data = await reviewManager.getGoogleStatus(req);
+    return res.status(200).json({ success: true, message: 'Google status fetched successfully', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.getGoogleConnectUrl = async (req, res, next) => {
+  try {
+    const url = reviewManager.getGoogleConnectUrl(req, req.admin);
+    return res.status(200).json({ success: true, message: 'Google sign-in link created', data: { url } });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+// Google redirects the browser here after sign-in (not a JSON call)
+exports.googleCallback = async (req, res) => {
+  const next = await reviewManager.finishGoogleConnect(req);
+  return res.redirect(next);
+};
+
+exports.getGoogleLocations = async (req, res, next) => {
+  try {
+    const data = await reviewManager.getGoogleLocations();
+    return res.status(200).json({ success: true, message: 'Google locations fetched successfully', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.setGoogleLocation = async (req, res, next) => {
+  try {
+    const data = await reviewManager.setGoogleLocation(req.admin, req.body || {});
+    return res.status(200).json({ success: true, message: 'Google location saved and synced', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.syncGoogleReviews = async (req, res, next) => {
+  try {
+    const data = await reviewManager.syncGoogleReviews();
+    return res.status(200).json({ success: true, message: 'Google reviews synced', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.disconnectGoogle = async (req, res, next) => {
+  try {
+    await reviewManager.disconnectGoogle(req.admin);
+    return res.status(200).json({ success: true, message: 'Google disconnected', data: true });
   } catch (error) {
     return next(error);
   }

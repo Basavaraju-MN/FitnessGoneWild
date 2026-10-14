@@ -175,7 +175,6 @@
   font-size: 16px;
   line-height: 1.8;
   color: #555;
-  white-space: pre-line;
 }
 
 /* =========================================
@@ -235,7 +234,6 @@
 ========================================= */
 
 .itinerary-content {
-  white-space: pre-line;
   font-size: 16px;
   line-height: 1.8;
   color: #555;
@@ -557,3 +555,26 @@
     display: none;
   }
 }
+
+/* =========================================
+   Rich text from the admin editor
+   (description, itinerary, short description)
+========================================= */
+.rich-text > :first-child { margin-top: 0; }
+.rich-text > :last-child { margin-bottom: 0; }
+.rich-text p { margin: 0 0 .85em; }
+.rich-text h1, .rich-text h2, .rich-text h3, .rich-text h4, .rich-text h5, .rich-text h6 {
+  margin: 1.2em 0 .5em; color: var(--forest, #0F3D36); line-height: 1.2;
+}
+.rich-text h1 { font-size: 1.7em; } .rich-text h2 { font-size: 1.45em; } .rich-text h3 { font-size: 1.25em; } .rich-text h4 { font-size: 1.1em; }
+.rich-text ul, .rich-text ol { margin: 0 0 .9em; padding-left: 1.5em; }
+.rich-text li { margin-bottom: .35em; }
+.rich-text ul { list-style: disc; } .rich-text ol { list-style: decimal; }
+.rich-text strong, .rich-text b { font-weight: 700; color: #333; }
+.rich-text a { color: var(--amber, #E4881F); text-decoration: underline; text-underline-offset: 2px; }
+.rich-text blockquote { margin: 0 0 1em; padding: 10px 16px; border-left: 4px solid var(--amber, #E4881F); background: #FBF5EC; border-radius: 0 8px 8px 0; }
+.rich-text hr { border: 0; border-top: 1px dashed #d9d9d9; margin: 1.2em 0; }
+.rich-text table { width: 100%; border-collapse: collapse; margin: 0 0 1em; font-size: .95em; display: block; overflow-x: auto; }
+.rich-text th, .rich-text td { border: 1px solid #e3e3e3; padding: 8px 10px; text-align: left; vertical-align: top; }
+.rich-text th { background: #F2F5F1; font-weight: 700; }
+.rich-text pre, .rich-text code { white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: .92em; }

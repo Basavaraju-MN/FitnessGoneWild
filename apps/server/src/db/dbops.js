@@ -72,9 +72,14 @@ class Cmds {
     await executeQuery(sqlQueries.updateDownloadCount, [trip_id]);
   }
 
-  // Lead for the admin portal (Brochure Downloads)
-  async createBrochureDownload({ customer_id, trip_id, name, phone, email = null }) {
-    await executeQuery(sqlQueries.createBrochureDownload, [customer_id || null, trip_id, name, phone, email || null]);
+  // Lead in the admin portal's Enquiries & Leads (source: brochure)
+  async createBrochureLead({ customer_id, trip_id, name, phone, email = null }) {
+    await executeQuery(sqlQueries.createBrochureLead, [customer_id || null, trip_id, name, phone, email || null]);
+  }
+
+  async findCustomerIdByPhone(phone) {
+    const rows = await executeQuery(sqlQueries.findCustomerIdByPhone, [phone]);
+    return rows?.[0]?.id || null;
   }
 
   async countTripInterested(trip_id) {

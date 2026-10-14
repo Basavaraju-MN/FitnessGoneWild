@@ -88,25 +88,18 @@ async function getBrochure({ trip_id, name, phone, email = null, city = null }) 
         };
     }
 
-    // Save the lead with the trip whose brochure they downloaded.
-    // Every download adds a new row, so repeat downloads are kept.
-    let customerId = null;
+    // Save the lead (Enquiries & Leads) with the trip whose brochure they
+    // downloaded. Every download adds a row, so repeat downloads are kept.
+    // They become a customer only when they book (bookingDbops.recordBooking).
     try {
-        const customer = await dbops.createCustomer({ name, phone, email, city, trip_id });
-        customerId = customer?.insertId || null;
+        const customerId = await dbops.findCustomerIdByPhone(phone);
+        await dbops.createBrochureLead({ customer_id: customerId, trip_id, name, phone, email });
     } catch (error) {
         return {
             success: false,
             statusCode: 500,
-            message: error.message || 'Unable to save customer details',
+            message: error.message || 'Unable to save your details',
         };
-    }
-
-    // Lead for the admin portal; never block the download for it
-    try {
-        await dbops.createBrochureDownload({ customer_id: customerId, trip_id, name, phone, email });
-    } catch (error) {
-        console.error('Brochure lead save failed:', error?.message || error);
     }
 
     // Email the admin in the background; the download does not wait for it

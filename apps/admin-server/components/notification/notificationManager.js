@@ -7,8 +7,8 @@ const {
 
 const NOTIFICATION_FEEDS = {
   booking: 'bookings', // feed: module needed to see it
-  brochure: 'brochures',
-  interest: 'brochures',
+  brochure: 'enquiries',
+  interest: 'enquiries',
 };
 
 async function getNotifications(admin) {

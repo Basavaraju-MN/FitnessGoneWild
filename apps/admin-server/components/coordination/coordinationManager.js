@@ -12,7 +12,7 @@ const {
 
 const DEPARTURE_FIELDS = [
   'trip_id', 'start_date', 'end_date', 'departure_type', 'seats_total',
-  'status', 'guide_id', 'vehicle_id', 'driver_id', 'trip_status',
+  'status', 'guide_id', 'trip_status',
   'price_override', 'notes',
 ];
 

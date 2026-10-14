@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import '../../styles/trekcard.css'
+import RichText from '../common/RichText';
 import { API_BASE_URL, getDownloadFileName } from '../../api/treks';
 import useTrekImages, { FALLBACK_IMAGE } from '../../hooks/useTrekImages';
 import {
@@ -419,7 +420,7 @@ export default function TrekCard({ trek, onClick }) {
         <div className="card-body">
           <h3>{trek.name}</h3>
 
-          <p>{trek.blurb}</p>
+          <RichText className="card-blurb" html={trek.blurb} />
 
           <div className="info">
             <span>{trek.duration_label}</span>

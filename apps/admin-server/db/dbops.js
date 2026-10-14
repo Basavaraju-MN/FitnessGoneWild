@@ -54,7 +54,7 @@ class Cmds {
   async getDashboardData() {
     const [
       bookingTotals, customerCount, upcomingCounts, enquiryCounts,
-      brochureCounts, revenue, upcoming, activity,
+      brochureCounts, revenue, upcoming, money, events, refunds,
     ] = await Promise.all([
       executeQuery(sqlQueries.dashboardBookingTotals).then(first),
       executeQuery(sqlQueries.dashboardCustomerCount).then(first),
@@ -63,13 +63,24 @@ class Cmds {
       executeQuery(sqlQueries.dashboardBrochureCounts).then(first),
       executeQuery(sqlQueries.dashboardRevenueByMonth),
       executeQuery(sqlQueries.dashboardUpcomingDepartures),
-      executeQuery(sqlQueries.dashboardActivity),
+      executeQuery(sqlQueries.dashboardRevenue).then(first),
+      executeQuery(sqlQueries.dashboardEvents).then(first),
+      executeQuery(sqlQueries.dashboardRefunds).then(first),
     ]);
 
     return {
       bookingTotals, customerCount, upcomingCounts, enquiryCounts,
-      brochureCounts, revenue, upcoming, activity,
+      brochureCounts, revenue, upcoming, money, events, refunds,
     };
+  }
+
+  /* ================= ACTIVITY LOG ================= */
+  async getActivityFeed() {
+    return executeQuery(sqlQueries.activityFeed);
+  }
+
+  async getActivityLog() {
+    return executeQuery(sqlQueries.activityLog);
   }
 
   /* ================= NOTIFICATIONS ================= */
@@ -90,17 +101,20 @@ class Cmds {
 
   /* ================= LOOKUPS ================= */
   async getLookups() {
-    const [trips, categories, guides, vehicles, drivers, pickupPoints, users] = await Promise.all([
+    const [trips, categories, guides, pickupPoints, users, leadStatuses] = await Promise.all([
       executeQuery(sqlQueries.lookupTrips),
       executeQuery(sqlQueries.lookupCategories),
       executeQuery(sqlQueries.lookupGuides),
-      executeQuery(sqlQueries.lookupVehicles),
-      executeQuery(sqlQueries.lookupDrivers),
       executeQuery(sqlQueries.lookupPickupPoints),
       executeQuery(sqlQueries.lookupUsers),
+      executeQuery(sqlQueries.lookupLeadStatuses),
     ]);
 
-    return { trips, categories, guides, vehicles, drivers, pickupPoints, users };
+    return { trips, categories, guides, pickupPoints, users, leadStatuses };
+  }
+
+  async getLeadStatus(key) {
+    return first(await executeQuery(sqlQueries.getLeadStatus, [key]));
   }
 
   /* ================= PACKAGES & TRIPS ================= */
@@ -123,6 +137,34 @@ class Cmds {
 
   async updateTrip(id, data) {
     return (await executeQuery(sqlQueries.updateTrip, [data, id])).affectedRows;
+  }
+
+  // { inclusions, exclusions } as text, one item per line
+  async getTripInclusions(tripId) {
+    const rows = await executeQuery(sqlQueries.getTripInclusions, [tripId]);
+    const join = (key) => rows.map((r) => (r[key] || '').trim()).filter(Boolean).join('\n');
+    return { inclusions: join('inclusion'), exclusions: join('exclusion') };
+  }
+
+  // Replaces the trip's inclusions/exclusions with one row (none if both empty)
+  async saveTripInclusions(tripId, inclusions, exclusions) {
+    await executeQuery(sqlQueries.deleteTripInclusions, [tripId]);
+    if (inclusions || exclusions) {
+      await executeQuery(sqlQueries.createTripInclusions, [tripId, inclusions || null, exclusions || null]);
+    }
+  }
+
+  // All of a trip's pickup points, active and hidden
+  async getTripPickupPoints(tripId) {
+    return executeQuery(sqlQueries.getTripPickupPoints, [tripId]);
+  }
+
+  async createPickupPoint(data) {
+    return (await executeQuery(sqlQueries.createPickupPoint, [data])).insertId;
+  }
+
+  async updatePickupPoint(tripId, id, data) {
+    await executeQuery(sqlQueries.updatePickupPoint, [data, id, tripId]);
   }
 
   /* ================= TRIP COORDINATION ================= */
@@ -222,6 +264,44 @@ class Cmds {
     await executeQuery(sqlQueries.updateBookingPayment, [amountPaid, balance, paymentStatus, status, id]);
   }
 
+  async getRecordedPaymentsTotal(bookingId) {
+    return Number(first(await executeQuery(sqlQueries.getRecordedPaymentsTotal, [bookingId]))?.total || 0);
+  }
+
+  /* ================= REFUNDS ================= */
+  async getRefunds() {
+    return executeQuery(`${sqlQueries.refundsBase} ORDER BY r.id DESC LIMIT 2000`);
+  }
+
+  async getBookingRefunds(bookingId) {
+    return executeQuery(`${sqlQueries.refundsBase} WHERE r.booking_id = ? ORDER BY r.id`, [bookingId]);
+  }
+
+  async getRefund(id) {
+    return first(await executeQuery(`${sqlQueries.refundsBase} WHERE r.id = ?`, [id]));
+  }
+
+  async createRefund({ bookingId, amount, mode, method, state, merchantRefundId, reference, reason, initiatedBy, completedAt }) {
+    const row = {
+      booking_id: bookingId, amount, mode, method: method || null, state,
+      merchant_refund_id: merchantRefundId || null, reference: reference || null,
+      reason: reason || null, initiated_by: initiatedBy || null, completed_at: completedAt || null,
+    };
+    return (await executeQuery(sqlQueries.createRefund, [row])).insertId;
+  }
+
+  async updateRefundState(id, { state, phonepeRefundId, error }) {
+    await executeQuery(sqlQueries.updateRefundState, [state, phonepeRefundId || null, error || null, state, id]);
+  }
+
+  async getPendingPhonePeRefunds() {
+    return executeQuery(sqlQueries.getPendingPhonePeRefunds);
+  }
+
+  async updateBookingRefundTotals(bookingId) {
+    await executeQuery(sqlQueries.updateBookingRefundTotals, [bookingId, bookingId]);
+  }
+
   async createBookingPayment({ bookingId, amount, method, reference, note, receivedBy, paidAt }) {
     await executeQuery(sqlQueries.createBookingPayment, [
       bookingId, amount, method, reference || null, note || null, receivedBy, paidAt || null,
@@ -242,12 +322,16 @@ class Cmds {
   }
 
   async getCustomerHistory(customer) {
-    const [bookings, downloads, enquiries] = await Promise.all([
+    // Enquiries include brochure downloads (source = brochure)
+    const [bookings, enquiries] = await Promise.all([
       executeQuery(sqlQueries.getCustomerBookings, [customer.id]),
-      executeQuery(sqlQueries.getCustomerDownloads, [customer.id, customer.phone]),
       executeQuery(sqlQueries.getCustomerEnquiries, [customer.id, customer.phone]),
     ]);
-    return { bookings, downloads, enquiries };
+    return { bookings, enquiries };
+  }
+
+  async linkLeadsToCustomer(customerId, phone) {
+    await executeQuery(sqlQueries.linkLeadsToCustomer, [customerId, phone]);
   }
 
   async createCustomer({ name, phone, email, tripId }) {
@@ -271,19 +355,6 @@ class Cmds {
     return (await executeQuery(sqlQueries.updateEnquiry, [data, id])).affectedRows;
   }
 
-  /* ================= BROCHURE DOWNLOADS ================= */
-  async getBrochureDownloads() {
-    const [rows, stats] = await Promise.all([
-      executeQuery(sqlQueries.getBrochureDownloads),
-      executeQuery(sqlQueries.getBrochureDownloadStats).then(first),
-    ]);
-    return { rows, stats };
-  }
-
-  async updateBrochureDownload(id, data) {
-    return (await executeQuery(sqlQueries.updateBrochureDownload, [data, id])).affectedRows;
-  }
-
   /* ================= PAYMENTS ================= */
   async getPayments() {
     const [online, offline, stats] = await Promise.all([
@@ -297,6 +368,10 @@ class Cmds {
   /* ================= MASTER DATA ================= */
   async getMasterList(table) {
     return executeQuery(sqlQueries.masterList[table]);
+  }
+
+  async getMasterRow(table, id) {
+    return first(await executeQuery(sqlQueries.getMasterRow, [table, id]));
   }
 
   async createMaster(table, data) {
@@ -314,6 +389,59 @@ class Cmds {
 
   async updateSetting(key, value) {
     await executeQuery(sqlQueries.updateSetting, [value, key]);
+  }
+
+  /* ================= REVIEWS ================= */
+  async getReviews() {
+    return executeQuery(sqlQueries.getReviews);
+  }
+
+  async updateReviewStatus(id, status, adminId) {
+    const result = await executeQuery(sqlQueries.updateReviewStatus, [status, adminId, status, id]);
+    return result.affectedRows > 0;
+  }
+
+  async getGoogleReviewIds() {
+    return (await executeQuery(sqlQueries.getGoogleReviewIds)).map((r) => r.google_review_id);
+  }
+
+  async upsertGoogleReview(r) {
+    await executeQuery(sqlQueries.upsertGoogleReview, [
+      r.google_review_id, r.author_name, r.author_photo_url, r.rating, r.body, r.owner_reply,
+      r.created_at, r.created_at, r.updated_at,
+    ]);
+  }
+
+  // Removes Google reviews that are no longer on Google; returns how many
+  async deleteGoogleReviewsExcept(ids) {
+    const result = ids.length
+      ? await executeQuery(sqlQueries.deleteGoogleReviewsExcept, [ids])
+      : await executeQuery(sqlQueries.deleteAllGoogleReviews);
+    return result.affectedRows || 0;
+  }
+
+  async getGoogleBusiness() {
+    return first(await executeQuery(sqlQueries.getGoogleBusiness));
+  }
+
+  async saveGoogleConnection({ refreshToken, email, adminId }) {
+    await executeQuery(sqlQueries.saveGoogleConnection, [refreshToken, email, adminId || null]);
+  }
+
+  async setGoogleLocation({ account_name: accountName, location_name: locationName, title }) {
+    await executeQuery(sqlQueries.setGoogleLocation, [accountName, locationName, title || null]);
+  }
+
+  async setGoogleSynced({ averageRating, totalReviews }) {
+    await executeQuery(sqlQueries.setGoogleSynced, [averageRating ?? null, totalReviews ?? null]);
+  }
+
+  async setGoogleError(message) {
+    await executeQuery(sqlQueries.setGoogleError, [message]);
+  }
+
+  async clearGoogleConnection() {
+    await executeQuery(sqlQueries.clearGoogleConnection);
   }
 
   /* ================= HEALTH ================= */

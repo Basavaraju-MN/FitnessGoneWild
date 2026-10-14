@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import '../../styles/trekdetails.css';
 import BookingModal from '../booking/BookingModal';
+import RichText from '../common/RichText';
 import useTrekImages, { FALLBACK_IMAGE } from '../../hooks/useTrekImages';
 import {
   getDisplayPrice,
@@ -54,7 +55,8 @@ export default function TrekDetails({ trek, onBack }) {
 
     if (typeof value === 'string') {
       return value
-        .split(/\|\||\n|,/) 
+        // One item per line ("||" joins rows); commas stay inside an item
+        .split(/\|\||\r?\n/)
         .map((item) => item.trim())
         .filter(Boolean);
     }
@@ -361,9 +363,7 @@ export default function TrekDetails({ trek, onBack }) {
           <h1>{trek.name}</h1>
 
           {trek.blurb && (
-            <p className="details-blurb">
-              {trek.blurb}
-            </p>
+            <RichText className="details-blurb" html={trek.blurb} />
           )}
 
           <div
@@ -415,9 +415,7 @@ export default function TrekDetails({ trek, onBack }) {
                 About {trek.name}
               </h2>
 
-              <div className="details-description-text">
-                {trek.description}
-              </div>
+              <RichText className="details-description-text" html={trek.description} />
 
             </div>
           )}
@@ -486,9 +484,7 @@ export default function TrekDetails({ trek, onBack }) {
               <h2>Itinerary</h2>
 
               {trek.itinerary ? (
-                <div className="itinerary-content">
-                  {trek.itinerary}
-                </div>
+                <RichText className="itinerary-content" html={trek.itinerary} />
               ) : (
                 <p className="details-empty">
                   Itinerary details will be

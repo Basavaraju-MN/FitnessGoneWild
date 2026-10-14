@@ -10,7 +10,7 @@ const POLL_MS = 30000;
 // Last event each person has read, per type (remembered in this browser)
 const SEEN_KEYS = {
   booking: 'fgw-admin-booking-seen-id',
-  brochure: 'fgw-admin-brochure-seen-id',
+  brochure: 'fgw-admin-brochure-lead-seen-id',
   interest: 'fgw-admin-interest-seen-id',
 };
 
@@ -68,6 +68,19 @@ const describe = {
  * downloads, "Interested" clicks — whatever this role may see); closing
  * the list marks them read so they go away.
  */
+const BellIcon = () => (
+  <svg viewBox="0 0 64 64" width="30" height="30" aria-hidden="true">
+    {/* clapper */}
+    <ellipse cx="32" cy="54" rx="8" ry="6" fill="#E8A21B" />
+    {/* top knob */}
+    <rect x="28" y="5" width="8" height="9" rx="4" fill="#F5B82E" />
+    {/* body */}
+    <path d="M32 10c-11 0-19 8.5-19 20v11.5c0 2.6-1.6 5-4 6.1l-1.6.8c-1.3.6-2 1.9-2 3.3 0 1.8 1.5 3.3 3.3 3.3h46.6c1.8 0 3.3-1.5 3.3-3.3 0-1.4-.8-2.7-2-3.3l-1.6-.8c-2.4-1.1-4-3.5-4-6.1V30c0-11.5-8-20-19-20z" fill="#F7C531" />
+    {/* rim */}
+    <rect x="6.5" y="47.5" width="51" height="7.5" rx="3.75" fill="#F5B82E" />
+  </svg>
+);
+
 export default function NotificationBell() {
   const toast = useToast();
   const { go, user } = useAdmin();
@@ -178,11 +191,11 @@ export default function NotificationBell() {
     <div className="bell" ref={boxRef}>
       <button
         type="button"
-        className="btn alt small bell-button"
+        className="bell-button"
         onClick={() => (open ? close() : setOpen(true))}
         aria-label={`${events.length} new alerts`}
       >
-        🔔
+        <BellIcon />
         {events.length > 0 && (
           <span className="bell-badge">{events.length > 19 ? '19+' : events.length}</span>
         )}
@@ -230,15 +243,15 @@ export default function NotificationBell() {
             >
               View bookings →
             </button>
-            {user.modules.includes('brochures') && (
+            {user.modules.includes('enquiries') && (
               <button
                 className="bell-all"
                 onClick={() => {
                   close();
-                  go('brochures');
+                  go('enquiries');
                 }}
               >
-                Brochure leads →
+                Leads →
               </button>
             )}
           </div>

@@ -178,12 +178,104 @@ export function PaymentModal({ booking, onClose, onSaved }) {
   );
 }
 
+/* ---------- Refund (PhonePe or paid back by us) ----------
+ * Opened from a booking or from a payment row on the Payments screen.
+ * mode: preferred way ('phonepe' | 'manual'); the form falls back to manual
+ * when nothing can go back through PhonePe.
+ */
+export function RefundModal({ bookingId, mode: preferredMode, onClose, onSaved }) {
+  const toast = useToast();
+  const [booking, setBooking] = useState(null);
+
+  useEffect(() => {
+    api(`/bookings/${bookingId}`)
+      .then(({ data }) => setBooking(data))
+      .catch((error) => {
+        toast(error.message, 'error');
+        onClose();
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookingId]);
+
+  if (!booking) return null;
+  const info = booking.refundInfo || {};
+
+  if (!(info.refundable > 0)) {
+    return (
+      <Modal title={`Refund · ${booking.booking_ref}`} onClose={onClose} footer={<button className="btn alt" onClick={onClose}>Close</button>}>
+        <div className="body">
+          Nothing left to refund on this booking: paid {money(info.paid)}, refunded {money(info.refunded)}
+          {info.pending > 0 ? `, ${money(info.pending)} in process` : ''}.
+        </div>
+      </Modal>
+    );
+  }
+
+  const startMode = preferredMode === 'manual' || !info.canPhonePe ? 'manual' : 'phonepe';
+
+  return (
+    <FormModal
+      title={`Refund · ${booking.booking_ref}`}
+      submitLabel="Save refund"
+      initial={{
+        mode: startMode,
+        amount: info.suggested > 0 ? info.suggested : info.suggested === 0 ? 0 : '',
+        method: 'upi',
+      }}
+      fields={[
+        {
+          name: 'summary', label: 'Booking', type: 'info', full: true,
+          text: `${booking.customer_name} · ${booking.trip_name || ''} · ${label(booking.status)} · Paid ${money(info.paid)} · Refunded ${money(info.refunded)}${info.pending > 0 ? ` · In process ${money(info.pending)}` : ''} · Can refund ${money(info.refundable)}`,
+        },
+        {
+          name: 'policy', label: booking.status === 'cancelled' ? 'Cancellation policy' : 'Note', type: 'info', full: true,
+          text: info.suggested == null
+            ? info.policyNote
+            : `${info.policyNote} → suggested ${money(info.suggested)} (${info.policyPercent}%). You can change the amount.`,
+        },
+        {
+          name: 'mode', label: 'How was it refunded?', type: 'select', required: true, full: true,
+          options: [
+            { value: 'manual', label: 'We sent the money ourselves (UPI / cash / bank) — mark as refunded' },
+            ...(info.canPhonePe ? [{ value: 'phonepe', label: `Through PhonePe — back to the customer's original UPI / card (up to ${money(info.phonepeRefundable)})` }] : []),
+          ],
+        },
+        {
+          name: 'amount', label: 'Amount refunded (₹)', type: 'number', min: 0, step: '0.01', required: true,
+          hint: (v) => (v.mode === 'phonepe'
+            ? `PhonePe sends it back; usually reaches the customer in 3–7 working days`
+            : `Up to ${money(info.refundable)}`),
+        },
+        { name: 'method', label: 'Sent via', type: 'select', options: PAYMENT_METHODS.filter((m) => m.value !== 'phonepe'), required: true, hidden: (v) => v.mode !== 'manual' },
+        { name: 'reference', label: 'Reference', placeholder: 'UPI / transaction ID', hidden: (v) => v.mode !== 'manual' },
+        { name: 'refunded_at', label: 'Sent on', type: 'date', hint: 'Leave empty for today', hidden: (v) => v.mode !== 'manual' },
+        { name: 'reason', label: 'Reason / note', type: 'textarea', full: true, placeholder: 'e.g. Cancelled 10 days before the trip' },
+      ]}
+      onClose={onClose}
+      onSubmit={async (values) => {
+        if (!(Number(values.amount) > 0)) throw new Error('Enter the amount refunded');
+        if (!window.confirm(`${values.mode === 'phonepe' ? 'Refund' : 'Mark as refunded:'} ${money(values.amount)} to ${booking.customer_name}${values.mode === 'phonepe' ? ' through PhonePe' : ''}?`)) {
+          throw new Error('Refund not saved');
+        }
+        const { data } = await api(`/bookings/${booking.id}/refunds`, { method: 'POST', body: values });
+        toast(
+          data.state === 'completed'
+            ? `${money(values.amount)} marked as refunded`
+            : `PhonePe refund of ${money(values.amount)} started — status updates automatically`
+        );
+        onSaved?.();
+      }}
+    />
+  );
+}
+
 /* ---------- Booking details ---------- */
 export function BookingDetailModal({ bookingId, onClose, onChanged }) {
   const toast = useToast();
-  const { lookups } = useAdmin();
+  const { lookups, user } = useAdmin();
   const [booking, setBooking] = useState(null);
   const [paying, setPaying] = useState(false);
+  const [refunding, setRefunding] = useState(false);
   const [editing, setEditing] = useState(false);
 
   const load = async () => {
@@ -232,7 +324,22 @@ export function BookingDetailModal({ bookingId, onClose, onChanged }) {
     ['Paid', money(booking.amount_paid)],
     ['Balance', money(booking.balance_amount)],
     ['Payment', `${label(booking.payment_type)} · ${label(booking.payment_status)}`],
+    ...(Number(booking.refund_amount) > 0
+      ? [['Refunded', `${money(booking.refund_amount)} · ${dateTime(booking.refunded_at)}`]]
+      : []),
   ];
+  const info = booking.refundInfo || {};
+  const canRefund = user?.modules?.includes('payments') && info.refundable > 0;
+
+  const checkRefund = async (refund) => {
+    try {
+      const { data } = await api(`/refunds/${refund.id}/check`, { method: 'POST' });
+      toast(data.state === 'pending' ? 'Still processing at PhonePe' : `Refund ${data.state}`, data.state === 'failed' ? 'error' : 'success');
+      changed();
+    } catch (error) {
+      toast(error.message, 'error');
+    }
+  };
 
   return (
     <>
@@ -248,6 +355,7 @@ export function BookingDetailModal({ bookingId, onClose, onChanged }) {
             {Number(booking.balance_amount) > 0 && booking.status !== 'cancelled' && (
               <button className="btn" onClick={() => setPaying(true)}>Collect balance</button>
             )}
+            {canRefund && <button className={`btn ${booking.status === 'cancelled' ? 'danger' : 'alt'}`} onClick={() => setRefunding(true)}>Refund</button>}
           </>
         }
       >
@@ -297,6 +405,40 @@ export function BookingDetailModal({ bookingId, onClose, onChanged }) {
             </table>
           )}
         </div>
+
+        {(booking.refunds?.length > 0 || booking.status === 'cancelled') && (
+          <div className="modal-section">
+            <h3>Refunds</h3>
+            {(booking.status === 'cancelled' || booking.refunds?.length > 0) && (
+              <p className="muted" style={{ marginTop: 0 }}>
+                Paid {money(info.paid)} · Refunded {money(info.refunded)}
+                {info.pending > 0 ? ` · In process ${money(info.pending)}` : ''} · Can still refund {money(info.refundable)}
+                {' · '}{info.policyNote}
+              </p>
+            )}
+            {!booking.refunds?.length ? (
+              <p className="muted" style={{ marginBottom: 0 }}>No refunds yet.</p>
+            ) : (
+              <table className="table">
+                <thead><tr><th>Date</th><th>Amount</th><th>Via</th><th>Status</th><th>Reference</th><th>By</th><th>Reason</th><th /></tr></thead>
+                <tbody>
+                  {booking.refunds.map((r) => (
+                    <tr key={r.id}>
+                      <td>{dateTime(r.completed_at || r.created_at)}</td>
+                      <td><b>{money(r.amount)}</b></td>
+                      <td>{r.mode === 'phonepe' ? 'PhonePe (original payment)' : label(r.method)}</td>
+                      <td><Pill value={r.state === 'pending' ? 'in_process' : r.state} />{r.error_message && <small className="refund-error">{r.error_message}</small>}</td>
+                      <td>{r.mode === 'phonepe' ? <span title={r.phonepe_refund_id || ''}>{r.merchant_refund_id}</span> : r.reference || '—'}</td>
+                      <td>{r.initiated_by_name || '—'}</td>
+                      <td>{r.reason || '—'}</td>
+                      <td>{r.mode === 'phonepe' && r.state === 'pending' && <button className="link" onClick={() => checkRefund(r)}>Check status</button>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
       </Modal>
 
       {paying && (
@@ -305,6 +447,17 @@ export function BookingDetailModal({ bookingId, onClose, onChanged }) {
           onClose={() => setPaying(false)}
           onSaved={() => {
             setPaying(false);
+            changed();
+          }}
+        />
+      )}
+
+      {refunding && (
+        <RefundModal
+          bookingId={booking.id}
+          onClose={() => setRefunding(false)}
+          onSaved={() => {
+            setRefunding(false);
             changed();
           }}
         />

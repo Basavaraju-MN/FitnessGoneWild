@@ -73,7 +73,7 @@ const sqlqueries = {
     GROUP BY t.id
     ORDER BY t.featured_order ASC, t.id ASC
   `,
-  getReviews: `SELECT id, trip_id, customer_id, booking_id, author_name, rating, body, trip_month, avatar_colour, status, moderated_by, created_at, published_at FROM reviews WHERE 1 ORDER BY published_at DESC, created_at DESC`,
+  getReviews: `SELECT id, source, trip_id, customer_id, booking_id, author_name, author_photo_url, rating, body, owner_reply, trip_month, avatar_colour, status, moderated_by, created_at, published_at FROM reviews WHERE status = 'published' AND body <> '' ORDER BY published_at DESC, created_at DESC`,
   getWhyUs: `SELECT id, title, description, created_at, updated_at FROM why_us WHERE 1 ORDER BY id ASC`,
   getFaq: `SELECT id, question, answer, created_at, updated_at FROM faq WHERE 1 ORDER BY id ASC`,
   getPickupPoints: `SELECT id, trip_id, name, address, map_url, sort_order FROM pickup_points WHERE is_active = 1 AND trip_id = ? ORDER BY sort_order ASC, id ASC`,
@@ -81,7 +81,10 @@ const sqlqueries = {
   createCustomer: `INSERT INTO customers (name, phone, email, city, trip_id, created_at) VALUES (?, ?, ?, ?, ?, NOW())`,
   downloadBroucher: ` SELECT id, trip_id, file_name, file_data, file_size, mime_type FROM brochures WHERE trip_id = ?`,
   updateDownloadCount: `UPDATE brochures SET download_count = download_count + 1 WHERE trip_id = ?`,
-  createBrochureDownload: `INSERT INTO brochure_downloads (customer_id, trip_id, name, phone, email) VALUES (?, ?, ?, ?, ?)`,
+  // Brochure download = a lead in Enquiries & Leads (admin portal)
+  createBrochureLead: `INSERT INTO enquiries (customer_id, trip_id, name, phone, email, people, status, source) VALUES (?, ?, ?, ?, ?, 1, 'new', 'brochure')`,
+  // Someone who already booked before: link the lead to them
+  findCustomerIdByPhone: `SELECT id FROM customers WHERE phone = ? ORDER BY id DESC LIMIT 1`,
   countTripInterested: `SELECT COUNT(*) AS total FROM trip_interests WHERE trip_id = ? AND type = 'interested'`,
   getTripById: `SELECT id, slug, name FROM trips WHERE id = ? LIMIT 1`,
   // Counts a download; creates the brochures row for file-only brochures

@@ -440,3 +440,9 @@
   height: 200px;
   object-fit: cover;
 }
+
+/* Short description on the card (rich text): same look as before, 3 lines max */
+.card-blurb { margin-top: 8px; color: var(--ink-soft); font-size: .93rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.card-blurb p { margin: 0; display: inline; }
+.card-blurb p + p::before { content: ' '; }
+.card-blurb a { color: inherit; }

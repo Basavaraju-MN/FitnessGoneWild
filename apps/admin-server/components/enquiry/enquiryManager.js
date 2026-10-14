@@ -8,10 +8,13 @@ const {
   requireFields,
   logActivity,
 } = require('../../utils/http');
-const {
-  ENQUIRY_STATUSES,
-  ENQUIRY_SOURCES,
-} = require('../common/rules');
+const { ENQUIRY_SOURCES } = require('../common/rules');
+
+// Statuses live in lead_statuses (managed in the admin)
+async function checkStatus(key) {
+  const status = await dbops.getLeadStatus(key);
+  if (!status || !Number(status.is_active)) throw badRequest('Unknown or hidden status');
+}
 
 const getEnquiries = () => dbops.getEnquiries();
 
@@ -28,7 +31,7 @@ async function createEnquiry(admin, body) {
 
 async function updateEnquiry(admin, id, body) {
   const data = pick(body, ['status', 'assigned_to', 'note', 'trip_id', 'people', 'email']);
-  if (data.status !== undefined && !ENQUIRY_STATUSES.includes(data.status)) throw badRequest('Unknown status');
+  if (data.status !== undefined) await checkStatus(data.status);
   if (!Object.keys(data).length) throw badRequest('Nothing to update');
 
   if (!(await dbops.updateEnquiry(id, data))) throw notFound('Enquiry not found');

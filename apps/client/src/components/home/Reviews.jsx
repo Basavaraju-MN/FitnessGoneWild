@@ -29,7 +29,8 @@ export default function Reviews() {
             id: review.id,
             name: review.author_name || 'Traveller',
             initial: (review.author_name || 'T').trim().charAt(0).toUpperCase(),
-            trek: review.trip_month || 'Trek',
+            trek: review.trip_month || (review.source === 'google' ? 'Google review' : 'Trek'),
+            source: review.source || 'website',
             date: formatReviewDate(review.published_at || review.created_at),
             rating: Number(review.rating || 5),
             text: review.body || 'Great experience.',
@@ -95,7 +96,7 @@ export default function Reviews() {
                 <figcaption>
                   <span className="avatar">{review.initial}</span>
                   <span className="who"><strong>{review.name}</strong><small>{review.trek} · {review.date}</small></span>
-                  <span className="verified">Verified</span>
+                  <span className="verified">{review.source === 'google' ? 'Google' : 'Verified'}</span>
                 </figcaption>
               </figure>
             ))

@@ -90,3 +90,28 @@ Then, once, on the Hostinger database:
 
 If `ADMIN_JWT_SECRET` is missing, the website still runs; only `/api/admin` is
 not mounted (the Render log shows "Admin API not mounted").
+
+## Google reviews (Business Profile API)
+
+The **Reviews** screen syncs every Google review into the `reviews` table
+(`source = 'google'`). New reviews are shown on the website straight away;
+use Hide to take one off. Reviews deleted on Google are removed at the next sync.
+
+1. Run `sql/google_reviews.sql` once on each database.
+2. Google Cloud: request Business Profile API access, then enable
+   *My Business Account Management API*, *My Business Business Information API*
+   and *Google My Business API*.
+3. Create an OAuth client ID (Web application). Authorised redirect URIs:
+   - `https://thefitnessgonewild.in/api/admin/google/callback`
+   - `http://localhost:4100/api/admin/google/callback` (local)
+4. Environment (Render and local `.env`):
+
+| Variable | Value |
+|---|---|
+| `GOOGLE_CLIENT_ID` | OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | OAuth client secret |
+| `GOOGLE_REDIRECT_URI` | Optional. Production: `https://thefitnessgonewild.in/api/admin/google/callback` |
+| `GOOGLE_SYNC_HOURS` | Optional, default `6` (`0` = only "Sync now") |
+
+5. Admin → Reviews → **Connect Google**, sign in with the account that manages
+   the business listing, choose the location. Syncs then run automatically.

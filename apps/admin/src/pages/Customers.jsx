@@ -5,6 +5,8 @@ import { date, dateTime, label, money, whatsappLink } from '../format';
 import DataTable from '../components/DataTable';
 import { FormModal, Modal, PageHead, Pill, useToast } from '../components/ui';
 import { BookingDetailModal } from '../components/booking';
+import { sourceOf } from '../sources';
+import { LeadStatusPill } from '../components/LeadStatus';
 
 function CustomerModal({ customerId, onClose, onChanged }) {
   const toast = useToast();
@@ -72,19 +74,10 @@ function CustomerModal({ customerId, onClose, onChanged }) {
         </div>
 
         <div className="modal-section">
-          <h3>Brochure downloads ({customer.downloads.length})</h3>
-          {customer.downloads.length === 0 ? <p className="muted">None.</p> : customer.downloads.map((d) => (
-            <p key={d.id} style={{ margin: '0 0 6px' }}>
-              {d.trip_name || '—'} · {dateTime(d.downloaded_at)} · <Pill value={d.follow_up_status} />
-            </p>
-          ))}
-        </div>
-
-        <div className="modal-section">
-          <h3>Enquiries ({customer.enquiries.length})</h3>
+          <h3>Enquiries & leads ({customer.enquiries.length})</h3>
           {customer.enquiries.length === 0 ? <p className="muted">None.</p> : customer.enquiries.map((e) => (
             <p key={e.id} style={{ margin: '0 0 6px' }}>
-              {e.trip_name || 'General'} · {dateTime(e.received_at)} · <Pill value={e.status} />
+              {sourceOf(e.source).icon} {sourceOf(e.source).short} · {e.trip_name || 'General'} · {dateTime(e.received_at)} · <LeadStatusPill value={e.status} />
               {e.note ? <span className="muted"> · {e.note}</span> : null}
             </p>
           ))}
@@ -126,7 +119,7 @@ export default function Customers() {
 
   return (
     <>
-      <PageHead title="Customers" subtitle="Everyone who booked or downloaded a brochure, with their booking history." />
+      <PageHead title="Customers" subtitle="People who booked and paid (advance or full). Everyone else stays in Enquiries & Leads." />
 
       <DataTable
         title="Customer Directory"
@@ -135,7 +128,8 @@ export default function Customers() {
         error={error}
         exportName="fgw-customers.csv"
         searchPlaceholder="Search customers…"
-        initialSort={{ key: 'created_at', dir: 'desc' }}
+        initialSort={{ key: 'customer_since', dir: 'desc' }}
+        emptyText="No paid bookings yet."
         columns={[
           { key: 'name', label: 'Name', render: (r) => <button className="link" onClick={() => setOpenId(r.id)}>{r.name}</button>, csv: (r) => r.name },
           { key: 'phone', label: 'Phone' },
@@ -146,8 +140,13 @@ export default function Customers() {
           { key: 'balance_due', label: 'Balance due', render: (r) => money(r.balance_due) },
           { key: 'brochure_downloads', label: 'Brochures' },
           { key: 'last_trip_date', label: 'Last trip', render: (r) => date(r.last_trip_date) },
-          { key: 'created_at', label: 'Added', render: (r) => date(r.created_at) },
-          { key: 'type', label: 'Type', sortValue: (r) => Number(r.bookings) > 0, render: (r) => <Pill value={Number(r.bookings) > 0 ? 'booked' : 'interested'} />, csv: (r) => label(Number(r.bookings) > 0 ? 'customer' : 'lead') },
+          { key: 'customer_since', label: 'Customer since', render: (r) => date(r.customer_since) },
+          {
+            key: 'payment', label: 'Payment',
+            sortValue: (r) => Number(r.balance_due) > 0,
+            render: (r) => (Number(r.balance_due) > 0 ? <span className="pill pending">Advance paid</span> : <Pill value="paid" />),
+            csv: (r) => (Number(r.balance_due) > 0 ? 'Advance paid' : 'Paid'),
+          },
         ]}
       />
 
