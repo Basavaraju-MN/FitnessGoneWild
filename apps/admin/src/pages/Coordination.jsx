@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { api, useApi } from '../api';
 import { useAdmin } from '../context';
@@ -6,6 +6,7 @@ import { date, label, money, today, whatsappLink } from '../format';
 import DataTable from '../components/DataTable';
 import { FormModal, PageHead, Pill, Stats, useToast } from '../components/ui';
 import { BookingDetailModal, NewBookingModal, PaymentModal } from '../components/booking';
+import { exportTripExcel } from '../exportTripExcel';
 
 const TRIP_STATUS = ['upcoming', 'ongoing', 'completed', 'cancelled'].map((v) => ({ value: v, label: label(v) }));
 
@@ -18,10 +19,7 @@ const departureFields = (lookups, isNew) => [
   ...(isNew
     ? [{ name: 'departure_type', label: 'Type', type: 'select', options: [{ value: 'scheduled', label: 'Scheduled (public)' }, { value: 'custom', label: 'Custom / private group' }] }]
     : []),
-  { name: 'seats_total', label: 'Seats', type: 'number', min: 1 },
   { name: 'guide_id', label: 'Guide', type: 'select', placeholder: 'Unassigned', options: (lookups?.guides || []).map((g) => ({ value: g.id, label: g.name })) },
-  { name: 'vehicle_id', label: 'Bus / vehicle', type: 'select', placeholder: 'Not assigned', options: (lookups?.vehicles || []).map((v) => ({ value: v.id, label: `${v.vehicle_number}${v.vehicle_type ? ` · ${v.vehicle_type}` : ''}` })) },
-  { name: 'driver_id', label: 'Driver', type: 'select', placeholder: 'Not assigned', options: (lookups?.drivers || []).map((d) => ({ value: d.id, label: d.name })) },
   { name: 'trip_status', label: 'Trip status', type: 'select', options: TRIP_STATUS },
   { name: 'notes', label: 'Notes', type: 'textarea', full: true, placeholder: 'Pickup plan, stay, special instructions…' },
 ];
@@ -54,10 +52,17 @@ export default function Coordination() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
 
-  // Pick the first trip once the list loads
+  // Show the first trip once the list loads
   useEffect(() => {
     if (!selectedId && data?.length) setSelectedId(data[0].id);
   }, [data, selectedId]);
+
+  // Clicking a trip shows its customers below and scrolls there
+  const detailsRef = useRef(null);
+  const showTrip = (id) => {
+    setSelectedId(id);
+    setTimeout(() => detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
+  };
 
   const refresh = () => {
     reload();
@@ -82,7 +87,7 @@ export default function Coordination() {
 
   return (
     <>
-      <PageHead title="Trip Coordination" subtitle="One record per actual travel date: customers, guide, bus, driver and pending amounts.">
+      <PageHead title="Trip Coordination" subtitle="One record per actual travel date: customers, guide and pending amounts.">
         <button className="btn" onClick={() => setForm('new')}>＋ Create Trip Coordination</button>
       </PageHead>
 
@@ -91,15 +96,17 @@ export default function Coordination() {
           ['Trip Coordinations', list.length, when === 'upcoming' ? 'Upcoming & ongoing' : label(when)],
           ['Customers Going', sum('people'), 'On confirmed bookings'],
           ['Amount Pending', money(sum('pending_amount')), 'Balance to collect'],
-          ['Guides Assigned', `${list.filter((d) => d.guide_id).length} / ${list.length}`, `${list.filter((d) => !d.vehicle_id || !d.driver_id).length} need bus/driver`],
+          ['Guides Assigned', `${list.filter((d) => d.guide_id).length} / ${list.length}`, `${list.filter((d) => !d.guide_id).length} without a guide`],
         ]}
       />
 
-      <div style={{ marginBottom: 18 }}>
+      <div style={{ marginBottom: 12 }}>
         <DataTable
           title="Trip Coordination List"
-          subtitle="Click a row's View to see its customers below"
+          subtitle="Click a trip to see its customers below"
           rows={data}
+          onRowClick={(r) => showTrip(r.id)}
+          selectedKey={selectedId}
           loading={loading}
           error={error}
           exportName="fgw-coordination.csv"
@@ -118,27 +125,15 @@ export default function Coordination() {
             { key: 'start_date', label: 'Travel date', render: (r) => date(r.start_date) },
             { key: 'end_date', label: 'Return date', render: (r) => date(r.end_date) },
             { key: 'departure_type', label: 'Type', render: (r) => <Pill value={r.departure_type} /> },
-            { key: 'people', label: 'Customers', render: (r) => `${r.people} / ${r.seats_total}`, csv: (r) => r.people },
+            { key: 'people', label: 'Customers' },
             { key: 'guide_name', label: 'Guide', render: (r) => r.guide_name || <span className="muted">Unassigned</span> },
-            {
-              key: 'vehicle_number',
-              label: 'Bus / Driver',
-              render: (r) => (
-                <>
-                  {r.vehicle_number || <span className="muted">No bus</span>}
-                  <br />
-                  <span className="muted">{r.driver_name || 'No driver'}</span>
-                </>
-              ),
-              csv: (r) => `${r.vehicle_number || ''} ${r.driver_name || ''}`.trim(),
-            },
             { key: 'pending_amount', label: 'Pending', render: (r) => money(r.pending_amount) },
             { key: 'trip_status', label: 'Status', render: (r) => <Pill value={r.trip_status} /> },
             {
               key: 'actions', label: 'Action', sortable: false, export: false,
               render: (r) => (
                 <>
-                  <button className="link" onClick={() => setSelectedId(r.id)}>View</button>
+                  <button className="link" onClick={() => showTrip(r.id)}>Customers</button>
                   <button className="link" onClick={() => setForm(r)}>Edit</button>
                 </>
               ),
@@ -148,14 +143,14 @@ export default function Coordination() {
       </div>
 
       {selected && (
-        <div className="card">
+        <div className="card trip-detail" ref={detailsRef}>
           <div className="cardhead">
             <div>
               <h2>TC-{selected.id} — Customer Coordination</h2>
               <p>{selected.trip_name} · {date(selected.start_date)}{selected.end_date !== selected.start_date ? ` → ${date(selected.end_date)}` : ''} · Guide {selected.guide_name || 'unassigned'}</p>
             </div>
             <div className="toolbar">
-              <button className="btn alt" onClick={() => setForm(selected)}>Edit team / status</button>
+              <button className="btn alt" onClick={() => setForm(selected)}>Edit guide / status</button>
               <button className="btn" onClick={() => setAddingBooking(true)}>＋ Add Customer</button>
             </div>
           </div>
@@ -163,9 +158,7 @@ export default function Coordination() {
           <div className="details">
             {[
               ['Guide', selected.guide_name ? `${selected.guide_name}${selected.guide_phone ? ` · ${selected.guide_phone}` : ''}` : 'Unassigned'],
-              ['Bus', selected.vehicle_number ? `${selected.vehicle_number}${selected.vehicle_type ? ` · ${selected.vehicle_type}` : ''}` : 'Not assigned'],
-              ['Driver', selected.driver_name ? `${selected.driver_name}${selected.driver_phone ? ` · ${selected.driver_phone}` : ''}` : 'Not assigned'],
-              ['Seats', `${selected.people} booked of ${selected.seats_total}`],
+              ['Customers', selected.people],
               ['Collected', money(selected.paid_amount)],
               ['Pending', money(selected.pending_amount)],
               ['Status', label(selected.trip_status)],
@@ -177,7 +170,16 @@ export default function Coordination() {
 
           <DataTable
             searchPlaceholder="Search customers…"
-            exportName={`fgw-TC-${selected.id}-customers.csv`}
+            actions={
+              <button
+                type="button"
+                className="btn alt"
+                disabled={!selected.customers?.length}
+                onClick={() => exportTripExcel(selected).catch((error) => toast(`Export failed: ${error.message}`, 'error'))}
+              >
+                Export Excel
+              </button>
+            }
             rows={selected.customers}
             emptyText="No customers attached to this trip yet."
             initialSort={{ key: 'pickup_name', dir: 'asc' }}
@@ -209,7 +211,7 @@ export default function Coordination() {
           wide
           title={form === 'new' ? 'Create Trip Coordination' : `Edit TC-${form.id} · ${form.trip_name}`}
           submitLabel={form === 'new' ? 'Create Coordination' : 'Save'}
-          initial={form === 'new' ? { start_date: today(), seats_total: 25, trip_status: 'upcoming', departure_type: 'scheduled' } : form}
+          initial={form === 'new' ? { start_date: today(), trip_status: 'upcoming', departure_type: 'scheduled' } : form}
           fields={departureFields(lookups, form === 'new')}
           onClose={() => setForm(null)}
           onSubmit={saveDeparture}

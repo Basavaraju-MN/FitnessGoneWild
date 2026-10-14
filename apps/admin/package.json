@@ -9,6 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "exceljs": "^4.4.0",
+    "jodit-react": "^5.8.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },

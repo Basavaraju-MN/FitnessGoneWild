@@ -2,6 +2,8 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 
 const routes = require('./routes/routes');
+const reviewManager = require('./components/review/reviewManager');
+const refundManager = require('./components/refund/refundManager');
 
 /**
  * The whole admin API as one router, so it can run on its own
@@ -11,10 +13,16 @@ const routes = require('./routes/routes');
 function createAdminRouter() {
   const router = express.Router();
 
-  router.use(express.json({ limit: '2mb' }));
+  // Photos and brochure PDFs are sent as base64 inside JSON
+  router.use(express.json({ limit: '30mb' }));
   router.use(cookieParser());
 
   router.use(routes);
+
+  // Keeps Google reviews in sync in the background (when connected)
+  reviewManager.startAutoSync();
+  // Checks pending PhonePe refunds until they complete or fail
+  refundManager.startRefundChecks();
 
   router.use((req, res) => {
     res.status(404).json({ success: false, message: 'Admin API endpoint not found' });

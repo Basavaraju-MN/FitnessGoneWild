@@ -129,12 +129,16 @@ app.use(
   })
 );
 
-app.use(
-  express.json({
-    verify(req, res, buffer) {
-      req.rawBody = buffer.toString('utf8');
-    },
-  })
+const jsonParser = express.json({
+  verify(req, res, buffer) {
+    req.rawBody = buffer.toString('utf8');
+  },
+});
+
+// The admin API reads its own JSON with a higher limit (photo and
+// brochure uploads), so its requests skip this parser.
+app.use((req, res, next) =>
+  req.path.startsWith('/api/admin') ? next() : jsonParser(req, res, next)
 );
 
 app.use(

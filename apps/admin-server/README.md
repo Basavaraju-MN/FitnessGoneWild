@@ -34,6 +34,23 @@ Admin: http://localhost:5175 · Website: http://localhost:5173
 The website server also serves the built admin at http://localhost:4000/admin
 (after `pnpm run build`), exactly like production.
 
+## Code structure (same layers as the website server)
+
+| File | What it does |
+|---|---|
+| `routes/routes.js` | Which URL goes to which controller function, and which roles may call it |
+| `controller/controller.js` | **One file.** Reads the request, calls the component, sends the JSON reply |
+| `components/<screen>/<screen>Manager.js` | Business rules for one screen: checks, calculations, the order things happen (e.g. `components/booking/bookingManager.js`) |
+| `components/common/rules.js` | Rules shared by several screens (statuses, payment methods, roles) |
+| `db/dbops.js` | One small function per database query |
+| `db/sqlqueries.js` | **All SQL**, grouped by section |
+| `db/connection.js` | Uses the website's connection pool (`apps/server/src/db/connection.js`) |
+| `middleware/auth.js` | Login check and role check |
+| `utils/http.js` | Error type, form helpers, activity log |
+
+To trace a request, e.g. `POST /api/admin/bookings/12/payments`:
+`routes.js` → `controller.addBookingPayment` → `bookingManager.addBookingPayment` → `dbops.createBookingPayment` / `dbops.updateBookingPayment` → `sqlqueries.createBookingPayment` / `updateBookingPayment`.
+
 ## Roles
 
 | Role | Sections |
@@ -73,3 +90,28 @@ Then, once, on the Hostinger database:
 
 If `ADMIN_JWT_SECRET` is missing, the website still runs; only `/api/admin` is
 not mounted (the Render log shows "Admin API not mounted").
+
+## Google reviews (Business Profile API)
+
+The **Reviews** screen syncs every Google review into the `reviews` table
+(`source = 'google'`). New reviews are shown on the website straight away;
+use Hide to take one off. Reviews deleted on Google are removed at the next sync.
+
+1. Run `sql/google_reviews.sql` once on each database.
+2. Google Cloud: request Business Profile API access, then enable
+   *My Business Account Management API*, *My Business Business Information API*
+   and *Google My Business API*.
+3. Create an OAuth client ID (Web application). Authorised redirect URIs:
+   - `https://thefitnessgonewild.in/api/admin/google/callback`
+   - `http://localhost:4100/api/admin/google/callback` (local)
+4. Environment (Render and local `.env`):
+
+| Variable | Value |
+|---|---|
+| `GOOGLE_CLIENT_ID` | OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | OAuth client secret |
+| `GOOGLE_REDIRECT_URI` | Optional. Production: `https://thefitnessgonewild.in/api/admin/google/callback` |
+| `GOOGLE_SYNC_HOURS` | Optional, default `6` (`0` = only "Sync now") |
+
+5. Admin → Reviews → **Connect Google**, sign in with the account that manages
+   the business listing, choose the location. Syncs then run automatically.

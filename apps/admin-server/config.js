@@ -11,8 +11,18 @@ if (!jwtSecret) {
   throw new Error('ADMIN_JWT_SECRET is not configured');
 }
 
+// Where trip photos and brochures are stored (read by the website)
+const appsDir = path.resolve(__dirname, '..');
+
 module.exports = {
   isProduction,
+
+  paths: {
+    // Source photos (kept in the repo) and the built site that is served
+    clientPublic: path.join(appsDir, 'client', 'public'),
+    clientDist: path.join(appsDir, 'client', 'dist'),
+    brochures: path.join(appsDir, 'server', 'brochures'),
+  },
   port: Number(process.env.PORT || 4100),
 
   jwtSecret,
@@ -24,6 +34,18 @@ module.exports = {
     .map((origin) => origin.trim().replace(/\/$/, ''))
     .filter(Boolean),
 
+  // Google Business Profile (reviews). Set on Render and in the local .env;
+  // the redirect URI must also be added to the OAuth client in Google Cloud.
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID || '',
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+    // Empty = worked out from the request (…/api/admin/google/callback)
+    redirectUri: process.env.GOOGLE_REDIRECT_URI || '',
+    syncHours: Number(process.env.GOOGLE_SYNC_HOURS || 6),
+  },
+  // Where the browser goes back to after connecting Google
+  adminAppUrl: process.env.ADMIN_APP_URL || (isProduction ? '/admin/' : 'http://localhost:5175/'),
+
   // Which roles can open which module
   permissions: {
     dashboard: ['admin', 'sales', 'operations'],
@@ -32,10 +54,12 @@ module.exports = {
     coordination: ['admin', 'operations'],
     customers: ['admin', 'sales', 'operations'],
     enquiries: ['admin', 'sales'],
-    brochures: ['admin', 'sales'],
     payments: ['admin'],
     reports: ['admin', 'sales', 'operations'],
-    masters: ['admin', 'operations'],
+    guides: ['admin', 'operations'],
+    'pickup-points': ['admin', 'operations'],
+    reviews: ['admin'],
+    activity: ['admin'],
     users: ['admin'],
     settings: ['admin'],
   },

@@ -4,7 +4,7 @@ const express = require('express');
 const cors = require('cors');
 
 const { port, adminOrigins } = require('./config');
-const { query } = require('./db');
+const dbops = require('./db/dbops');
 const { createAdminRouter } = require('./app');
 
 const app = express();
@@ -27,7 +27,7 @@ app.use(
 
 app.get('/health', async (req, res) => {
   try {
-    await query('SELECT 1');
+    await dbops.ping();
     res.json({ success: true, database: 'connected' });
   } catch (error) {
     res.status(503).json({ success: false, database: 'disconnected' });

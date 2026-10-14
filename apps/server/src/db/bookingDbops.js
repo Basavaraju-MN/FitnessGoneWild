@@ -9,6 +9,7 @@ const queries = {
 
   findCustomerByPhone: `SELECT id FROM customers WHERE phone = ? ORDER BY id DESC LIMIT 1`,
   createCustomer: `INSERT INTO customers (name, phone, email, trip_id, created_at) VALUES (?, ?, ?, ?, NOW())`,
+  linkLeadsToCustomer: `UPDATE enquiries SET customer_id = ? WHERE phone = ? AND customer_id IS NULL`,
 
   findPickupPoint: `SELECT id FROM pickup_points WHERE trip_id = ? AND name = ? ORDER BY id LIMIT 1`,
 
@@ -58,14 +59,21 @@ async function findOrCreateDeparture(tripId, startDate, endDate, departureType) 
   }
 }
 
+// Customers are added here, when they book (not on brochure downloads)
 async function findOrCreateCustomer({ name, phone, email, tripId }) {
   const rows = await executeQuery(queries.findCustomerByPhone, [phone]);
-  if (rows[0]) return rows[0].id;
+  let customerId = rows[0]?.id;
 
-  const result = await executeQuery(queries.createCustomer, [
-    name || 'Customer', phone, email || null, tripId,
-  ]);
-  return result.insertId;
+  if (!customerId) {
+    const result = await executeQuery(queries.createCustomer, [
+      name || 'Customer', phone, email || null, tripId,
+    ]);
+    customerId = result.insertId;
+  }
+
+  // Their earlier enquiries / brochure downloads now belong to them
+  await executeQuery(queries.linkLeadsToCustomer, [customerId, phone]).catch(() => {});
+  return customerId;
 }
 
 async function findPickupPointId(tripId, pickupName) {

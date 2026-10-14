@@ -22,37 +22,10 @@ CREATE TABLE IF NOT EXISTS `guides` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-CREATE TABLE IF NOT EXISTS `vehicles` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `vehicle_number` varchar(30) NOT NULL,
-  `vehicle_type` varchar(60) DEFAULT NULL,
-  `seats` smallint DEFAULT NULL,
-  `provider` varchar(120) DEFAULT NULL,
-  `provider_phone` varchar(20) DEFAULT NULL,
-  `notes` varchar(500) DEFAULT NULL,
-  `is_active` tinyint(1) NOT NULL DEFAULT 1,
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_vehicle_number` (`vehicle_number`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
-CREATE TABLE IF NOT EXISTS `drivers` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `name` varchar(120) NOT NULL,
-  `phone` varchar(20) DEFAULT NULL,
-  `license_number` varchar(40) DEFAULT NULL,
-  `notes` varchar(500) DEFAULT NULL,
-  `is_active` tinyint(1) NOT NULL DEFAULT 1,
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
 -- 3. Trip coordination = a departure (trip + dates) with its team
 ALTER TABLE `departures`
   ADD COLUMN `guide_id` int DEFAULT NULL AFTER `status`,
-  ADD COLUMN `vehicle_id` int DEFAULT NULL AFTER `guide_id`,
-  ADD COLUMN `driver_id` int DEFAULT NULL AFTER `vehicle_id`,
-  ADD COLUMN `trip_status` enum('upcoming','ongoing','completed','cancelled') NOT NULL DEFAULT 'upcoming' AFTER `driver_id`;
+  ADD COLUMN `trip_status` enum('upcoming','ongoing','completed','cancelled') NOT NULL DEFAULT 'upcoming' AFTER `guide_id`;
 
 -- 4. Payments received outside PhonePe (balance in cash, UPI, bank)
 CREATE TABLE IF NOT EXISTS `booking_payments` (

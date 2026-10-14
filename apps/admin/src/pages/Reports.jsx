@@ -40,10 +40,7 @@ const REPORTS = [
       { key: 'end_date', label: 'Return date', csv: (r) => date(r.end_date) },
       { key: 'departure_type', label: 'Type' },
       { key: 'people', label: 'Customers' },
-      { key: 'seats_total', label: 'Seats' },
       { key: 'guide_name', label: 'Guide' },
-      { key: 'vehicle_number', label: 'Bus' },
-      { key: 'driver_name', label: 'Driver' },
       { key: 'paid_amount', label: 'Collected' },
       { key: 'pending_amount', label: 'Pending' },
       { key: 'trip_status', label: 'Status' },
@@ -64,7 +61,7 @@ const REPORTS = [
     ],
   },
   {
-    id: 'enquiries', module: 'enquiries', title: 'Enquiries', note: 'Leads and their follow-up status',
+    id: 'enquiries', module: 'enquiries', title: 'Enquiries & leads', note: 'All leads incl. brochure downloads, with source',
     path: '/enquiries', file: 'fgw-enquiries.csv',
     columns: [
       { key: 'name', label: 'Name' },
@@ -76,20 +73,6 @@ const REPORTS = [
       { key: 'assigned_name', label: 'Assigned to' },
       { key: 'note', label: 'Note' },
       { key: 'received_at', label: 'Received', csv: (r) => dateTime(r.received_at) },
-    ],
-  },
-  {
-    id: 'brochures', module: 'brochures', title: 'Brochure leads', note: 'Brochure downloads and follow-ups',
-    path: '/brochure-downloads', file: 'fgw-brochure-leads.csv',
-    columns: [
-      { key: 'name', label: 'Name' },
-      { key: 'phone', label: 'Phone' },
-      { key: 'email', label: 'Email' },
-      { key: 'trip_name', label: 'Brochure' },
-      { key: 'follow_up_status', label: 'Follow-up', csv: (r) => label(r.follow_up_status) },
-      { key: 'assigned_name', label: 'Assigned to' },
-      { key: 'notes', label: 'Notes' },
-      { key: 'downloaded_at', label: 'Downloaded', csv: (r) => dateTime(r.downloaded_at) },
     ],
   },
   {

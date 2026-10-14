@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { label } from '../format';
 
 /* ---------- Toast ---------- */
@@ -29,14 +29,21 @@ export const useToast = () => useContext(ToastContext);
 
 /* ---------- Modal ---------- */
 export function Modal({ title, onClose, children, footer, wide }) {
+  const backdrop = useRef(null);
+
   useEffect(() => {
-    const onKey = (event) => event.key === 'Escape' && onClose();
+    // Esc closes only the top pop-up when one is open over another
+    const onKey = (event) => {
+      if (event.key !== 'Escape') return;
+      const open = document.querySelectorAll('.modalbg');
+      if (open[open.length - 1] === backdrop.current) onClose();
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
   return (
-    <div className="modalbg" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+    <div className="modalbg" ref={backdrop} onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <div className={`modal ${wide ? 'wide' : ''}`} role="dialog" aria-label={title}>
         <div className="modalhead">
           <h2>{title}</h2>
@@ -50,7 +57,7 @@ export function Modal({ title, onClose, children, footer, wide }) {
 }
 
 /* ---------- Form ----------
- * fields: [{ name, label, type?, options?, required?, full?, hint?, min?, step? }]
+ * fields: [{ name, label, type?, options?, required?, full?, hint?, min?, step?, hidden?(values) }]
  * options: [{ value, label }]
  */
 export function FormModal({ title, fields, initial = {}, onSubmit, onClose, submitLabel = 'Save', wide }) {
@@ -82,7 +89,7 @@ export function FormModal({ title, fields, initial = {}, onSubmit, onClose, subm
     <Modal title={title} onClose={onClose} wide={wide}>
       <form onSubmit={submit}>
         <div className="form">
-          {fields.map((field) => (
+          {fields.filter((field) => !field.hidden?.(values)).map((field) => (
             <Field
               key={field.name}
               field={field}
@@ -206,13 +213,13 @@ const PILL_TONES = {
   // green
   confirmed: '', paid: '', success: '', completed: '', active: '', booked: '', converted: '', published: '', open: '',
   // amber
-  pending: 'pending', partial: 'pending', processing: 'pending', contacted: 'pending', upcoming: 'pending', draft: 'pending', interested: 'pending',
+  pending: 'pending', in_process: 'pending', partial: 'pending', processing: 'pending', contacted: 'pending', upcoming: 'pending', draft: 'pending', interested: 'pending',
   // red
   cancelled: 'red', failed: 'red', unpaid: 'red', not_contacted: 'red', full: 'red', not_interested: 'red', inactive: 'red',
   // blue
-  new: 'blue', ongoing: 'blue', custom: 'blue',
+  new: 'blue', ongoing: 'blue', custom: 'blue', replied: 'blue',
   // grey
-  closed: 'grey', archived: 'grey', refunded: 'grey', scheduled: 'grey',
+  closed: 'grey', archived: 'grey', refunded: 'grey', scheduled: 'grey', hidden: 'grey',
 };
 
 export function Pill({ value }) {
