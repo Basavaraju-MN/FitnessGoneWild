@@ -217,7 +217,7 @@ const PILL_TONES = {
   // red
   cancelled: 'red', failed: 'red', unpaid: 'red', not_contacted: 'red', full: 'red', not_interested: 'red', inactive: 'red',
   // blue
-  new: 'blue', ongoing: 'blue', custom: 'blue', replied: 'blue',
+  new: 'blue', ongoing: 'blue', custom: 'blue', replied: 'blue', sent: 'blue', delivered: '', read: '', sending: 'pending',
   // grey
   closed: 'grey', archived: 'grey', refunded: 'grey', scheduled: 'grey', hidden: 'grey',
 };

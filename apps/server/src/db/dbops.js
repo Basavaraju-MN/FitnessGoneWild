@@ -53,6 +53,14 @@ class Cmds {
     return rows || [];
   }
 
+  async getHero() {
+    const [settings, slides] = await Promise.all([
+      executeQuery(sqlQueries.getHeroSettings),
+      executeQuery(sqlQueries.getHeroSlides),
+    ]);
+    return { settings: settings?.[0] || null, slides: slides || [] };
+  }
+
   async getWhyUs() {
     const rows = await executeQuery(sqlQueries.getWhyUs);
     return rows || [];

@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 
-import Header from '../components/layout/Header';
+import Header, { scrollToSection } from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 
 import Hero from '../components/home/Hero';
@@ -17,6 +18,36 @@ export default function Home() {
 
   const [selectedTrek, setSelectedTrek] = useState(null);
   const [scrollBeforeDetails, setScrollBeforeDetails] = useState(0);
+  const [pendingSection, setPendingSection] = useState(null);
+  const location = useLocation();
+
+  // Header link: leave the trek page (if open) and go to the section
+  const handleNavigate = (id) => {
+    setSelectedTrek(null);
+    setPendingSection(id);
+  };
+
+  // Opened as /#trips (e.g. from another page): go to that section
+  useEffect(() => {
+    const id = location.hash.replace('#', '');
+    if (id) setPendingSection(id);
+  }, [location.hash]);
+
+  // Scroll once the home sections are on screen again
+  useEffect(() => {
+    if (!pendingSection || selectedTrek) return undefined;
+    const id = pendingSection;
+    const first = setTimeout(() => scrollToSection(id), 60);
+    // Treks / reviews load again and can move the sections: settle once more
+    const settle = setTimeout(() => {
+      if (id !== 'top') scrollToSection(id);
+      setPendingSection(null);
+    }, 700);
+    return () => {
+      clearTimeout(first);
+      clearTimeout(settle);
+    };
+  }, [pendingSection, selectedTrek]);
 
 
   const handleTrekSelect = (trek) => {
@@ -46,7 +77,7 @@ export default function Home() {
 
   return (
     <>
-      <Header />
+      <Header onNavigate={handleNavigate} />
 
       <main>
 

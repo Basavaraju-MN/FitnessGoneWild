@@ -184,6 +184,7 @@ const sqlqueries = {
   lookupGuides: 'SELECT id, name, phone FROM guides WHERE is_active = 1 ORDER BY name',
   lookupPickupPoints: 'SELECT id, trip_id, name, address FROM pickup_points WHERE is_active = 1 ORDER BY sort_order, name',
   lookupUsers: 'SELECT id, full_name, role FROM admin_users WHERE is_active = 1 ORDER BY full_name',
+  getGstPercent: "SELECT setting_value FROM settings WHERE setting_key = 'gst_percent'",
   // All lead statuses (inactive too, so old leads still show their label)
   lookupLeadStatuses: 'SELECT id, status_key, label, stage, tone, sort_order, is_active, is_system FROM lead_statuses ORDER BY sort_order, id',
   getLeadStatus: 'SELECT * FROM lead_statuses WHERE status_key = ?',
@@ -282,6 +283,7 @@ const sqlqueries = {
   bookingsWhereCustomer: 'b.customer_id = ?',
   bookingsWhereId: 'b.id = ?',
   getBookingRow: 'SELECT * FROM bookings WHERE id = ?',
+  setInvoiceToken: 'UPDATE bookings SET invoice_token = ? WHERE id = ? AND invoice_token IS NULL',
   getBookingPayments: `
     SELECT bp.id, bp.amount, bp.method, bp.reference, bp.note, bp.paid_at,
            a.full_name AS received_by_name
@@ -464,6 +466,16 @@ const sqlqueries = {
     SET refresh_token = NULL, connected_email = NULL, account_name = NULL, location_name = NULL,
         location_title = NULL, last_error = NULL
     WHERE id = 1`,
+
+  /* ================= WEBSITE HERO ================= */
+  getHeroSettings: 'SELECT * FROM site_hero WHERE id = 1',
+  // Each hero = one slide with its own photo, texts, buttons and stats
+  getHeroSlides: 'SELECT * FROM hero_slides ORDER BY sort_order, id',
+  // Shared settings (time per hero)
+  saveHeroSettings: 'UPDATE site_hero SET ? WHERE id = 1',
+  createHeroSlide: 'INSERT INTO hero_slides SET ?',
+  updateHeroSlide: 'UPDATE hero_slides SET ? WHERE id = ?',
+  deleteHeroSlide: 'DELETE FROM hero_slides WHERE id = ?',
 
   /* ================= SETTINGS ================= */
   getSettings: 'SELECT setting_key, setting_value, label, updated_at FROM settings ORDER BY label',

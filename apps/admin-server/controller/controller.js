@@ -18,6 +18,7 @@ const settingManager = require('../components/setting/settingManager');
 const reviewManager = require('../components/review/reviewManager');
 const activityManager = require('../components/activity/activityManager');
 const refundManager = require('../components/refund/refundManager');
+const heroManager = require('../components/hero/heroManager');
 
 // Session cookie: the admin is on the same site as its API
 // (thefitnessgonewild.in/admin and /api/admin; localhost ports locally)
@@ -559,6 +560,126 @@ exports.disconnectGoogle = async (req, res, next) => {
   try {
     await reviewManager.disconnectGoogle(req.admin);
     return res.status(200).json({ success: true, message: 'Google disconnected', data: true });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/* =====================================================================
+   WEBSITE HERO
+   ===================================================================== */
+
+exports.getHero = async (req, res, next) => {
+  try {
+    const data = await heroManager.getHero();
+    return res.status(200).json({ success: true, message: 'Hero fetched successfully', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.createHero = async (req, res, next) => {
+  try {
+    const data = await heroManager.createHero(req.admin, req.body || {});
+    return res.status(200).json({ success: true, message: 'Hero created', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.updateHero = async (req, res, next) => {
+  try {
+    const data = await heroManager.updateHero(req.admin, idParam(req), req.body || {});
+    return res.status(200).json({ success: true, message: 'Hero saved', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.deleteHero = async (req, res, next) => {
+  try {
+    await heroManager.deleteHero(req.admin, idParam(req));
+    return res.status(200).json({ success: true, message: 'Hero deleted', data: true });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.reorderHeroes = async (req, res, next) => {
+  try {
+    const data = await heroManager.reorderHeroes(req.admin, req.body?.ids || []);
+    return res.status(200).json({ success: true, message: 'Order saved', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.saveHeroTiming = async (req, res, next) => {
+  try {
+    const data = await heroManager.saveHeroTiming(req.admin, req.body || {});
+    return res.status(200).json({ success: true, message: 'Saved', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/* =====================================================================
+   INVOICE (WhatsApp)
+   ===================================================================== */
+
+exports.getInvoiceLink = async (req, res, next) => {
+  try {
+    const data = await bookingManager.getInvoiceLink(req.admin, idParam(req), { send: Boolean(req.body?.send) });
+    return res.status(200).json({ success: true, message: 'Invoice link ready', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.getInvoicePdf = async (req, res, next) => {
+  try {
+    const { fileName, pdf } = await bookingManager.getInvoicePdf(req.admin, idParam(req));
+    res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="${fileName}"` });
+    return res.send(pdf);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.getInvoices = async (req, res, next) => {
+  try {
+    const data = await bookingManager.getInvoices(idParam(req));
+    return res.status(200).json({ success: true, message: 'Invoices fetched successfully', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/* =====================================================================
+   WHATSAPP BUSINESS API (invoice as an attachment)
+   ===================================================================== */
+
+exports.sendInvoiceWhatsApp = async (req, res, next) => {
+  try {
+    const data = await bookingManager.sendInvoiceWhatsApp(req.admin, idParam(req));
+    return res.status(200).json({ success: true, message: 'Invoice sent on WhatsApp', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.getWhatsappMessages = async (req, res, next) => {
+  try {
+    const data = await bookingManager.getWhatsappMessages(idParam(req));
+    return res.status(200).json({ success: true, message: 'Messages fetched', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.getWhatsappStatus = async (req, res, next) => {
+  try {
+    return res.status(200).json({ success: true, message: 'WhatsApp status', data: bookingManager.getWhatsappStatus() });
   } catch (error) {
     return next(error);
   }

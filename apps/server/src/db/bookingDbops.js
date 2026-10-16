@@ -173,6 +173,10 @@ async function recordBooking(transaction) {
   await executeQuery(queries.setBookingRef, [result.insertId]);
   await executeQuery(queries.addSeatsBooked, [people, departureId]);
 
+  // Save the invoice PDF in the background (never holds up the booking)
+  require('../components/invoice/invoiceStore').ensureInvoice(result.insertId)
+    .catch((error) => console.error('Invoice save failed:', error?.message || error));
+
   // Email the admin in the background (the admin bell picks it up too)
   executeQuery(queries.getBookingRef, [result.insertId])
     .then((rows) =>

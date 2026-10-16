@@ -147,3 +147,13 @@ export async function saveTripInterest(tripId, type = 'interested') {
   const result = await parseResponse(response);
   return result.data;
 }
+
+// Home page hero (texts, buttons, stats, photos) — edited in the admin
+export async function getHero() {
+  const response = await fetch(`${API_BASE_URL}/hero`, {
+    credentials: 'include',
+  });
+
+  const result = await parseResponse(response);
+  return result.data;
+}

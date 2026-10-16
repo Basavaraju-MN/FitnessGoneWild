@@ -11,6 +11,8 @@ const trekRoutes = require('./routes/routes');
 const { clientOrigins } = require('./config/config');
 const { checkDatabaseConnection } = require('./db/connection');
 const { db } = require('./config/database');
+const { invoicePage, invoicePdfPage } = require('./components/invoice/invoice');
+const whatsappCloud = require('./components/whatsapp/whatsappCloud');
 
 const app = express();
 
@@ -130,6 +132,11 @@ app.use(
   })
 );
 
+// WhatsApp delivery status (sent / delivered / read). Raw body: its
+// signature is checked against WHATSAPP_APP_SECRET.
+app.get('/api/whatsapp/webhook', whatsappCloud.verifyWebhook);
+app.post('/api/whatsapp/webhook', express.raw({ type: '*/*', limit: '1mb' }), whatsappCloud.receiveWebhook);
+
 const jsonParser = express.json({
   verify(req, res, buffer) {
     req.rawBody = buffer.toString('utf8');
@@ -216,6 +223,10 @@ app.get(/^\/admin(\/.*)?$/, (req, res, next) => {
     if (error) next();
   });
 });
+
+// Customer invoice (link sent on WhatsApp from the admin)
+app.get('/invoice/:token', invoicePage);
+app.get('/invoice/:token/pdf', invoicePdfPage);
 
 app.use('/api', trekRoutes);
 

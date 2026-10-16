@@ -46,6 +46,25 @@ const getFeaturedTrips = async () => {
     return result;
 }
 
+// Home page hero; facts are stored as JSON text
+const getHero = async () => {
+    const result = {};
+    try {
+        const { settings, slides } = await dbCmds.getHero();
+        const parse = (raw) => { try { const list = JSON.parse(raw || '[]'); return Array.isArray(list) ? list : []; } catch { return []; } };
+        result.success = true;
+        result.data = {
+            slide_seconds: settings?.slide_seconds || 4,
+            heroes: slides.map((slide) => ({ ...slide, facts: parse(slide.facts) })),
+        };
+    } catch (error) {
+        result.success = false;
+        result.message = 'Error fetching hero';
+        console.error('Error fetching hero:', error?.message || error);
+    }
+    return result;
+};
+
 const getReviews = async () => {
     const result = {};
     try {
@@ -143,6 +162,7 @@ module.exports = {
     getTrekDetails,
     getFeaturedTrips,
     getReviews,
+    getHero,
     getWhyUs,
     getFaq,
     createTripInterest

@@ -20,6 +20,7 @@ import Enquiries from './pages/Enquiries';
 import Payments from './pages/Payments';
 import Reviews from './pages/Reviews';
 import Activity from './pages/Activity';
+import WebsiteHero from './pages/WebsiteHero';
 import Reports from './pages/Reports';
 import Guides from './pages/Guides';
 import PickupPoints from './pages/PickupPoints';
@@ -38,6 +39,7 @@ const PAGES = [
   { id: 'reports', label: 'Reports & Exports', icon: '▥', component: Reports, group: 'MANAGEMENT' },
   { id: 'guides', label: 'Guides', icon: '⛰', component: Guides, group: 'MANAGEMENT' },
   { id: 'pickup-points', label: 'Pickup Points', icon: '⚑', component: PickupPoints, group: 'MANAGEMENT' },
+  { id: 'hero', label: 'Website Hero', icon: '▭', component: WebsiteHero, group: 'MANAGEMENT' },
   { id: 'activity', label: 'Activity Log', icon: '☰', component: Activity, group: 'MANAGEMENT' },
   { id: 'users', label: 'Users & Roles', icon: '♟', component: Users, group: 'MANAGEMENT' },
   { id: 'settings', label: 'Settings', icon: '☷', component: Settings, group: 'MANAGEMENT' },

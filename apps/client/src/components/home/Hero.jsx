@@ -1,6 +1,25 @@
 import { useEffect, useState } from 'react';
+import { getHero } from '../../api/treks';
 
-const heroSlides = [
+// Shown until the admin's heroes load (and if they cannot load).
+// Each hero (slide) has its own photo, texts, buttons and stats.
+const DEFAULT_TEXT = {
+  eyebrow: 'Leaving Bangalore every Friday, 10:30 PM',
+  headline_line1: 'Escape the routine.',
+  headline_line2: 'Sleep under the Ghats.',
+  primary_label: "See this month's treks",
+  primary_target: 'trips',
+  secondary_label: 'Read 1,200+ reviews',
+  secondary_target: 'reviews',
+  facts: [
+    { value: '25', label: 'max group size' },
+    { value: '4.9', label: 'average rating' },
+    { value: '300+', label: 'trips completed' },
+    { value: '0', label: 'hidden charges' },
+  ],
+};
+
+const DEFAULT_SLIDES = [
   {
     image: '/images/hero1.jpg',
     message: 'Chase the sunrise. Find your next adventure.',
@@ -17,6 +36,29 @@ const heroSlides = [
 
 export default function Hero() {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [heroSlides, setHeroSlides] = useState(() => DEFAULT_SLIDES.map((sl) => ({ ...DEFAULT_TEXT, ...sl })));
+  const [seconds, setSeconds] = useState(4);
+
+  // Heroes from the admin (Website Hero screen); empty fields stay empty
+  useEffect(() => {
+    let cancelled = false;
+    getHero()
+      .then((data) => {
+        if (cancelled || !data) return;
+        const heroes = (data.heroes || [])
+          .filter((h) => h.image_path && h.headline_line1)
+          .map((h) => ({ ...h, image: h.image_path, facts: Array.isArray(h.facts) ? h.facts : [] }));
+        if (heroes.length) {
+          setHeroSlides(heroes);
+          setCurrentSlide(0);
+        }
+        if (data.slide_seconds) setSeconds(Number(data.slide_seconds));
+      })
+      .catch((error) => console.error('Hero could not load, showing the default:', error));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   /*
    * Automatically change image every 5 seconds.
@@ -26,10 +68,10 @@ export default function Hero() {
       setCurrentSlide((prev) =>
         (prev + 1) % heroSlides.length
       );
-    }, 4000);
+    }, Math.max(2, seconds || 4) * 1000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [heroSlides.length, seconds]);
 
   const handlePrevious = () => {
     setCurrentSlide((prev) =>
@@ -45,7 +87,8 @@ export default function Hero() {
     );
   };
 
-  const slide = heroSlides[currentSlide];
+  const slide = heroSlides[currentSlide] || heroSlides[0];
+  const text = slide; // this hero's own texts, buttons and stats
 
   return (
     <section
@@ -125,64 +168,67 @@ export default function Hero() {
 
       <div className="hero-inner">
 
-        <p className="eyebrow eyebrow-light">
-          Leaving Bangalore every Friday, 10:30 PM
-        </p>
+        {text.eyebrow && (
+          <p className="eyebrow eyebrow-light">
+            {text.eyebrow}
+          </p>
+        )}
 
         <h1>
-          Escape the routine.
-          <br />
-          Sleep under the Ghats.
+          {text.headline_line1}
+          {text.headline_line2 && (
+            <>
+              <br />
+              {text.headline_line2}
+            </>
+          )}
         </h1>
 
-        {/* Dynamic trekking message */}
-        <p
-          className="hero-sub"
-          key={currentSlide}
-          style={{
-            transition: 'opacity 0.5s ease',
-          }}
-        >
-          {slide.message}
-        </p>
+        {/* This hero's line under the headline (removed in the admin = not shown) */}
+        {slide.message ? (
+          <p
+            className="hero-sub"
+            key={currentSlide}
+            style={{
+              transition: 'opacity 0.5s ease',
+            }}
+          >
+            {slide.message}
+          </p>
+        ) : (
+          <div style={{ height: '22px' }} />
+        )}
 
         <div className="hero-actions">
-          <a
-            className="btn btn-lg"
-            href="#trips"
-          >
-            See this month's treks
-          </a>
+          {text.primary_label && (
+            <a
+              className="btn btn-lg"
+              href={`#${text.primary_target || 'trips'}`}
+            >
+              {text.primary_label}
+            </a>
+          )}
 
-          <a
-            className="btn-ghost"
-            href="#reviews"
-          >
-            Read 1,200+ reviews →
-          </a>
+          {text.secondary_label && (
+            <a
+              className="btn-ghost"
+              href={`#${text.secondary_target || 'reviews'}`}
+            >
+              {text.secondary_label} →
+            </a>
+          )}
         </div>
 
-        <ul className="hero-facts">
-          <li>
-            <strong>25</strong>
-            <span>max group size</span>
-          </li>
-
-          <li>
-            <strong>4.9</strong>
-            <span>average rating</span>
-          </li>
-
-          <li>
-            <strong>300+</strong>
-            <span>trips completed</span>
-          </li>
-
-          <li>
-            <strong>0</strong>
-            <span>hidden charges</span>
-          </li>
-        </ul>
+        {text.facts?.length > 0 && (
+          <ul className="hero-facts">
+            {text.facts.map((fact, index) => (
+              <li key={index}>
+                <strong>{fact.value}</strong>
+                <span>{fact.label}</span>
+              </li>
+            ))}
+          </ul>
+        )}
 
       </div>
 
