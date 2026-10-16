@@ -48,6 +48,12 @@ router.get('/bookings/:id', can('bookings'), controller.getBooking);
 router.post('/bookings', can('bookings'), controller.createBooking);
 router.patch('/bookings/:id', can('bookings'), controller.updateBooking);
 router.post('/bookings/:id/payments', can('bookings'), controller.addBookingPayment);
+router.post('/bookings/:id/invoice', can('bookings'), controller.getInvoiceLink);
+router.get('/bookings/:id/invoice.pdf', can('bookings'), controller.getInvoicePdf);
+router.get('/bookings/:id/invoices', can('bookings'), controller.getInvoices);
+router.post('/bookings/:id/invoice/whatsapp', can('bookings'), controller.sendInvoiceWhatsApp);
+router.get('/bookings/:id/whatsapp', can('bookings'), controller.getWhatsappMessages);
+router.get('/whatsapp/status', can('bookings'), controller.getWhatsappStatus);
 router.post('/bookings/:id/refunds', can('payments'), controller.createRefund);
 router.get('/refunds', can('payments'), controller.getRefunds);
 router.post('/refunds/:id/check', can('payments'), controller.checkRefund);
@@ -81,6 +87,13 @@ router.get('/google/locations', can('reviews'), controller.getGoogleLocations);
 router.put('/google/location', can('reviews'), controller.setGoogleLocation);
 router.post('/google/sync', can('reviews'), controller.syncGoogleReviews);
 router.post('/google/disconnect', can('reviews'), controller.disconnectGoogle);
+
+router.get('/hero', can('hero'), controller.getHero);
+router.post('/hero', can('hero'), controller.createHero);
+router.put('/hero/order', can('hero'), controller.reorderHeroes);
+router.put('/hero/timing', can('hero'), controller.saveHeroTiming);
+router.put('/hero/:id', can('hero'), controller.updateHero);
+router.delete('/hero/:id', can('hero'), controller.deleteHero);
 
 router.get('/settings', can('settings'), controller.getSettings);
 router.put('/settings', can('settings'), controller.updateSettings);

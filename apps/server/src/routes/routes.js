@@ -19,6 +19,8 @@ router.get('/featured-trips', controller.getFeaturedTrips);
 
 router.get('/reviews', controller.getReviews);
 
+router.get('/hero', controller.getHero);
+
 router.get('/why-us', controller.getWhyUs);
 
 router.get('/faq', controller.getFaq);

@@ -7,6 +7,7 @@ import DataTable from '../components/DataTable';
 import { FormModal, PageHead, Pill, Stats, useToast } from '../components/ui';
 import { BookingDetailModal, NewBookingModal, PaymentModal } from '../components/booking';
 import { exportTripExcel } from '../exportTripExcel';
+import { RowMenu, useInvoiceActions } from '../components/invoiceActions';
 
 const TRIP_STATUS = ['upcoming', 'ongoing', 'completed', 'cancelled'].map((v) => ({ value: v, label: label(v) }));
 
@@ -36,6 +37,7 @@ export default function Coordination() {
   const [addingBooking, setAddingBooking] = useState(false);
   const [openBookingId, setOpenBookingId] = useState(null);
   const [payingBooking, setPayingBooking] = useState(null);
+  const invoice = useInvoiceActions();
 
   const loadSelected = async (id = selectedId) => {
     if (!id) return setSelected(null);
@@ -196,10 +198,22 @@ export default function Coordination() {
               { key: 'status', label: 'Status', render: (r) => (r.status === 'cancelled' ? <Pill value="cancelled" /> : <Pill value={r.payment_status} />) },
               {
                 key: 'actions', label: '', sortable: false, export: false,
-                render: (r) =>
-                  Number(r.balance_amount) > 0 && r.status !== 'cancelled' ? (
-                    <button className="btn small" onClick={() => setPayingBooking({ ...r, trip_name: selected.trip_name })}>Collect balance</button>
-                  ) : null,
+                render: (r) => (
+                  <div className="row-actions">
+                    {Number(r.balance_amount) > 0 && r.status !== 'cancelled' && (
+                      <button className="btn small" onClick={() => setPayingBooking({ ...r, trip_name: selected.trip_name })}>Collect balance</button>
+                    )}
+                    <RowMenu
+                      items={[
+                        { icon: '🟢', label: invoice.busy === r.id ? 'Preparing invoice…' : 'Send invoice on WhatsApp', onClick: () => invoice.send(r), disabled: invoice.busy === r.id },
+                        { icon: '⬇', label: 'Download invoice (PDF)', onClick: () => invoice.download(r) },
+                        { icon: '🧾', label: 'View invoice', onClick: () => invoice.view(r) },
+                        { icon: '↗', label: 'Open booking', onClick: () => setOpenBookingId(r.id) },
+                        invoice.modeItem,
+                      ]}
+                    />
+                  </div>
+                ),
               },
             ]}
           />
@@ -229,6 +243,7 @@ export default function Coordination() {
         />
       )}
 
+      {invoice.dialog}
       {openBookingId && <BookingDetailModal bookingId={openBookingId} onClose={() => setOpenBookingId(null)} onChanged={refresh} />}
 
       {payingBooking && (

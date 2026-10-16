@@ -1,6 +1,8 @@
 // Bookings screen: list, details, offline bookings, balance payments.
 // Called by controller/controller.js; reads and writes through db/dbops.js.
+const crypto = require('crypto');
 const dbops = require('../../db/dbops');
+const { publicSiteUrl } = require('../../config');
 const refundManager = require('../refund/refundManager');
 const {
   badRequest,
@@ -40,7 +42,10 @@ async function findOrCreateCustomer({ name, phone, email, tripId }) {
 
 // Booking taken by phone / WhatsApp / walk-in
 async function createBooking(admin, body) {
-  requireFields(body, ['departure_id', 'name', 'phone', 'amount']);
+  requireFields(body, ['departure_id', 'name', 'phone']);
+  if ((body.trip_amount === undefined || body.trip_amount === '') && (body.amount === undefined || body.amount === '')) {
+    throw badRequest('Enter the trip amount');
+  }
 
   const departure = await dbops.getDepartureForBooking(body.departure_id);
   if (!departure) throw badRequest('Trip coordination not found');
@@ -50,9 +55,14 @@ async function createBooking(admin, body) {
   const people = withTransport + withoutTransport;
   if (people < 1) throw badRequest('Add at least one person');
 
-  const amount = toMoney(body.amount);
+  // The trip amount is entered without GST; GST (Settings, 5%) is added on top.
+  // "Paid now" is what the customer actually sent (e.g. an advance).
+  const gst = await dbops.getGstPercent();
+  const amount = body.trip_amount !== undefined && body.trip_amount !== ''
+    ? toMoney(Number(body.trip_amount) * (1 + gst / 100))
+    : toMoney(body.amount);
   const paid = toMoney(body.paid_amount);
-  if (amount <= 0) throw badRequest('Total amount must be more than 0');
+  if (amount <= 0) throw badRequest('Trip amount must be more than 0');
   if (paid > amount) throw badRequest('Paid amount cannot be more than the total');
 
   const method = body.payment_method || 'upi';
@@ -115,6 +125,10 @@ async function createBooking(admin, body) {
   if (isActiveBooking(status)) await dbops.changeDepartureSeats(departure.id, people);
 
   await logActivity(admin, 'create', 'booking', bookingId, `${body.name} · ${people} people · ₹${amount}`);
+
+  // Save the invoice PDF straight away (ready to send from the ⋮ menu)
+  await invoiceStore.ensureInvoice(bookingId, admin.id).catch((error) =>
+    console.error('Invoice save failed:', error?.message || error));
   return { id: bookingId };
 }
 
@@ -123,6 +137,10 @@ async function updateBooking(admin, id, body) {
   if (!booking) throw notFound('Booking not found');
 
   const data = pick(body, ['status', 'pickup_point_id', 'notes', 'amount']);
+  // Edited as the trip amount without GST: total = amount + GST
+  if (body.trip_amount !== undefined && body.trip_amount !== '') {
+    data.amount = Number(body.trip_amount) * (1 + (await dbops.getGstPercent()) / 100);
+  }
 
   if (data.status !== undefined && !BOOKING_STATUSES.includes(data.status)) {
     throw badRequest('Unknown booking status');
@@ -195,7 +213,112 @@ async function addBookingPayment(admin, id, body) {
   return { id: booking.id, balance: newBalance, paymentStatus, status };
 }
 
+/* ---------------- Invoice on WhatsApp ---------------- */
+const invoiceStore = require('../../../server/src/components/invoice/invoiceStore');
+const whatsappCloud = require('../../../server/src/components/whatsapp/whatsappCloud');
+
+// The saved invoice PDF of a booking (a new version is made if amounts changed)
+async function getInvoicePdf(admin, id) {
+  const saved = await invoiceStore.getInvoicePdf(id, admin?.id || null);
+  if (!saved?.pdf) throw notFound('Booking not found');
+  return { fileName: saved.fileName, pdf: saved.pdf, invoiceNo: saved.row.invoice_no };
+}
+
+// Saved invoices of a booking (newest first)
+const getInvoices = (id) => invoiceStore.listInvoices(id);
+
+const inr = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+const shortDate = (v) => (v ? new Date(`${String(v).slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '');
+
+// Private invoice link for the booking (created once) and a ready WhatsApp message
+async function getInvoiceLink(admin, id, { send = false } = {}) {
+  let booking = await dbops.getBookingRow(id);
+  if (!booking) throw notFound('Booking not found');
+
+  const saved = await invoiceStore.ensureInvoice(booking.id, admin?.id || null);
+  if (send && saved) await invoiceStore.markSent(saved.id);
+
+  if (!booking.invoice_token) {
+    await dbops.setInvoiceToken(booking.id, crypto.randomBytes(18).toString('base64url'));
+    booking = await dbops.getBookingRow(id);
+  }
+  const details = await dbops.getBookingById(booking.id);
+  const url = `${publicSiteUrl}/invoice/${booking.invoice_token}`;
+
+  const balance = Number(details.balance_amount);
+  const dates = details.trek_end_date && details.trek_end_date !== details.trek_start_date
+    ? `${shortDate(details.trek_start_date)} – ${shortDate(details.trek_end_date)}`
+    : shortDate(details.trek_start_date);
+
+  const lines = [
+    `Hi ${details.customer_name}, thank you for booking with The Fitness Gone Wild! 🏔️`,
+    '',
+    `*${details.trip_name || 'Your trip'}*`,
+    `📅 ${dates}`,
+    `👥 ${details.people} ${Number(details.people) === 1 ? 'person' : 'people'}${details.pickup_name ? ` · Pickup: ${details.pickup_name}` : ''}`,
+    `🧾 Booking ID: ${details.booking_ref}${saved ? ` · Invoice ${saved.invoice_no}` : ''}`,
+    '',
+    `Total: ${inr(details.amount)} (incl. GST)`,
+    `Paid: ${inr(details.amount_paid)}`,
+    details.status === 'cancelled' ? 'Status: Cancelled' : (balance > 0.009 ? `*Balance due: ${inr(balance)}*` : '✅ Fully paid'),
+    '',
+    `Your invoice: ${url}`,
+    `Download PDF: ${url}/pdf`,
+  ];
+
+  if (send) await logActivity(admin, 'invoice', 'booking', booking.id, `${saved?.invoice_no || 'invoice'} sent on WhatsApp`);
+  return { url, phone: details.customer_phone, message: lines.join('\n'), invoiceNo: saved?.invoice_no || null };
+}
+
+// Template values, in this order (see README: "booking_invoice" template)
+// {{1}} name · {{2}} trip · {{3}} dates · {{4}} booking ID · {{5}} total · {{6}} paid · {{7}} balance
+async function sendInvoiceWhatsApp(admin, id) {
+  const saved = await invoiceStore.getInvoicePdf(id, admin?.id || null);
+  if (!saved?.pdf) throw notFound('Booking not found');
+  const b = await dbops.getBookingById(id);
+
+  const dates = b.trek_end_date && b.trek_end_date !== b.trek_start_date
+    ? `${shortDate(b.trek_start_date)} – ${shortDate(b.trek_end_date)}`
+    : shortDate(b.trek_start_date);
+  const balance = Number(b.balance_amount);
+
+  const result = await whatsappCloud.sendInvoiceDocument({
+    bookingId: b.id,
+    invoiceId: saved.row.id,
+    phone: b.customer_phone,
+    pdf: saved.pdf,
+    fileName: saved.fileName,
+    sentBy: admin?.id,
+    params: [
+      b.customer_name,
+      b.trip_name || 'your trip',
+      dates || '-',
+      b.booking_ref,
+      inr(b.amount),
+      inr(b.amount_paid),
+      b.status === 'cancelled' ? 'Cancelled' : balance > 0.009 ? inr(balance) : 'Nil (fully paid)',
+    ],
+  });
+
+  await invoiceStore.markSent(saved.row.id);
+  await logActivity(admin, 'invoice', 'booking', b.id, `${saved.row.invoice_no} sent by WhatsApp API to ${result.to}`);
+  return { to: result.to, invoiceNo: saved.row.invoice_no, messageId: result.id };
+}
+
+const getWhatsappMessages = (id) => whatsappCloud.messagesForBooking(id);
+
+const getWhatsappStatus = () => ({
+  configured: whatsappCloud.isConfigured(),
+  template: whatsappCloud.templateName(),
+});
+
 module.exports = {
+  sendInvoiceWhatsApp,
+  getWhatsappMessages,
+  getWhatsappStatus,
+  getInvoiceLink,
+  getInvoicePdf,
+  getInvoices,
   getBookings,
   getBooking,
   createBooking,

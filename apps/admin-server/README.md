@@ -115,3 +115,56 @@ use Hide to take one off. Reviews deleted on Google are removed at the next sync
 
 5. Admin → Reviews → **Connect Google**, sign in with the account that manages
    the business listing, choose the location. Syncs then run automatically.
+
+## WhatsApp invoices (PDF attached) — WhatsApp Business API
+
+With the WhatsApp Business (Cloud) API set up, **⋮ → Send invoice on WhatsApp**
+sends the saved invoice PDF **as an attachment** to the customer's number,
+from your business number. Without it, the admin falls back to WhatsApp Web /
+the app (PDF downloaded, attach it yourself).
+
+Delivery status (sent → delivered → read / failed) shows in the booking.
+Cost: Meta charges per "utility" conversation (about ₹0.12–0.15 in India).
+
+### 1. Meta setup (one time)
+1. **business.facebook.com** → create / open your Business, finish **Business verification**.
+2. **developers.facebook.com** → *My Apps* → *Create app* → type **Business** → add **WhatsApp**.
+3. WhatsApp → **API Setup** → *Add phone number* → your business number (it must not be
+   in use in the normal WhatsApp app at the same time) → verify by SMS.
+   Copy the **Phone number ID**.
+4. Business settings → **System users** → add a system user (Admin) → *Add assets* →
+   the app (full control) → **Generate token** with `whatsapp_business_messaging` and
+   `whatsapp_business_management`, expiry **Never**. This is `WHATSAPP_TOKEN`.
+5. WhatsApp Manager → **Message templates** → *Create template*:
+   - Category **Utility**, name **booking_invoice**, language **English** (`en`)
+   - Header: **Document**
+   - Body (exactly 7 values, in this order):
+
+     ```
+     Hi {{1}}, thank you for booking {{2}} ({{3}}) with The Fitness Gone Wild.
+     Booking ID: {{4}}
+     Total: {{5}} (incl. GST)
+     Paid: {{6}}
+     Balance due: {{7}}
+     Your invoice is attached. See you on the trail!
+     ```
+   - Submit; approval usually takes minutes to a day.
+6. App → WhatsApp → **Configuration** → Webhook:
+   - Callback URL: `https://thefitnessgonewild.in/api/whatsapp/webhook`
+   - Verify token: the same text as `WHATSAPP_VERIFY_TOKEN`
+   - Subscribe to **messages** (gives the delivery status).
+
+### 2. Environment (Render, and `apps/server/.env` locally)
+
+| Variable | Value |
+|---|---|
+| `WHATSAPP_TOKEN` | System-user token (step 4) |
+| `WHATSAPP_PHONE_NUMBER_ID` | Phone number ID (step 3) |
+| `WHATSAPP_TEMPLATE_NAME` | Optional, default `booking_invoice` |
+| `WHATSAPP_TEMPLATE_LANG` | Optional, default `en` |
+| `WHATSAPP_API_VERSION` | Optional, default `v21.0` |
+| `WHATSAPP_VERIFY_TOKEN` | Any secret text, also typed in the webhook setup |
+| `WHATSAPP_APP_SECRET` | App → Settings → Basic → App secret (checks webhook signatures) |
+
+Restart the server. The ⋮ menu then shows **"WhatsApp: sent automatically (Business API)"**.
+Run `sql/whatsapp_messages.sql` (or `sql/upgrade_to_latest.sql`) on the database first.

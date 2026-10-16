@@ -101,16 +101,23 @@ class Cmds {
 
   /* ================= LOOKUPS ================= */
   async getLookups() {
-    const [trips, categories, guides, pickupPoints, users, leadStatuses] = await Promise.all([
+    const [trips, categories, guides, pickupPoints, users, leadStatuses, gstPercent] = await Promise.all([
       executeQuery(sqlQueries.lookupTrips),
       executeQuery(sqlQueries.lookupCategories),
       executeQuery(sqlQueries.lookupGuides),
       executeQuery(sqlQueries.lookupPickupPoints),
       executeQuery(sqlQueries.lookupUsers),
       executeQuery(sqlQueries.lookupLeadStatuses),
+      this.getGstPercent(),
     ]);
 
-    return { trips, categories, guides, pickupPoints, users, leadStatuses };
+    return { trips, categories, guides, pickupPoints, users, leadStatuses, gstPercent };
+  }
+
+  // GST % from Settings (5 when not set)
+  async getGstPercent() {
+    const value = Number(first(await executeQuery(sqlQueries.getGstPercent))?.setting_value);
+    return Number.isFinite(value) && value >= 0 ? value : 5;
   }
 
   async getLeadStatus(key) {
@@ -242,6 +249,10 @@ class Cmds {
   // Raw bookings row (for updates)
   async getBookingRow(id) {
     return first(await executeQuery(sqlQueries.getBookingRow, [id]));
+  }
+
+  async setInvoiceToken(id, token) {
+    await executeQuery(sqlQueries.setInvoiceToken, [token, id]);
   }
 
   async getBookingPayments(bookingId) {
@@ -442,6 +453,31 @@ class Cmds {
 
   async clearGoogleConnection() {
     await executeQuery(sqlQueries.clearGoogleConnection);
+  }
+
+  /* ================= WEBSITE HERO ================= */
+  async getHeroSettings() {
+    return first(await executeQuery(sqlQueries.getHeroSettings));
+  }
+
+  async getHeroSlides() {
+    return executeQuery(sqlQueries.getHeroSlides);
+  }
+
+  async saveHeroSettings(data) {
+    await executeQuery(sqlQueries.saveHeroSettings, [data]);
+  }
+
+  async createHeroSlide(row) {
+    return (await executeQuery(sqlQueries.createHeroSlide, [row])).insertId;
+  }
+
+  async updateHeroSlide(id, row) {
+    await executeQuery(sqlQueries.updateHeroSlide, [row, id]);
+  }
+
+  async deleteHeroSlide(id) {
+    await executeQuery(sqlQueries.deleteHeroSlide, [id]);
   }
 
   /* ================= HEALTH ================= */

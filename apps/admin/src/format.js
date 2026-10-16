@@ -38,11 +38,22 @@ export const today = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-export const whatsappLink = (phone, message = '') => {
+const waDigits = (phone) => {
   let digits = String(phone || '').replace(/\D/g, '');
   if (digits.length === 10) digits = `91${digits}`;
-  return `https://wa.me/${digits}${message ? `?text=${encodeURIComponent(message)}` : ''}`;
+  return digits;
 };
+
+export const whatsappLink = (phone, message = '') =>
+  `https://wa.me/${waDigits(phone)}${message ? `?text=${encodeURIComponent(message)}` : ''}`;
+
+// Straight into WhatsApp Web (no "open the app?" page)
+export const whatsappWebLink = (phone, message = '') =>
+  `https://web.whatsapp.com/send?phone=${waDigits(phone)}${message ? `&text=${encodeURIComponent(message)}` : ''}`;
+
+// Straight into the installed WhatsApp app (desktop or phone)
+export const whatsappAppLink = (phone, message = '') =>
+  `whatsapp://send?phone=${waDigits(phone)}${message ? `&text=${encodeURIComponent(message)}` : ''}`;
 
 // Downloads rows as a CSV that opens in Excel
 export function exportCsv(filename, columns, rows) {

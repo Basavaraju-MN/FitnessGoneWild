@@ -1,10 +1,34 @@
 import { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 
-export default function Header() {
-  const [open, setOpen] = useState(false);
+// Scroll to a home-page section ("top" = page top); the sticky header is
+// allowed for by scroll-padding-top in global.css
+export const scrollToSection = (id) => {
+  if (id === 'top') {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
 
-  const close = () => setOpen(false);
+/**
+ * onNavigate(id): set by the home page so a link can first close an open
+ * trek page (its sections are hidden while a trek is shown).
+ */
+export default function Header({ onNavigate }) {
+  const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const go = (event, id) => {
+    event.preventDefault();
+    setOpen(false);
+
+    if (onNavigate) onNavigate(id);
+    else if (location.pathname !== '/') navigate(`/#${id}`);
+    else scrollToSection(id);
+  };
 
   return (
     <header
@@ -19,8 +43,8 @@ export default function Header() {
       >
         <a
           className="brand"
-          href="#top"
-          onClick={close}
+          href="/#top"
+          onClick={(event) => go(event, 'top')}
         >
           <img
             src="/images/logo.png"
@@ -52,35 +76,53 @@ export default function Header() {
             fontWeight: 'bold',
           }}
         >
-          <a href="#top" onClick={close}>
+          <a
+          href="/#top"
+          onClick={(event) => go(event, 'top')}
+        >
             Home
           </a>
 
-          <a href="#trips" onClick={close}>
+          <a
+          href="/#trips"
+          onClick={(event) => go(event, 'trips')}
+        >
             Treks
           </a>
 
-          <a href="#featured" onClick={close}>
+          <a
+          href="/#featured"
+          onClick={(event) => go(event, 'featured')}
+        >
             Trips
           </a>
 
-          <a href="#why" onClick={close}>
+          <a
+          href="/#why"
+          onClick={(event) => go(event, 'why')}
+        >
             Why us
           </a>
 
-          <a href="#reviews" onClick={close}>
+          <a
+          href="/#reviews"
+          onClick={(event) => go(event, 'reviews')}
+        >
             Reviews
           </a>
 
-          <a href="#faq" onClick={close}>
+          <a
+          href="/#faq"
+          onClick={(event) => go(event, 'faq')}
+        >
             FAQ
           </a>
 
           <a
             className="btn btn-sm"
-            href="#contact"
-            onClick={close}
-          >
+          href="/#contact"
+          onClick={(event) => go(event, 'contact')}
+        >
             Talk to us
           </a>
         </div>

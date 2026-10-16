@@ -4,6 +4,7 @@ import { api } from '../api';
 import { useAdmin } from '../context';
 import { date, dateTime, label, money, whatsappLink } from '../format';
 import { FormModal, Modal, Pill, useToast } from './ui';
+import { useInvoiceActions } from './invoiceActions';
 
 const GST_RATE = 0.05;
 
@@ -38,6 +39,10 @@ export function NewBookingModal({ departureId, onClose, onSaved }) {
   const departureOf = (values) => departures.find((d) => String(d.id) === String(values.departure_id));
   const tripOf = (values) => lookups?.trips.find((t) => t.id === departureOf(values)?.trip_id);
 
+  const gstPercent = Number(lookups?.gstPercent ?? GST_RATE * 100);
+  const withGst = (base) => Math.round(Number(base || 0) * (1 + gstPercent / 100) * 100) / 100;
+
+  // Trip price × people, without GST (GST is added on top)
   const suggested = (values) => {
     const trip = tripOf(values);
     if (!trip) return 0;
@@ -46,7 +51,7 @@ export function NewBookingModal({ departureId, onClose, onSaved }) {
     const subtotal =
       (Number(values.with_transport_people) || 0) * withPrice +
       (Number(values.without_transport_people) || 0) * withoutPrice;
-    return Math.round(subtotal * (1 + GST_RATE) * 100) / 100;
+    return Math.round(subtotal * 100) / 100;
   };
 
   return (
@@ -90,15 +95,28 @@ export function NewBookingModal({ departureId, onClose, onSaved }) {
         { name: 'with_transport_people', label: 'People with transport', type: 'number', min: 0 },
         { name: 'without_transport_people', label: 'People without transport', type: 'number', min: 0 },
         {
-          name: 'amount',
-          label: 'Total amount (₹, incl. GST)',
+          name: 'trip_amount',
+          label: 'Trip amount (₹, without GST)',
           type: 'number',
           min: 0,
           step: '0.01',
           required: true,
-          hint: (values) => (suggested(values) ? `Suggested from trip prices + 5% GST: ${money(suggested(values))}` : ''),
+          hint: (values) => {
+            const base = Number(values.trip_amount) || 0;
+            const parts = [];
+            if (base > 0) parts.push(`+ GST ${gstPercent}% ${money(withGst(base) - base)} = Total ${money(withGst(base))}`);
+            if (suggested(values)) parts.push(`Trip price × people: ${money(suggested(values))}`);
+            return parts.join(' · ');
+          },
         },
-        { name: 'paid_amount', label: 'Paid now (₹)', type: 'number', min: 0, step: '0.01', hint: 'Leave 0 if nothing is paid yet' },
+        {
+          name: 'paid_amount', label: 'Paid now (₹)', type: 'number', min: 0, step: '0.01',
+          hint: (values) => {
+            const total = withGst(values.trip_amount);
+            const paid = Number(values.paid_amount) || 0;
+            return total > 0 ? `What the customer sent (e.g. advance) · Balance: ${money(Math.max(0, total - paid))}` : 'Leave 0 if nothing is paid yet';
+          },
+        },
         { name: 'payment_method', label: 'Payment method', type: 'select', options: PAYMENT_METHODS },
         { name: 'payment_reference', label: 'Payment reference', placeholder: 'UPI / transaction ID' },
         { name: 'status', label: 'Booking status', type: 'select', options: BOOKING_STATUSES },
@@ -293,6 +311,13 @@ export function BookingDetailModal({ bookingId, onClose, onChanged }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookingId]);
 
+  // Invoice actions (saved PDF → WhatsApp / download / view)
+  const invoice = useInvoiceActions();
+  const [waMessages, setWaMessages] = useState([]);
+  useEffect(() => {
+    api(`/bookings/${bookingId}/whatsapp`).then(({ data }) => setWaMessages(data || [])).catch(() => setWaMessages([]));
+  }, [bookingId, invoice.busy]);
+
   const changed = () => {
     load();
     onChanged?.();
@@ -320,7 +345,9 @@ export function BookingDetailModal({ bookingId, onClose, onChanged }) {
     ['People', `${booking.people} (${booking.with_transport_people} with transport, ${booking.without_transport_people} without)`],
     ['Pickup', booking.pickup_name || '—'],
     ['Booked on', dateTime(booking.booked_at)],
-    ['Trip total', money(booking.amount)],
+    ['Trip amount (without GST)', money(Number(booking.amount) / (1 + Number(lookups?.gstPercent ?? 5) / 100))],
+    [`GST (${Number(lookups?.gstPercent ?? 5)}%)`, money(Number(booking.amount) - Number(booking.amount) / (1 + Number(lookups?.gstPercent ?? 5) / 100))],
+    ['Total (incl. GST)', money(booking.amount)],
     ['Paid', money(booking.amount_paid)],
     ['Balance', money(booking.balance_amount)],
     ['Payment', `${label(booking.payment_type)} · ${label(booking.payment_status)}`],
@@ -349,6 +376,9 @@ export function BookingDetailModal({ bookingId, onClose, onChanged }) {
         onClose={onClose}
         footer={
           <>
+            <button className="btn whatsapp-btn" onClick={() => invoice.send(booking)} disabled={invoice.busy === booking.id}>{invoice.busy === booking.id ? 'Preparing invoice…' : 'Send invoice on WhatsApp'}</button>
+            <button className="btn alt" onClick={() => invoice.view(booking)}>View invoice</button>
+            <button className="btn alt" onClick={() => invoice.download(booking)}>Download PDF</button>
             <a className="btn alt" href={whatsappLink(booking.customer_phone)} target="_blank" rel="noreferrer">WhatsApp</a>
             <a className="btn alt" href={`tel:${booking.customer_phone}`}>Call</a>
             <button className="btn alt" onClick={() => setEditing(true)}>Edit</button>
@@ -406,6 +436,25 @@ export function BookingDetailModal({ bookingId, onClose, onChanged }) {
           )}
         </div>
 
+        {waMessages.length > 0 && (
+          <div className="modal-section">
+            <h3>Invoices sent on WhatsApp</h3>
+            <table className="table">
+              <thead><tr><th>Sent</th><th>To</th><th>Status</th><th>Last update</th></tr></thead>
+              <tbody>
+                {waMessages.map((m) => (
+                  <tr key={m.id}>
+                    <td>{dateTime(m.created_at)}</td>
+                    <td>+{m.to_phone}</td>
+                    <td><Pill value={m.status} />{m.error && <small className="refund-error">{m.error}</small>}</td>
+                    <td>{dateTime(m.updated_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
         {(booking.refunds?.length > 0 || booking.status === 'cancelled') && (
           <div className="modal-section">
             <h3>Refunds</h3>
@@ -452,6 +501,8 @@ export function BookingDetailModal({ bookingId, onClose, onChanged }) {
         />
       )}
 
+      {invoice.dialog}
+
       {refunding && (
         <RefundModal
           bookingId={booking.id}
@@ -466,7 +517,7 @@ export function BookingDetailModal({ bookingId, onClose, onChanged }) {
       {editing && (
         <FormModal
           title={`Edit ${booking.booking_ref}`}
-          initial={booking}
+          initial={{ ...booking, trip_amount: Math.round((Number(booking.amount) / (1 + Number(lookups?.gstPercent ?? 5) / 100)) * 100) / 100 }}
           fields={[
             {
               name: 'pickup_point_id',
@@ -476,14 +527,21 @@ export function BookingDetailModal({ bookingId, onClose, onChanged }) {
                 .filter((p) => p.trip_id === booking.trip_id)
                 .map((p) => ({ value: p.id, label: p.name })),
             },
-            { name: 'amount', label: 'Trip total (₹)', type: 'number', min: 0, step: '0.01', hint: `Already paid: ${money(booking.amount_paid)}` },
+            {
+              name: 'trip_amount', label: 'Trip amount (₹, without GST)', type: 'number', min: 0, step: '0.01',
+              hint: (values) => {
+                const g = Number(lookups?.gstPercent ?? 5);
+                const total = Math.round(Number(values.trip_amount || 0) * (1 + g / 100) * 100) / 100;
+                return `+ GST ${g}% = Total ${money(total)} · Already paid: ${money(booking.amount_paid)}`;
+              },
+            },
             { name: 'notes', label: 'Notes', type: 'textarea', full: true },
           ]}
           onClose={() => setEditing(false)}
           onSubmit={async (values) => {
             await api(`/bookings/${booking.id}`, {
               method: 'PATCH',
-              body: { pickup_point_id: values.pickup_point_id, amount: values.amount, notes: values.notes },
+              body: { pickup_point_id: values.pickup_point_id, trip_amount: values.trip_amount, notes: values.notes },
             });
             toast('Booking updated');
             setEditing(false);

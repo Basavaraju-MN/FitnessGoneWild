@@ -75,6 +75,16 @@ exports.getFeaturedTrips = async (req, res) => {
   }
 };
 
+exports.getHero = async (req, res) => {
+  try {
+    const result = await component.getHero();
+    if (!result.success) throw new Error(result.message);
+    return res.status(200).json({ success: true, message: 'Hero fetched successfully', data: result.data });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Error fetching hero' });
+  }
+};
+
 exports.getReviews = async (req, res) => {
   try {
     const result = await component.getReviews();

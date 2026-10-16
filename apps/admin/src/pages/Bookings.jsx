@@ -5,8 +5,9 @@ import { date, label, money } from '../format';
 import DataTable from '../components/DataTable';
 import { PageHead, Pill, Stats } from '../components/ui';
 import { BookingDetailModal, NewBookingModal, PaymentModal } from '../components/booking';
+import { RowMenu, useInvoiceActions } from '../components/invoiceActions';
 
-export const bookingColumns = (open, collect) => [
+export const bookingColumns = (open, collect, invoice) => [
   { key: 'booking_ref', label: 'Booking ID', render: (r) => <button className="link" onClick={() => open(r.id)}>{r.booking_ref}</button>, csv: (r) => r.booking_ref },
   { key: 'customer_name', label: 'Customer', render: (r) => <><b>{r.customer_name}</b><br /><span className="muted">{r.customer_phone}</span></>, csv: (r) => `${r.customer_name} (${r.customer_phone})` },
   { key: 'trip_name', label: 'Trip' },
@@ -22,10 +23,25 @@ export const bookingColumns = (open, collect) => [
   { key: 'booked_at', label: 'Booked on', render: (r) => date(r.booked_at) },
   {
     key: 'actions', label: '', sortable: false, export: false,
-    render: (r) =>
-      collect && Number(r.balance_amount) > 0 && r.status !== 'cancelled' ? (
-        <button className="btn small" onClick={() => collect(r)}>Collect balance</button>
-      ) : null,
+    render: (r) => (
+      <div className="row-actions">
+        {collect && Number(r.balance_amount) > 0 && r.status !== 'cancelled' && (
+          <button className="btn small" onClick={() => collect(r)}>Collect balance</button>
+        )}
+        {invoice && (
+          <RowMenu
+            items={[
+              { icon: '🟢', label: invoice.busy === r.id ? 'Preparing invoice…' : 'Send invoice on WhatsApp', onClick: () => invoice.send(r), disabled: invoice.busy === r.id },
+              { icon: '⬇', label: 'Download invoice (PDF)', onClick: () => invoice.download(r) },
+              { icon: '🧾', label: 'View invoice', onClick: () => invoice.view(r) },
+              { icon: '₹', label: 'Collect balance', onClick: () => collect(r), hidden: !collect || !(Number(r.balance_amount) > 0) || r.status === 'cancelled' },
+              { icon: '↗', label: 'Open booking', onClick: () => open(r.id) },
+              invoice.modeItem,
+            ]}
+          />
+        )}
+      </div>
+    ),
   },
 ];
 
@@ -35,6 +51,7 @@ export default function Bookings() {
   const [creating, setCreating] = useState(false);
   const [collecting, setCollecting] = useState(null);
   const [filter, setFilter] = useState('active');
+  const invoice = useInvoiceActions();
 
   const rows = useMemo(() => {
     const list = data || [];
@@ -78,7 +95,7 @@ export default function Bookings() {
             <option value="all">All</option>
           </select>
         }
-        columns={bookingColumns(setOpenId, setCollecting)}
+        columns={bookingColumns(setOpenId, setCollecting, invoice)}
       />
 
       {collecting && (
@@ -92,6 +109,7 @@ export default function Bookings() {
         />
       )}
 
+      {invoice.dialog}
       {openId && <BookingDetailModal bookingId={openId} onClose={() => setOpenId(null)} onChanged={reload} />}
       {creating && (
         <NewBookingModal

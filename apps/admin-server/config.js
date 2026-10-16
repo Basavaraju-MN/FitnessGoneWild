@@ -43,6 +43,9 @@ module.exports = {
     redirectUri: process.env.GOOGLE_REDIRECT_URI || '',
     syncHours: Number(process.env.GOOGLE_SYNC_HOURS || 6),
   },
+  // Public website address, used in invoice links sent to customers
+  publicSiteUrl: (process.env.PUBLIC_SITE_URL || (isProduction ? 'https://thefitnessgonewild.in' : 'http://localhost:4000')).replace(/\/+$/, ''),
+
   // Where the browser goes back to after connecting Google
   adminAppUrl: process.env.ADMIN_APP_URL || (isProduction ? '/admin/' : 'http://localhost:5175/'),
 
@@ -60,6 +63,7 @@ module.exports = {
     'pickup-points': ['admin', 'operations'],
     reviews: ['admin'],
     activity: ['admin'],
+    hero: ['admin'],
     users: ['admin'],
     settings: ['admin'],
   },
