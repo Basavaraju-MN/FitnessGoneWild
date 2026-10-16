@@ -37,8 +37,10 @@ const clean = (html) => (String(html || '').replace(/<[^>]*>|&nbsp;|\s/g, '') ? 
  * simple: small toolbar for short text.
  */
 export default function RichTextEditor({ value, onChange, placeholder, simple = false, height = 320 }) {
+  const dark = document.documentElement.dataset.theme === 'dark';
   const config = useMemo(() => ({
     readonly: false,
+    theme: dark ? 'dark' : 'default',
     placeholder: placeholder || 'Start typing…',
     height: simple ? 140 : height,
     minHeight: simple ? 110 : 200,
@@ -56,7 +58,7 @@ export default function RichTextEditor({ value, onChange, placeholder, simple = 
     uploader: { insertImageAsBase64URI: false },
     link: { noFollowCheckbox: false, openInNewTabCheckbox: true },
     style: { fontFamily: 'Noto Sans, system-ui, sans-serif', fontSize: '14px' },
-  }), [placeholder, simple, height]);
+  }), [placeholder, simple, height, dark]);
 
   const start = useMemo(() => toHtml(value), [value]);
 

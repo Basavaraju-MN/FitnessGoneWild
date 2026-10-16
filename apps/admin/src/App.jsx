@@ -7,6 +7,8 @@ import { AdminContext } from './context';
 import { FormModal, useToast } from './components/ui';
 import NotificationBell from './components/NotificationBell';
 import ProfileMenu from './components/ProfileMenu';
+import ThemeToggle from './components/ThemeToggle';
+import { applyTheme, saveTheme, savedTheme } from './theme';
 
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -48,6 +50,17 @@ export default function App() {
   const [page, setPage] = useState(pageFromLocation);
   const [menuOpen, setMenuOpen] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
+  const [theme, setTheme] = useState(savedTheme);
+
+  // Login page and portal follow the same switch
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
+
+  const changeTheme = (next) => {
+    setTheme(next);
+    saveTheme(next);
+  };
 
   // Restore the session
   useEffect(() => {
@@ -111,7 +124,7 @@ export default function App() {
   };
 
   if (user === undefined) return <div className="loading">Loading…</div>;
-  if (!user) return <Login onLogin={setUser} />;
+  if (!user) return <Login onLogin={setUser} theme={theme} onThemeChange={changeTheme} />;
 
   const current = allowedPages.find((p) => p.id === page) || allowedPages[0];
   const PageComponent = current?.component;
@@ -155,6 +168,7 @@ export default function App() {
             <button type="button" className="btn alt mobile" onClick={() => setMenuOpen((v) => !v)}>☰</button>
             <div className="top-title">{current?.label}</div>
             <div className="top-user">
+              <ThemeToggle theme={theme} onChange={changeTheme} />
               <NotificationBell />
               <ProfileMenu
                 user={user}
