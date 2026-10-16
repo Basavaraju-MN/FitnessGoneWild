@@ -76,7 +76,7 @@ export function NewBookingModal({ departureId, onClose, onSaved }) {
           full: true,
           options: departures.map((d) => ({
             value: d.id,
-            label: `TC-${d.id} · ${d.trip_name} · ${date(d.start_date)}${d.end_date !== d.start_date ? ` → ${date(d.end_date)}` : ''}`,
+            label: `${d.trip_code ? `${d.trip_code} · ` : ''}${d.trip_name} · ${date(d.start_date)}${d.end_date !== d.start_date ? ` → ${date(d.end_date)}` : ''}`,
           })),
           hint: departures.length ? '' : 'No upcoming trip coordinations. Create one in Trip Coordination first.',
         },

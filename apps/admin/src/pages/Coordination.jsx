@@ -12,6 +12,11 @@ import { RowMenu, useInvoiceActions } from '../components/invoiceActions';
 const TRIP_STATUS = ['upcoming', 'ongoing', 'completed', 'cancelled'].map((v) => ({ value: v, label: label(v) }));
 
 const departureFields = (lookups, isNew) => [
+  {
+    name: 'trip_code', label: 'Trip code',
+    placeholder: isNew ? 'Given with the first booking' : 'e.g. TC-0012',
+    hint: 'Your own trip number. Left empty, it is given automatically when the first customer is added (pattern in Settings).',
+  },
   ...(isNew
     ? [{ name: 'trip_id', label: 'Master trip', type: 'select', required: true, full: true, options: (lookups?.trips || []).map((t) => ({ value: t.id, label: t.name })) }]
     : []),
@@ -122,7 +127,7 @@ export default function Coordination() {
             </select>
           }
           columns={[
-            { key: 'id', label: 'ID', render: (r) => <b>TC-{r.id}</b>, csv: (r) => `TC-${r.id}` },
+            { key: 'trip_code', label: 'Trip code', render: (r) => (r.trip_code ? <b>{r.trip_code}</b> : <span className="muted">No code yet</span>), csv: (r) => r.trip_code || '' },
             { key: 'trip_name', label: 'Master trip' },
             { key: 'start_date', label: 'Travel date', render: (r) => date(r.start_date) },
             { key: 'end_date', label: 'Return date', render: (r) => date(r.end_date) },
@@ -148,7 +153,7 @@ export default function Coordination() {
         <div className="card trip-detail" ref={detailsRef}>
           <div className="cardhead">
             <div>
-              <h2>TC-{selected.id} — Customer Coordination</h2>
+              <h2>{selected.trip_code || 'No trip code yet'} — Customer Coordination</h2>
               <p>{selected.trip_name} · {date(selected.start_date)}{selected.end_date !== selected.start_date ? ` → ${date(selected.end_date)}` : ''} · Guide {selected.guide_name || 'unassigned'}</p>
             </div>
             <div className="toolbar">
@@ -223,7 +228,7 @@ export default function Coordination() {
       {form && (
         <FormModal
           wide
-          title={form === 'new' ? 'Create Trip Coordination' : `Edit TC-${form.id} · ${form.trip_name}`}
+          title={form === 'new' ? 'Create Trip Coordination' : `Edit ${form.trip_code || 'trip'} · ${form.trip_name}`}
           submitLabel={form === 'new' ? 'Create Coordination' : 'Save'}
           initial={form === 'new' ? { start_date: today(), trip_status: 'upcoming', departure_type: 'scheduled' } : form}
           fields={departureFields(lookups, form === 'new')}

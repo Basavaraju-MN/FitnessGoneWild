@@ -194,6 +194,10 @@ class Cmds {
     return executeQuery(sql, params);
   }
 
+  async isTripCodeTaken(code, exceptId) {
+    return (await executeQuery(sqlQueries.tripCodeTaken, [code, exceptId || 0])).length > 0;
+  }
+
   async getDepartureById(id) {
     const sql = `${withWhere(sqlQueries.departuresBase, [sqlQueries.departuresWhereId])} GROUP BY d.id`;
     return first(await executeQuery(sql, [id]));

@@ -34,7 +34,7 @@ const REPORTS = [
     id: 'coordination', module: 'coordination', title: 'Trip coordination', note: 'Upcoming departures with team and balances',
     path: '/departures?when=all', file: 'fgw-coordination.csv',
     columns: [
-      { key: 'id', label: 'ID', csv: (r) => `TC-${r.id}` },
+      { key: 'trip_code', label: 'Trip code', csv: (r) => r.trip_code || '' },
       { key: 'trip_name', label: 'Trip' },
       { key: 'start_date', label: 'Travel date', csv: (r) => date(r.start_date) },
       { key: 'end_date', label: 'Return date', csv: (r) => date(r.end_date) },

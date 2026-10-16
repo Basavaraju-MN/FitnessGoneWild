@@ -173,6 +173,10 @@ async function recordBooking(transaction) {
   await executeQuery(queries.setBookingRef, [result.insertId]);
   await executeQuery(queries.addSeatsBooked, [people, departureId]);
 
+  // First booking on this trip: it gets its trip code (Settings pattern)
+  await require('../components/trip/tripCode').ensureTripCode(departureId)
+    .catch((error) => console.error('Trip code failed:', error?.message || error));
+
   // Save the invoice PDF in the background (never holds up the booking)
   require('../components/invoice/invoiceStore').ensureInvoice(result.insertId)
     .catch((error) => console.error('Invoice save failed:', error?.message || error));

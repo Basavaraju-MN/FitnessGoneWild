@@ -2,6 +2,7 @@
 // Called by controller/controller.js; reads and writes through db/dbops.js.
 const crypto = require('crypto');
 const dbops = require('../../db/dbops');
+const tripCode = require('../../../server/src/components/trip/tripCode');
 const { publicSiteUrl } = require('../../config');
 const refundManager = require('../refund/refundManager');
 const {
@@ -125,6 +126,10 @@ async function createBooking(admin, body) {
   if (isActiveBooking(status)) await dbops.changeDepartureSeats(departure.id, people);
 
   await logActivity(admin, 'create', 'booking', bookingId, `${body.name} · ${people} people · ₹${amount}`);
+
+  // First booking on this trip: it gets its trip code (Settings pattern)
+  await tripCode.ensureTripCode(departure.id).catch((error) =>
+    console.error('Trip code failed:', error?.message || error));
 
   // Save the invoice PDF straight away (ready to send from the ⋮ menu)
   await invoiceStore.ensureInvoice(bookingId, admin.id).catch((error) =>
