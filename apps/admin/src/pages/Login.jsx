@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { PasswordInput } from '../components/ui';
 import { LOGO_URL } from '../assets';
+import ThemeToggle from '../components/ThemeToggle';
 
 // Photos in apps/admin/public/login, with the line shown on each
 const SLIDES = [
@@ -24,7 +25,7 @@ const MailIcon = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg>
 );
 
-export default function Login({ onLogin }) {
+export default function Login({ onLogin, theme, onThemeChange }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -55,6 +56,10 @@ export default function Login({ onLogin }) {
 
   return (
     <div className="login-page">
+      <div className="login-theme">
+        <ThemeToggle theme={theme} onChange={onThemeChange} />
+      </div>
+
       <div className="login-frame">
         {/* Photo side */}
         <section className="login-hero" aria-hidden="true">

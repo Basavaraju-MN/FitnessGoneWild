@@ -10,6 +10,7 @@ dotenv.config({
 const trekRoutes = require('./routes/routes');
 const { clientOrigins } = require('./config/config');
 const { checkDatabaseConnection } = require('./db/connection');
+const { db } = require('./config/database');
 
 const app = express();
 
@@ -169,10 +170,15 @@ app.get('/api/health', async (req, res) => {
       error?.message || error
     );
 
+    // The error code (no passwords) says why, e.g.
+    // ER_ACCESS_DENIED_ERROR = this server's IP / password not allowed,
+    // ETIMEDOUT = blocked or unreachable, ENOTFOUND = wrong host name
     return res.status(503).json({
       success: false,
       message: 'API is running but database is unavailable',
       database: 'disconnected',
+      error: error?.code || 'UNKNOWN',
+      host: db.host,
     });
   }
 });
