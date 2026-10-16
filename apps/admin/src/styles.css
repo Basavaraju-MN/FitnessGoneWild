@@ -787,3 +787,7 @@ button.avatar:hover { background: var(--cp-brand-blue-90); }
 .wa-choice-option b { display: block; color: var(--heading); margin-bottom: 3px; }
 .wa-choice-option small { color: var(--muted); font-size: 12px; line-height: 1.4; }
 .wa-choice .muted { margin: 4px 0 0; font-size: 12px; }
+
+/* Long text in tables wraps (e.g. a long trip name) instead of widening the table */
+.table th.wrap, .table td.wrap { white-space: normal; min-width: 140px; max-width: 240px; overflow-wrap: anywhere; line-height: 1.35; }
+.table td.wrap b { font-weight: 700; }

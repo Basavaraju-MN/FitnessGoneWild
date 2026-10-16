@@ -28,7 +28,8 @@ export async function exportTripExcel(departure) {
 
   const book = new ExcelJS.Workbook();
   book.creator = 'The Fitness Gone Wild';
-  const sheet = book.addWorksheet(`TC-${departure.id}`, {
+  const code = departure.trip_code || `Trip ${departure.id}`;
+  const sheet = book.addWorksheet(code.replace(/[\\/?*[\]:]/g, '-').slice(0, 31), {
     pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
   });
 
@@ -58,7 +59,7 @@ export async function exportTripExcel(departure) {
 
   const details = [
     ['Departure date', dates],
-    ['Trip code', `TC-${departure.id}`],
+    ['Trip code', departure.trip_code || 'Not given yet'],
     ['Guide', departure.guide_name ? `${departure.guide_name}${departure.guide_phone ? ` · ${departure.guide_phone}` : ''}` : 'Not assigned'],
     ['Customers', `${customers.length} bookings · ${sum('people')} people`],
   ];
@@ -134,7 +135,7 @@ export async function exportTripExcel(departure) {
   const safeName = String(departure.trip_name || 'trip').replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').slice(0, 50);
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = `TC-${departure.id}-${safeName}-${String(departure.start_date).slice(0, 10)}.xlsx`;
+  link.download = `${code.replace(/[^A-Za-z0-9_-]+/g, '-')}-${safeName}-${String(departure.start_date).slice(0, 10)}.xlsx`;
   document.body.appendChild(link);
   link.click();
   link.remove();

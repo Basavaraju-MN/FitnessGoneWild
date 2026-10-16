@@ -72,7 +72,7 @@ export default function Dashboard() {
               rows={data.upcoming}
               emptyText="No upcoming trips."
               columns={[
-                { key: 'id', label: 'ID', render: (r) => <b>TC-{r.id}</b> },
+                { key: 'trip_code', label: 'Trip code', render: (r) => (r.trip_code ? <b>{r.trip_code}</b> : <span className="muted">No code yet</span>) },
                 { key: 'trip_name', label: 'Trip' },
                 { key: 'start_date', label: 'Travel date', render: (r) => date(r.start_date) },
                 { key: 'people', label: 'Customers' },

@@ -37,6 +37,10 @@ function compare(a, b) {
  *
  * columns: [{ key, label, render?(row), sortValue?(row), csv?(row), sortable?, className? }]
  */
+// Long text columns wrap onto the next line (no sideways scrolling for a long trip name)
+const WRAP_KEYS = new Set(['trip_name', 'pickup_name', 'customer_name', 'name', 'address', 'note', 'notes', 'detail', 'title', 'reason', 'message', 'label']);
+const cellClass = (column) => [column.className || '', column.wrap ?? WRAP_KEYS.has(column.key) ? 'wrap' : ''].join(' ');
+
 export default function DataTable({
   title,
   subtitle,
@@ -155,7 +159,7 @@ export default function DataTable({
                     className={[
                       sortable ? 'sortable' : '',
                       isSorted ? 'sorted' : '',
-                      column.className || '',
+                      cellClass(column),
                     ].join(' ')}
                     onClick={sortable ? () => toggleSort(column.key) : undefined}
                     aria-sort={isSorted ? (sort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
@@ -190,7 +194,7 @@ export default function DataTable({
                       key={column.key}
                       className={[
                         sort?.key === column.key ? 'sorted' : '',
-                        column.className || '',
+                        cellClass(column),
                       ].join(' ')}
                     >
                       {column.render ? column.render(row) : row[column.key] ?? '—'}

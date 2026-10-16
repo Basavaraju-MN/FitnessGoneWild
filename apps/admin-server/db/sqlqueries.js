@@ -101,7 +101,7 @@ const sqlqueries = {
     WHERE m.at >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 5 MONTH)
     GROUP BY month ORDER BY month`,
   dashboardUpcomingDepartures: `
-    SELECT d.id, t.name AS trip_name, d.start_date, d.end_date, d.trip_status,
+    SELECT d.id, d.trip_code, t.name AS trip_name, d.start_date, d.end_date, d.trip_status,
            g.name AS guide_name,
            COALESCE(SUM(CASE WHEN ${ACTIVE} THEN b.people END), 0) AS people,
            COALESCE(SUM(CASE WHEN ${ACTIVE} THEN b.balance_amount END), 0) AS pending
@@ -219,7 +219,7 @@ const sqlqueries = {
   /* ================= TRIP COORDINATION (departures) ================= */
   // Base of the departure list; WHERE / GROUP BY / ORDER BY are added in dbops
   departuresBase: `
-    SELECT d.id, d.trip_id, t.name AS trip_name, t.slug,
+    SELECT d.id, d.trip_code, d.trip_id, t.name AS trip_name, t.slug,
            d.start_date, d.end_date, d.departure_type, d.seats_total, d.seats_booked,
            d.status, d.trip_status, d.notes,
            d.guide_id, g.name AS guide_name, g.phone AS guide_phone,
@@ -248,6 +248,7 @@ const sqlqueries = {
     WHERE b.departure_id = ?
     ORDER BY b.status = 'cancelled', p.sort_order, c.name`,
   findDeparture: 'SELECT id FROM departures WHERE trip_id = ? AND start_date = ? AND end_date = ? AND departure_type = ?',
+  tripCodeTaken: 'SELECT id FROM departures WHERE trip_code = ? AND id <> ?',
   getDepartureForBooking: `
     SELECT id, trip_id, start_date, end_date, departure_type,
            DATEDIFF(end_date, start_date) + 1 AS days
