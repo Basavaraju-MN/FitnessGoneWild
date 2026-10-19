@@ -791,3 +791,12 @@ button.avatar:hover { background: var(--cp-brand-blue-90); }
 /* Long text in tables wraps (e.g. a long trip name) instead of widening the table */
 .table th.wrap, .table td.wrap { white-space: normal; min-width: 140px; max-width: 240px; overflow-wrap: anywhere; line-height: 1.35; }
 .table td.wrap b { font-weight: 700; }
+
+/* Brochure on Hostinger (trip form) */
+.brochure-host { padding: 12px 14px; border: 1px dashed var(--cp-light-blue-gray); border-radius: 10px; background: var(--cp-surface-lighter-gray); }
+.brochure-host p { margin: 0 0 8px; font-size: 13px; line-height: 1.5; }
+.brochure-host code { background: var(--cp-card); border: 1px solid var(--line); padding: 1px 6px; border-radius: 5px; font-size: 12px; }
+.brochure-status { font-weight: 600; }
+.brochure-status.ok { color: #1f7a50; }
+.brochure-status.missing { color: var(--cp-error); }
+.brochure-status.warn { color: #9a5a12; font-weight: 500; }

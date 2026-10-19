@@ -168,3 +168,27 @@ Cost: Meta charges per "utility" conversation (about ₹0.12–0.15 in India).
 
 Restart the server. The ⋮ menu then shows **"WhatsApp: sent automatically (Business API)"**.
 Run `sql/whatsapp_messages.sql` (or `sql/upgrade_to_latest.sql`) on the database first.
+
+## Brochures on Hostinger (FTP)
+
+Brochure PDFs are managed only in **Hostinger File Manager → `public/brochures/`**.
+The website server reads them over FTP when a visitor downloads a brochure
+(the lead is saved first). File names, per trek slug:
+
+- `kudremukh.pdf` (preferred), or any name starting with the slug (`kudremukh-2D1N.pdf`),
+- or a folder `kudremukh/` with one PDF inside.
+
+If FTP is not set up, or a trek has no PDF there, the old brochures are used.
+
+Add to Render → Environment and to `apps/server/.env` (never commit the password):
+
+| Variable | Value |
+|---|---|
+| `HOSTINGER_FTP_HOST` | hPanel → Files → **FTP Accounts** → FTP IP / hostname |
+| `HOSTINGER_FTP_USER` | FTP username (e.g. `u441995167` or `u441995167.brochures`) |
+| `HOSTINGER_FTP_PASSWORD` | FTP password |
+| `HOSTINGER_FTP_PORT` | Optional, default `21` |
+| `HOSTINGER_FTP_SECURE` | Optional, `true` (FTPS, default) or `false` |
+| `BROCHURE_FTP_DIR` | Optional, default `public/brochures` — the folder as seen after FTP login |
+
+The admin trip form (step 4) shows whether each trek's PDF is found on Hostinger.

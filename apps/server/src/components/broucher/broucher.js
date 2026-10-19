@@ -1,49 +1,11 @@
-const fs = require('fs');
-const path = require('path');
-
 const dbops = require('../../db/dbops');
+const ftpBrochure = require('./ftpBrochure');
 const { sendBrochureDownloadAlert } = require('../../utils/mail');
 
-// Brochure PDFs live on disk, one folder per trek named by its slug:
-//   apps/server/brochures/<slug>/<any name>.pdf
-//   e.g. brochures/kudremukh/Kudremukh Peak Trek (2D 1N).pdf
-// The PDF's own file name is used as the download name.
-// Not a public folder, so a file is only sent after the lead form.
-const BROCHURE_DIR = path.resolve(__dirname, '../../../brochures');
-
-// The trek's brochure PDF { filePath, fileName }, or null when none.
-function findBrochureFile(slug) {
-    // Slugs are simple names; anything else could point outside the folder
-    if (!/^[a-z0-9_-]+$/i.test(String(slug || ''))) {
-        return null;
-    }
-
-    const folder = path.join(BROCHURE_DIR, slug);
-
-    let pdfs = [];
-    try {
-        pdfs = fs
-            .readdirSync(folder, { withFileTypes: true })
-            .filter((entry) => entry.isFile() && /\.pdf$/i.test(entry.name))
-            .map((entry) => entry.name)
-            .sort();
-    } catch {
-        return null; // no folder for this trek
-    }
-
-    if (pdfs.length === 0) return null;
-
-    if (pdfs.length > 1) {
-        console.warn(
-            `More than one brochure PDF in brochures/${slug}; using "${pdfs[0]}"`
-        );
-    }
-
-    return {
-        filePath: path.join(folder, pdfs[0]),
-        fileName: pdfs[0],
-    };
-}
+// Brochure PDFs are kept only on Hostinger (File Manager → public_html/public/brochures),
+// one folder per trek named by its slug, read over FTP:
+//   public/brochures/kudremukh/Kudremukha trek.pdf   or   public/brochures/kudremukh.pdf
+// Nothing is stored on the website server or in the database.
 
 async function getBrochure({ trip_id, name, phone, email = null, city = null }) {
     if (!trip_id) {
@@ -72,15 +34,19 @@ async function getBrochure({ trip_id, name, phone, email = null, city = null }) 
         };
     }
 
-    // 1. PDF in the trek's brochures folder (preferred)
-    const brochureFile = findBrochureFile(trip.slug);
+    if (!ftpBrochure.isConfigured()) {
+        console.error('Brochure: HOSTINGER_FTP_HOST / USER / PASSWORD are not set');
+        return {
+            success: false,
+            statusCode: 503,
+            message: 'Brochures are not available right now. Please try again later.',
+        };
+    }
 
-    // 2. Older brochures still stored in the database
-    const storedBrochure = brochureFile
-        ? null
-        : await dbops.getBrochureById(trip_id);
+    // The PDF on Hostinger, looked up fresh (a renamed or removed file shows at once)
+    const onFtp = await ftpBrochure.findBrochure(trip.slug, { fresh: true });
 
-    if (!brochureFile && !storedBrochure?.file_data) {
+    if (!onFtp) {
         return {
             success: false,
             statusCode: 404,
@@ -115,13 +81,9 @@ async function getBrochure({ trip_id, name, phone, email = null, city = null }) 
     return {
         success: true,
         data: {
-            fileName:
-                brochureFile?.fileName ||
-                storedBrochure?.file_name ||
-                `${trip.name}.pdf`,
-            mimeType: storedBrochure?.mime_type || 'application/pdf',
-            filePath: brochureFile?.filePath || null,
-            fileData: storedBrochure?.file_data || null,
+            fileName: `${trip.name}.pdf`,
+            mimeType: 'application/pdf',
+            ftpSlug: trip.slug,
         },
     };
 }

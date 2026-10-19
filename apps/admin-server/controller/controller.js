@@ -684,3 +684,12 @@ exports.getWhatsappStatus = async (req, res, next) => {
     return next(error);
   }
 };
+
+exports.getBrochureCheck = async (req, res, next) => {
+  try {
+    const data = await packageManager.getBrochureCheck(idParam(req));
+    return res.status(200).json({ success: true, message: 'Brochure checked', data });
+  } catch (error) {
+    return next(error);
+  }
+};

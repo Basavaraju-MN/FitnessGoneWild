@@ -30,6 +30,7 @@ router.get('/dashboard', can('dashboard'), controller.getDashboard);
 router.get('/notifications', controller.getNotifications);
 
 router.get('/trips', can('packages'), controller.getTrips);
+router.get('/trips/:id/brochure-check', can('packages'), controller.getBrochureCheck);
 router.get('/trips/:id', can('packages'), controller.getTrip);
 router.post('/trips', can('packages'), controller.createTrip);
 router.put('/trips/:id', can('packages'), controller.updateTrip);

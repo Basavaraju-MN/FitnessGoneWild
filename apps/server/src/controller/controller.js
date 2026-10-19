@@ -223,23 +223,23 @@ exports.downloadBroucher = async (req, res) => {
         `attachment; filename="${asciiFileName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`,
     };
 
-    // PDF from the brochures folder (streamed, works for large files)
-    if (brochure.filePath) {
-      return res.sendFile(brochure.filePath, { headers }, (error) => {
-        if (error && !res.headersSent) {
-          console.error('Brochure file send error:', error);
-          res.status(500).json({
-            success: false,
-            message: 'Error fetching brochure',
-          });
-        }
-      });
+    // PDF from Hostinger over FTP: streamed to the visitor (the only place brochures are kept)
+    try {
+      const file = await require('../components/broucher/ftpBrochure').openBrochure(brochure.ftpSlug);
+      if (file) {
+        res.set(headers);
+        if (file.size) res.setHeader('Content-Length', file.size);
+        file.stream.on('error', (error) => {
+          console.error('Brochure FTP download failed:', error?.message || error);
+          if (!res.headersSent) res.status(502).json({ success: false, message: 'The brochure could not be loaded. Please try again.' });
+          else res.destroy();
+        });
+        return file.stream.pipe(res);
+      }
+    } catch (error) {
+      console.error('Brochure FTP failed:', error?.message || error);
     }
-
-    // Older brochure stored in the database
-    res.set(headers);
-    res.setHeader('Content-Length', brochure.fileData.length);
-    return res.send(brochure.fileData);
+    return res.status(502).json({ success: false, message: 'The brochure could not be loaded. Please try again.' });
 
   } catch (error) {
     console.error('getBrochure error:', error);
