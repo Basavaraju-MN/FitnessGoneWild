@@ -3,6 +3,30 @@
 // Photos and brochures are files on disk (see tripFiles.js).
 const dbops = require('../../db/dbops');
 const tripFiles = require('./tripFiles');
+const ftpBrochure = require('../../../server/src/components/broucher/ftpBrochure');
+
+// Brochures are kept only on Hostinger (public_html/public/brochures/<slug>/), read over FTP
+async function brochureFor(slug) {
+  const found = await ftpBrochure.findBrochure(slug);
+  return found ? found.file : null;
+}
+
+// Where the trek's brochure must be on Hostinger, and whether it is there (looked up fresh)
+async function getBrochureCheck(id) {
+  const trip = await findTrip(id);
+  const configured = ftpBrochure.isConfigured();
+  const found = configured ? await ftpBrochure.findBrochure(trip.slug, { fresh: true }) : null;
+  return {
+    configured,
+    via: 'ftp',
+    folder: ftpBrochure.folder(),
+    fileName: found?.file || `${trip.slug}/<any name>.pdf`,
+    url: null,
+    found: Boolean(found),
+    size: found?.size || null,
+    localFile: null,
+  };
+}
 const {
   badRequest,
   notFound,
@@ -148,7 +172,7 @@ async function getTrips() {
     trips.map(async (trip) => {
       const [images, brochure] = await Promise.all([
         tripFiles.listImages(trip.slug),
-        tripFiles.getBrochure(trip.slug),
+        brochureFor(trip.slug),
       ]);
       return {
         ...trip,
@@ -165,7 +189,7 @@ async function getTrip(id) {
   const trip = await findTrip(id);
   const [images, brochure, lists, pickups] = await Promise.all([
     tripFiles.listImages(trip.slug),
-    tripFiles.getBrochure(trip.slug),
+    brochureFor(trip.slug),
     dbops.getTripInclusions(trip.id),
     dbops.getTripPickupPoints(trip.id),
   ]);
@@ -250,6 +274,7 @@ async function deleteTripBrochure(admin, id) {
 }
 
 module.exports = {
+  getBrochureCheck,
   getTrips,
   getTrip,
   createTrip,

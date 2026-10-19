@@ -114,7 +114,7 @@ importers:
         version: 3.4.17
       lucide-react:
         specifier: latest
-        version: 1.58.0(@types/react@19.2.18)(react@19.3.1)
+        version: 1.59.0(@types/react@19.2.18)(react@19.3.1)
       react:
         specifier: latest
         version: 19.3.1
@@ -143,6 +143,9 @@ importers:
       '@phonepe-pg/pg-sdk-node':
         specifier: ^2.0.6
         version: 2.0.6
+      basic-ftp:
+        specifier: ^6.2.3
+        version: 6.2.3
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
@@ -934,6 +937,10 @@ packages:
     resolution: {integrity: sha512-JyJ954WzuIR8/FFzX0o5krdSTrBAkcCSRfWSleRsIHSWV+cZe2FI1PKggVkFke1hBldRs+LRxUczzE9iPmgZww==}
     engines: {node: '>=6.0.0'}
     hasBin: true
+
+  basic-ftp@6.2.3:
+    resolution: {integrity: sha512-T7GYtQ2eKJUN5YORG7A8u2WfB9JMN0a4/wl3MI64qq2qTRfa3FXzoNq0DDojZDkDyStcL+TkfKsz4JHEZx5kGQ==}
+    engines: {node: '>=10.0.0'}
 
   bcryptjs@3.0.3:
     resolution: {integrity: sha512-GlF5wPWnSa/X5LKM1o0wz0suXIINz1iHRLvTS+sLyi7XPbe5ycmYI3DlZqVGZZtDgl4DmasFg7gOB3JYbphV5g==}
@@ -1845,8 +1852,8 @@ packages:
     resolution: {integrity: sha512-DqC6n3QQ77zdFpCMASA1a3Jlb64Hv2N2DciFGkO/4L9+q/IpIAuRlKOvCXabtRW6cQf8usbmM6BE/TOPysCdIA==}
     engines: {bun: '>=1.0.0', deno: '>=1.30.0', node: '>=8.0.0'}
 
-  lucide-react@1.58.0:
-    resolution: {integrity: sha512-hXaFNm6mk6QVtBnDGBn1YAs8j2tGUk0A4s/CpclIcczfxeXiW1rdOLVo6zCsoIih9XXsGvDODQerl749a2n7bA==}
+  lucide-react@1.59.0:
+    resolution: {integrity: sha512-5qgMyyCPU6OvnKpLS2t693+ZtiqA8oaSweWoUows0BLFKFf6V75m4+CptpmohZHpD5IuOVIBXHBBiv2vpLJmtw==}
     peerDependencies:
       '@types/react': '*'
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
@@ -3222,6 +3229,8 @@ snapshots:
 
   baseline-browser-mapping@2.11.14: {}
 
+  basic-ftp@6.2.3: {}
+
   bcryptjs@3.0.3: {}
 
   big-integer@1.6.52: {}
@@ -4196,7 +4205,7 @@ snapshots:
 
   lru.min@1.1.4: {}
 
-  lucide-react@1.58.0(@types/react@19.2.18)(react@19.3.1):
+  lucide-react@1.59.0(@types/react@19.2.18)(react@19.3.1):
     dependencies:
       react: 19.3.1
     optionalDependencies:

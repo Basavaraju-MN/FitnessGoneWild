@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api } from '../api';
 import { siteUrl } from '../assets';
@@ -108,6 +108,55 @@ function DropZone({ accept, onFile, className = '', children }) {
  *   photos   -> website folder images/treks/<slug>/1.jpg … 5.jpg (1 = cover)
  *   brochure -> brochures/<slug>/<file>.pdf
  */
+// Brochures are kept only on Hostinger (File Manager → public_html/public/brochures/<slug>/).
+// Shown here: where to put this trek's PDF and whether it is there.
+function BrochureOnHostinger({ tripId, slug }) {
+  const [check, setCheck] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const run = useCallback(async () => {
+    if (!tripId) return;
+    setLoading(true);
+    try {
+      const { data } = await api(`/trips/${tripId}/brochure-check`);
+      setCheck(data);
+    } catch {
+      setCheck(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [tripId]);
+
+  useEffect(() => {
+    run();
+  }, [run]);
+
+  const folder = check?.folder || 'public/brochures';
+  const place = `${folder}/${slug || '<slug>'}/`;
+  return (
+    <div className="brochure-host">
+      <p>
+        Brochures are managed in <b>Hostinger File Manager</b> → <code>public_html/{place}</code>.
+        Put this trek's PDF in that folder (any file name; replace the file to update it).
+      </p>
+      {!tripId ? (
+        <p className="muted">Save the trip first, then upload the PDF on Hostinger.</p>
+      ) : check && !check.configured ? (
+        <p className="brochure-status warn">
+          Hostinger FTP is not set up on the server (<code>HOSTINGER_FTP_HOST</code>, <code>HOSTINGER_FTP_USER</code>, <code>HOSTINGER_FTP_PASSWORD</code>), so brochures cannot be downloaded.
+        </p>
+      ) : check ? (
+        <p className={`brochure-status ${check.found ? 'ok' : 'missing'}`}>
+          {check.found
+            ? <>✓ Found on Hostinger: <code>{check.fileName}</code>{check.size ? ` · ${Math.round(check.size / 1024)} KB` : ''}</>
+            : <>✕ Not found: upload the PDF to <code>public_html/{place}</code></>}
+        </p>
+      ) : null}
+      {tripId && <button type="button" className="btn alt small" onClick={run} disabled={loading}>{loading ? 'Checking…' : 'Check again'}</button>}
+    </div>
+  );
+}
+
 export default function TripModal({ tripId, categories, onClose, onSaved }) {
   const toast = useToast();
   const isNew = !tripId;
@@ -579,19 +628,7 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
 
               <div className="field full">
                 <label>Brochure (PDF)</label>
-                <DropZone accept="application/pdf,.pdf" onFile={pickBrochure} className="brochure-drop">
-                  {shownBrochure ? (
-                    <span>📄 <b>{shownBrochure}</b> · click or drop to replace</span>
-                  ) : (
-                    <span>Drop the brochure PDF here, or click to choose</span>
-                  )}
-                </DropZone>
-                {shownBrochure && (
-                  <button type="button" className="link danger-link" onClick={() => setBrochureChange(brochure ? { remove: true } : null)}>
-                    Remove brochure
-                  </button>
-                )}
-                <small>Visitors download it with this file name after filling the brochure form.</small>
+                <BrochureOnHostinger tripId={tripId} slug={slug} />
               </div>
             </div>
           )}
