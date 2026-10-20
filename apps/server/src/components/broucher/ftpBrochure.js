@@ -11,6 +11,8 @@
 //   HOSTINGER_FTP_PORT       optional, default 21
 //   HOSTINGER_FTP_SECURE     optional: "true" (FTPS, default) or "false" (plain FTP)
 //   BROCHURE_FTP_DIR         optional, default public/brochures (relative to the FTP login folder = public_html)
+const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { PassThrough } = require('stream');
 const ftp = require('basic-ftp');
@@ -123,29 +125,114 @@ async function locate(client, slug) {
   return found;
 }
 
+// A copy of each PDF on this server's own disk, so most downloads need no FTP.
+// The copy is trusted for 10 minutes, then checked against Hostinger again
+// (a replaced or renamed file is picked up then). The disk is temporary on
+// Render, so copies are fetched again after a restart (see warmUp).
+const CACHE_DIR = path.join(os.tmpdir(), 'fgw-brochures');
+const copies = new Map(); // slug -> { file, size, path, at }
+const COPY_FRESH_FOR = 10 * 60 * 1000;
+
+const copyIsThere = (copy) => {
+  try {
+    return fs.statSync(copy.path).size === copy.size;
+  } catch {
+    return false;
+  }
+};
+const fromDisk = (copy) => ({ stream: fs.createReadStream(copy.path), file: copy.file, size: copy.size });
+
 /**
- * Streams the trek's PDF from Hostinger over one FTP connection.
- * Returns { stream, file, size } or null when it is not there.
- * The connection closes when the download ends.
+ * The trek's PDF as { stream, file, size }, or null when it is not on Hostinger.
+ * Sent from the local copy when there is a current one; otherwise downloaded
+ * over one FTP connection and saved as the new copy while it is sent.
  */
 async function openBrochure(slug) {
   if (!isConfigured() || !validSlug(slug)) return null;
+  const key = slug.toLowerCase();
+
+  const copy = copies.get(key);
+  if (copy && Date.now() - copy.at < COPY_FRESH_FOR && copyIsThere(copy)) return fromDisk(copy);
+
   const client = await connect();
   try {
     const found = await locate(client, slug);
     if (!found) {
       client.close();
+      copies.delete(key);
       return null;
     }
+
+    // Same file as the copy: no need to download it again
+    if (copy && copy.file === found.file && copy.size === found.size && copyIsThere(copy)) {
+      client.close();
+      copy.at = Date.now();
+      return fromDisk(copy);
+    }
+
+    fs.mkdirSync(CACHE_DIR, { recursive: true });
+    const target = path.join(CACHE_DIR, `${key}.pdf`);
+    const part = `${target}.${process.pid}.${Date.now()}.part`;
+    const disk = fs.createWriteStream(part);
+    const diskClosed = new Promise((resolve) => disk.on('close', resolve).on('error', resolve));
     const stream = new PassThrough();
-    client.downloadTo(stream, `${env().dir}/${found.file}`)
-      .catch((error) => stream.destroy(error))
+    const source = new PassThrough();
+    source.pipe(stream);
+    source.pipe(disk);
+
+    client.downloadTo(source, `${env().dir}/${found.file}`)
+      .then(async () => {
+        await diskClosed;
+        try {
+          fs.renameSync(part, target);
+          copies.set(key, { file: found.file, size: found.size, path: target, at: Date.now() });
+        } catch { /* keep serving from Hostinger */ }
+      })
+      .catch((error) => {
+        stream.destroy(error);
+        disk.destroy();
+        fs.rm(part, { force: true }, () => {});
+      })
       .finally(() => client.close());
     return { stream, file: found.file, size: found.size };
   } catch (error) {
     client.close();
     throw error;
   }
+}
+
+/**
+ * Fetches every brochure into the local copy in the background (one at a
+ * time), so the first visitor after a restart also gets a fast download.
+ * Covers trek folders (brochures/<slug>/) and <slug>.pdf files.
+ */
+async function warmUp() {
+  if (!isConfigured()) return;
+  let slugs = [];
+  try {
+    const entries = await listBrochures();
+    slugs = entries
+      .map((e) => (e.isDir ? e.name : e.name.replace(/\.pdf$/i, '')))
+      .filter(validSlug);
+  } catch (error) {
+    console.error('Brochure warm-up: listing failed:', error?.message || error);
+    return;
+  }
+  let done = 0;
+  for (const slug of [...new Set(slugs)]) {
+    try {
+      const file = await openBrochure(slug);
+      if (!file) continue;
+      await new Promise((resolve) => {
+        file.stream.on('end', resolve).on('error', resolve).on('close', resolve);
+        file.stream.resume();
+      });
+      done += 1;
+    } catch (error) {
+      console.error(`Brochure warm-up (${slug}) failed:`, error?.message || error);
+    }
+  }
+  console.log(`Brochures ready on this server: ${done} of ${slugs.length}`);
 }
 
 // For the admin: what is in the brochures folder
@@ -160,4 +247,4 @@ async function listBrochures() {
   }
 }
 
-module.exports = { isConfigured, findBrochure, openBrochure, listBrochures, folder: () => env().dir };
+module.exports = { isConfigured, findBrochure, openBrochure, listBrochures, warmUp, folder: () => env().dir };
