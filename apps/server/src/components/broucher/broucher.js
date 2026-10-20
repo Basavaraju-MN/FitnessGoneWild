@@ -43,10 +43,20 @@ async function getBrochure({ trip_id, name, phone, email = null, city = null }) 
         };
     }
 
-    // The PDF on Hostinger, looked up fresh (a renamed or removed file shows at once)
-    const onFtp = await ftpBrochure.findBrochure(trip.slug, { fresh: true });
+    // The PDF on Hostinger: found and opened on one FTP connection
+    let file;
+    try {
+        file = await ftpBrochure.openBrochure(trip.slug);
+    } catch (error) {
+        console.error('Hostinger FTP (brochure) failed:', error?.message || error);
+        return {
+            success: false,
+            statusCode: 502,
+            message: 'The brochure could not be loaded. Please try again.',
+        };
+    }
 
-    if (!onFtp) {
+    if (!file) {
         return {
             success: false,
             statusCode: 404,
@@ -61,6 +71,7 @@ async function getBrochure({ trip_id, name, phone, email = null, city = null }) 
         const customerId = await dbops.findCustomerIdByPhone(phone);
         await dbops.createBrochureLead({ customer_id: customerId, trip_id, name, phone, email });
     } catch (error) {
+        file.stream.destroy(); // not sent: close the FTP download
         return {
             success: false,
             statusCode: 500,
@@ -83,7 +94,7 @@ async function getBrochure({ trip_id, name, phone, email = null, city = null }) 
         data: {
             fileName: `${trip.name}.pdf`,
             mimeType: 'application/pdf',
-            ftpSlug: trip.slug,
+            file, // { stream, size } from Hostinger
         },
     };
 }

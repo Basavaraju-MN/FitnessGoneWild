@@ -224,22 +224,15 @@ exports.downloadBroucher = async (req, res) => {
     };
 
     // PDF from Hostinger over FTP: streamed to the visitor (the only place brochures are kept)
-    try {
-      const file = await require('../components/broucher/ftpBrochure').openBrochure(brochure.ftpSlug);
-      if (file) {
-        res.set(headers);
-        if (file.size) res.setHeader('Content-Length', file.size);
-        file.stream.on('error', (error) => {
-          console.error('Brochure FTP download failed:', error?.message || error);
-          if (!res.headersSent) res.status(502).json({ success: false, message: 'The brochure could not be loaded. Please try again.' });
-          else res.destroy();
-        });
-        return file.stream.pipe(res);
-      }
-    } catch (error) {
-      console.error('Brochure FTP failed:', error?.message || error);
-    }
-    return res.status(502).json({ success: false, message: 'The brochure could not be loaded. Please try again.' });
+    const { file } = brochure;
+    res.set(headers);
+    if (file.size) res.setHeader('Content-Length', file.size);
+    file.stream.on('error', (error) => {
+      console.error('Brochure FTP download failed:', error?.message || error);
+      if (!res.headersSent) res.status(502).json({ success: false, message: 'The brochure could not be loaded. Please try again.' });
+      else res.destroy();
+    });
+    return file.stream.pipe(res);
 
   } catch (error) {
     console.error('getBrochure error:', error);

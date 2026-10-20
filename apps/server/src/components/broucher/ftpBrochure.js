@@ -101,16 +101,38 @@ async function findBrochure(slug, { fresh = false } = {}) {
   }
 }
 
+// Where each trek's PDF was last found, so most downloads skip the folder listing
+const known = new Map(); // slug -> { file, size, at }
+const KNOWN_FOR = 10 * 60 * 1000;
+
+// The trek's PDF on an open connection: the remembered path if the file is
+// still there (one quick SIZE call), else looked up fresh (renames show at once)
+async function locate(client, slug) {
+  const hit = known.get(slug);
+  if (hit && Date.now() - hit.at < KNOWN_FOR) {
+    try {
+      const size = await client.size(`${env().dir}/${hit.file}`);
+      return { file: hit.file, size };
+    } catch {
+      known.delete(slug); // moved or renamed
+    }
+  }
+  clearCache();
+  const found = await findPath(client, slug);
+  if (found) known.set(slug, { ...found, at: Date.now() });
+  return found;
+}
+
 /**
- * Streams the trek's PDF from Hostinger. Returns { stream, file, size } or
- * null when it is not there. The FTP connection closes when the download ends.
+ * Streams the trek's PDF from Hostinger over one FTP connection.
+ * Returns { stream, file, size } or null when it is not there.
+ * The connection closes when the download ends.
  */
 async function openBrochure(slug) {
   if (!isConfigured() || !validSlug(slug)) return null;
   const client = await connect();
   try {
-    clearCache(); // a download always looks at the folder as it is now
-    const found = await findPath(client, slug);
+    const found = await locate(client, slug);
     if (!found) {
       client.close();
       return null;
