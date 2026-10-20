@@ -289,5 +289,11 @@ app.listen(
     console.log(
       `Client build path: ${CLIENT_DIST_PATH}`
     );
+
+    // Copy the Hostinger brochures to this server in the background
+    setTimeout(() => {
+      require('./components/broucher/ftpBrochure').warmUp()
+        .catch((error) => console.error('Brochure warm-up failed:', error?.message || error));
+    }, 5000);
   }
 );
