@@ -164,21 +164,19 @@ async function findTrip(id) {
   return trip;
 }
 
-// Trip cards: each with its cover photo and brochure status
+// Trip cards: each with its cover photo and brochure status.
+// Brochures: one Hostinger folder listing for all treks (not one per trek).
 async function getTrips() {
-  const trips = await dbops.getTrips();
+  const [trips, brochureOf] = await Promise.all([dbops.getTrips(), ftpBrochure.brochureIndex()]);
 
   return Promise.all(
     trips.map(async (trip) => {
-      const [images, brochure] = await Promise.all([
-        tripFiles.listImages(trip.slug),
-        brochureFor(trip.slug),
-      ]);
+      const images = await tripFiles.listImages(trip.slug);
       return {
         ...trip,
         cover_url: images[0]?.url || null,
         image_count: images.length,
-        brochure_file: brochure,
+        brochure_file: brochureOf ? brochureOf(trip.slug) : null,
       };
     })
   );
