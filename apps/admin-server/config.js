@@ -61,6 +61,7 @@ module.exports = {
     reports: ['admin', 'sales', 'operations'],
     guides: ['admin', 'operations'],
     'pickup-points': ['admin', 'operations'],
+    regions: ['admin'],
     reviews: ['admin'],
     activity: ['admin'],
     hero: ['admin'],

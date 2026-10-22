@@ -129,6 +129,34 @@ export function Field({ field, value, values, onChange }) {
     );
   }
 
+  // Several ticks; value = list of option values (also accepts "1,2,3")
+  if (field.type === 'checklist') {
+    const picked = (Array.isArray(value) ? value : String(value ?? '').split(','))
+      .map(String).filter(Boolean);
+    const toggle = (optionValue) => {
+      const key = String(optionValue);
+      onChange(picked.includes(key) ? picked.filter((v) => v !== key) : [...picked, key]);
+    };
+    return (
+      <div className={`field ${field.full ? 'full' : ''}`}>
+        <label>{field.label}</label>
+        <div className="checklist">
+          {(options || []).map((option) => (
+            <label key={option.value} className="checklist-item">
+              <input
+                type="checkbox"
+                checked={picked.includes(String(option.value))}
+                onChange={() => toggle(option.value)}
+              />
+              {option.label}
+            </label>
+          ))}
+        </div>
+        {hint && <small>{hint}</small>}
+      </div>
+    );
+  }
+
   let input;
   if (field.type === 'select') {
     input = (

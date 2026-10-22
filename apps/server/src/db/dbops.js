@@ -18,6 +18,26 @@ class Cmds {
     return rows || [];
   }
 
+  async getRegions() {
+    return (await executeQuery(sqlQueries.getRegions)) || [];
+  }
+
+  async getRegionCategories() {
+    return (await executeQuery(sqlQueries.getRegionCategories)) || [];
+  }
+
+  async getDepartureCities() {
+    return (await executeQuery(sqlQueries.getDepartureCities)) || [];
+  }
+
+  async getTripPlaces() {
+    return (await executeQuery(sqlQueries.getTripPlaces)) || [];
+  }
+
+  async getPickupCities(tripId) {
+    return (await executeQuery(sqlQueries.getPickupCities, [tripId])) || [];
+  }
+
   async getPickupPoints(tripId) {
     const rows = await executeQuery(sqlQueries.getPickupPoints, [tripId]);
     return rows || [];

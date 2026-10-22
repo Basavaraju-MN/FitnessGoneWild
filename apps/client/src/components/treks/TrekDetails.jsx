@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import '../../styles/trekdetails.css';
+import '../../styles/places.css';
+import { MapPin } from 'lucide-react';
 import BookingModal from '../booking/BookingModal';
 import RichText from '../common/RichText';
 import useTrekImages, { FALLBACK_IMAGE } from '../../hooks/useTrekImages';
@@ -360,7 +362,18 @@ export default function TrekDetails({ trek, onBack }) {
 
         <section className="trek-details-overview">
 
+          {trek.region && <p className="details-places"><span className="details-region">{trek.region.name}</span></p>}
+
           <h1>{trek.name}</h1>
+
+          {trek.departure_cities?.length > 0 && (
+            <p className="details-places">
+              <span className="details-from">
+                <MapPin size={14} aria-hidden="true" />
+                Departs from {trek.departure_cities.map((c) => c.name).join(' · ')}
+              </span>
+            </p>
+          )}
 
           {trek.blurb && (
             <RichText className="details-blurb" html={trek.blurb} />

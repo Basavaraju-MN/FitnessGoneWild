@@ -4,6 +4,7 @@ import SectionHeader from '../common/SectionHeader';
 import useTrekImages, { FALLBACK_IMAGE } from '../../hooks/useTrekImages';
 import '../../styles/trekcard.css';
 import { getDisplayPrice, showsDifficulty } from '../../utils/tripPricing';
+import { fromLabel, usePlaces } from '../../context/PlacesContext';
 
 const formatPrice = (price) => {
   const numericPrice = Number(price || 0);
@@ -131,8 +132,15 @@ export default function FeaturedTrips({ onTrekSelect }) {
     );
   };
 
-  const featuredTrips = (trips || []).map((trip, index) => {
+  // Only the featured trips for the chosen city / region; all of them when none match
+  const { city, matches } = usePlaces();
+  const matching = (trips || []).filter((trip) => matches(trip));
+  const visibleTrips = matching.length > 0 ? matching : trips || [];
+
+  const featuredTrips = visibleTrips.map((trip, index) => {
+    const from = fromLabel(trip, city);
     const metaParts = [
+      from ? `From ${from}` : null,
       trip.duration_label || trip.duration || trip.days,
       showsDifficulty(trip) ? trip.difficulty : null,
       trip.departure_time || trip.departure || trip.departure_label,
@@ -174,6 +182,7 @@ export default function FeaturedTrips({ onTrekSelect }) {
             <FeaturedTripImage slug={trip.slug} name={trip.name} />
 
             <span className="trip-rank">{trip.rank}</span>
+            {trip.region && <span className="card-region">{trip.region.name}</span>}
             <h3>{trip.name}</h3>
             <p className="trip-meta">{trip.meta}</p>
             <p className="trip-price">{trip.displayPrice} <small>/ person</small></p>

@@ -181,8 +181,11 @@ const sqlqueries = {
   /* ================= LOOKUPS (dropdowns) ================= */
   lookupTrips: 'SELECT id, name, slug, category_id, with_transport_price, without_transport_price, price FROM trips ORDER BY name',
   lookupCategories: 'SELECT id, name FROM categories ORDER BY sort_order, id',
+  lookupRegions: 'SELECT id, slug, name, is_active FROM regions ORDER BY sort_order, id',
+  lookupDepartureCities: 'SELECT id, name, state, is_active FROM departure_cities ORDER BY sort_order, id',
   lookupGuides: 'SELECT id, name, phone FROM guides WHERE is_active = 1 ORDER BY name',
-  lookupPickupPoints: 'SELECT id, trip_id, name, address FROM pickup_points WHERE is_active = 1 ORDER BY sort_order, name',
+  lookupPickupPoints: 'SELECT id, trip_id, city_id, name, address FROM pickup_points WHERE is_active = 1 ORDER BY sort_order, name',
+  lookupPickupPointsNoCity: 'SELECT id, trip_id, name, address FROM pickup_points WHERE is_active = 1 ORDER BY sort_order, name',
   lookupUsers: 'SELECT id, full_name, role FROM admin_users WHERE is_active = 1 ORDER BY full_name',
   getGstPercent: "SELECT setting_value FROM settings WHERE setting_key = 'gst_percent'",
   // All lead statuses (inactive too, so old leads still show their label)
@@ -211,7 +214,7 @@ const sqlqueries = {
   getTripInclusions: 'SELECT inclusion, exclusion FROM inclusion_exclusion WHERE trip_id = ? ORDER BY id',
   deleteTripInclusions: 'DELETE FROM inclusion_exclusion WHERE trip_id = ?',
   // A trip's pickup points (website booking form)
-  getTripPickupPoints: 'SELECT id, name, address, map_url, sort_order, is_active FROM pickup_points WHERE trip_id = ? ORDER BY sort_order, id',
+  getTripPickupPoints: 'SELECT id, city_id, name, address, map_url, sort_order, is_active FROM pickup_points WHERE trip_id = ? ORDER BY sort_order, id',
   createPickupPoint: 'INSERT INTO pickup_points SET ?',
   updatePickupPoint: 'UPDATE pickup_points SET ? WHERE id = ? AND trip_id = ?',
   createTripInclusions: 'INSERT INTO inclusion_exclusion (trip_id, inclusion, exclusion) VALUES (?, ?, ?)',
@@ -415,14 +418,33 @@ const sqlqueries = {
   masterList: {
     guides: 'SELECT * FROM guides ORDER BY is_active DESC, name',
     pickup_points: `
-      SELECT p.*, t.name AS trip_name
-      FROM pickup_points p LEFT JOIN trips t ON t.id = p.trip_id
+      SELECT p.*, t.name AS trip_name, c.name AS city_name
+      FROM pickup_points p
+      LEFT JOIN trips t ON t.id = p.trip_id
+      LEFT JOIN departure_cities c ON c.id = p.city_id
       ORDER BY t.name, p.sort_order, p.name`,
+    // Each region with the tabs it shows (category ids in order) and its trek count
+    regions: `
+      SELECT r.*,
+             (SELECT GROUP_CONCAT(rc.category_id ORDER BY rc.sort_order, rc.category_id)
+                FROM region_categories rc WHERE rc.region_id = r.id) AS category_ids,
+             (SELECT COUNT(*) FROM trips t WHERE t.region_id = r.id) AS trek_count
+      FROM regions r
+      ORDER BY r.sort_order, r.id`,
+    // Each city with how many treks leave from it (treks with a pickup point there)
+    departure_cities: `
+      SELECT c.*,
+             (SELECT COUNT(DISTINCT p.trip_id) FROM pickup_points p
+               WHERE p.city_id = c.id AND p.is_active = 1) AS trek_count
+      FROM departure_cities c
+      ORDER BY c.sort_order, c.id`,
     categories: 'SELECT * FROM categories ORDER BY sort_order, id',
     lead_statuses: 'SELECT * FROM lead_statuses ORDER BY sort_order, id',
   },
   getMasterRow: 'SELECT * FROM ?? WHERE id = ?',
   createMaster: 'INSERT INTO ?? SET ?',
+  clearRegionCategories: 'DELETE FROM region_categories WHERE region_id = ?',
+  addRegionCategories: 'INSERT INTO region_categories (region_id, category_id, sort_order) VALUES ?',
   updateMaster: 'UPDATE ?? SET ? WHERE id = ?',
 
   /* ================= REVIEWS ================= */

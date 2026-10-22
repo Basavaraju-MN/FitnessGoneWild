@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api } from '../api';
 import { siteUrl } from '../assets';
+import { useAdmin } from '../context';
 import { useToast } from './ui';
 import RichTextEditor, { plainText } from './RichTextEditor';
 
@@ -29,7 +30,7 @@ const slugify = (text) =>
 // "2 days" -> 2, "1 Day" -> 1 (saved as duration_days)
 const daysFrom = (label) => Math.max(1, parseInt(String(label || '').match(/\d+/)?.[0] || '1', 10));
 
-const emptyPickup = () => ({ name: '', address: '' });
+const emptyPickup = (cityId = '') => ({ name: '', address: '', city_id: cityId });
 
 // Shrinks a photo to PHOTO_MAX_WIDTH wide JPEG so the website stays fast
 function resizePhoto(file) {
@@ -170,21 +171,29 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  // Regions & Cities (Management menu); empty before regions_cities.sql has run
+  const { lookups } = useAdmin();
+  const regions = (lookups?.regions || []).filter((r) => Number(r.is_active) || String(r.id) === String(values?.region_id));
+  const cities = (lookups?.departureCities || []).filter((c) => Number(c.is_active) || values?.pickup_points?.some((p) => String(p.city_id) === String(c.id)));
+  const hasRegions = (lookups?.regions || []).length > 0;
+  const firstCityId = cities[0]?.id || '';
+
   // Load the trip (or start a blank one)
   useEffect(() => {
     if (isNew) {
       setValues({
         status: 'draft', difficulty: 'Easy', badge_style: 'plain',
         category_id: categories[0]?.id || '', is_featured: 0,
-        pickup_points: [emptyPickup(), emptyPickup()],
+        region_id: (lookups?.regions || []).find((r) => Number(r.is_active))?.id || '',
+        pickup_points: [emptyPickup(firstCityId), emptyPickup(firstCityId)],
       });
       return;
     }
 
     api(`/trips/${tripId}`)
       .then(({ data }) => {
-        const pickups = (data.pickup_points || []).map((p) => ({ id: p.id, name: p.name, address: p.address || '' }));
-        while (pickups.length < MIN_PICKUP_POINTS) pickups.push(emptyPickup());
+        const pickups = (data.pickup_points || []).map((p) => ({ id: p.id, name: p.name, address: p.address || '', city_id: p.city_id || '' }));
+        while (pickups.length < MIN_PICKUP_POINTS) pickups.push(emptyPickup(firstCityId));
         setValues({ ...data, pickup_points: pickups });
         setPhotos(Object.fromEntries((data.images || []).map((img) => [img.number, img])));
         setBrochure(data.brochure_file);
@@ -193,6 +202,7 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
         toast(err.message, 'error');
         onClose();
       });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tripId, isNew, categories, toast, onClose]);
 
   useEffect(() => {
@@ -213,7 +223,11 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
   /* ---------- Pickup points ---------- */
   const setPickup = (index, key, value) =>
     set('pickup_points', values.pickup_points.map((p, i) => (i === index ? { ...p, [key]: value } : p)));
-  const addPickup = () => set('pickup_points', [...values.pickup_points, emptyPickup()]);
+  // A new row takes the city of the row above it
+  const addPickup = () => set('pickup_points', [
+    ...values.pickup_points,
+    emptyPickup(values.pickup_points[values.pickup_points.length - 1]?.city_id || firstCityId),
+  ]);
   const removePickup = (index) => set('pickup_points', values.pickup_points.filter((_, i) => i !== index));
   const movePickup = (index, delta) => {
     const list = [...values.pickup_points];
@@ -272,6 +286,7 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
       if (!plainText(values.blurb)) return 'Enter a short description';
       if (plainText(values.blurb).length > BLURB_MAX) return `Short description: keep it under ${BLURB_MAX} characters (now ${plainText(values.blurb).length})`;
       if (!values.category_id) return 'Choose a category';
+      if (hasRegions && !values.region_id) return 'Choose a region';
       if (!String(values.duration_label || '').trim()) return 'Enter the duration, e.g. 2 days';
       if (values.price === '' || values.price === undefined || values.price === null) return 'Enter the price per person';
       if (isNew && !slug) return 'The trek name needs some letters or numbers (used for the web address)';
@@ -279,6 +294,7 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
     if (index === 2) {
       const named = values.pickup_points.filter((p) => String(p.name || '').trim());
       if (named.length < MIN_PICKUP_POINTS) return `Add at least ${MIN_PICKUP_POINTS} pickup points`;
+      if (cities.length && named.some((p) => !p.city_id)) return 'Choose the departure city of every pickup point';
     }
     return '';
   };
@@ -412,6 +428,16 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
                   {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
+              {hasRegions && (
+                <div className="field">
+                  <label>Region *</label>
+                  <select value={values.region_id ?? ''} onChange={(e) => set('region_id', e.target.value)}>
+                    <option value="">Select…</option>
+                    {regions.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                  </select>
+                  <small>“Select region” on the website</small>
+                </div>
+              )}
               <div className="field">
                 <label>Difficulty</label>
                 <select value={values.difficulty ?? 'Easy'} onChange={(e) => set('difficulty', e.target.value)}>
@@ -550,6 +576,17 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
                   {values.pickup_points.map((p, i) => (
                     <div key={p.id || `new-${i}`} className="pickup-row">
                       <span className="pickup-num">{i + 1}</span>
+                      {cities.length > 0 && (
+                        <select
+                          className="pickup-city"
+                          value={p.city_id ?? ''}
+                          onChange={(e) => setPickup(i, 'city_id', e.target.value)}
+                          aria-label="Departure city"
+                        >
+                          <option value="">City…</option>
+                          {cities.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                      )}
                       <input
                         value={p.name}
                         onChange={(e) => setPickup(i, 'name', e.target.value)}
@@ -578,7 +615,7 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
                   ))}
                 </div>
                 <button type="button" className="add-pickup" onClick={addPickup}>＋ Add pickup point</button>
-                <small>Shown in the website booking form for this trek. The name is saved with each booking.</small>
+                <small>Shown in the website booking form for this trek. The name is saved with each booking.{cities.length > 0 && ' The trek shows as leaving from every city used here.'}</small>
               </div>
             </div>
           )}

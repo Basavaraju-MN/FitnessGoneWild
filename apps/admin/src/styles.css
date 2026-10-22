@@ -800,3 +800,14 @@ button.avatar:hover { background: var(--cp-brand-blue-90); }
 .brochure-status.ok { color: #1f7a50; }
 .brochure-status.missing { color: var(--cp-error); }
 .brochure-status.warn { color: #9a5a12; font-weight: 500; }
+
+/* Several ticks in a form (e.g. a region's category tabs) */
+.checklist { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 4px 0; }
+.checklist-item { display: inline-flex; align-items: center; gap: 7px; font-weight: 500; cursor: pointer; }
+.checklist-item input { width: auto; margin: 0; }
+/* Trek form: pickup rows with a departure city */
+.pickup-row:has(.pickup-city) { grid-template-columns: 28px 150px 1fr 1.3fr auto; }
+@media (max-width: 720px) {
+  .pickup-row:has(.pickup-city) { grid-template-columns: 28px 1fr; }
+  .pickup-row .pickup-city, .pickup-row:has(.pickup-city) input { grid-column: 2; }
+}

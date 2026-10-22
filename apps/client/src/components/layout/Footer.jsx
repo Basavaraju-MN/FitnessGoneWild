@@ -40,7 +40,7 @@ export default function Footer() {
           />
           <h3>The Fitness Gone Wild</h3>
           <p>Experience with us</p>
-          <p className="footer-note">Running treks and trips out of Bangalore since 2018.</p>
+          <p className="footer-note">Running treks and trips since 2018, from the Western Ghats to the Himalayas.</p>
         </div>
         <div>
           <h4>Trips</h4>
