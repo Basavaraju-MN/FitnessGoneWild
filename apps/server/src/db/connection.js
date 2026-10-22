@@ -13,12 +13,13 @@ const pool = mysql.createPool({
   queueLimit: 0,
   timezone: db.timezone,
   dateStrings: db.dateStrings,
-  // The remote MySQL drops idle connections; keep them alive and
-  // recycle idle ones before the server closes them.
+  // Hostinger allows only 500 NEW connections per hour for this user:
+  // keep a few connections open and reuse them, instead of opening and
+  // closing them for every burst of queries.
   enableKeepAlive: true,
   keepAliveInitialDelay: 10000,
-  maxIdle: 2,
-  idleTimeout: 60000,
+  maxIdle: db.connectionLimit,
+  idleTimeout: 10 * 60 * 1000,
   connectTimeout: 15000,
 });
 
@@ -34,7 +35,7 @@ const RETRYABLE_ERROR_CODES = new Set([
   // Hostinger limits simultaneous connections per database user
   'ER_CON_COUNT_ERROR',
   'ER_TOO_MANY_USER_CONNECTIONS',
-  'ER_USER_LIMIT_REACHED',
+  // Not ER_USER_LIMIT_REACHED (hourly limit): retrying only uses up more
 ]);
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
