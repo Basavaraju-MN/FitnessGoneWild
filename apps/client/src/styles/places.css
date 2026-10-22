@@ -1,0 +1,336 @@
+/* Trek-list bar (search, region, departure city) and the region / city
+   labels on cards and the trek page. Uses the colours and fonts from global.css. */
+
+/* ---------- Bar above the trek list ---------- */
+.trek-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin: 0 0 30px;
+  padding: 10px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+
+/* Search box: takes the free space */
+.trek-search {
+  flex: 1 1 320px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 50px;
+  padding: 0 8px 0 16px;
+  background: var(--mist);
+  border: 1.5px solid transparent;
+  border-radius: var(--pill);
+  color: var(--ink-soft);
+  cursor: text;
+  transition: border-color .18s ease, background .18s ease;
+}
+.trek-search:focus-within { background: var(--paper); border-color: var(--forest); }
+.trek-search svg { flex: 0 0 auto; }
+.trek-search input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-size: .95rem;
+  color: var(--ink);
+}
+.trek-search input::placeholder { color: var(--ink-soft); }
+.trek-search input::-webkit-search-cancel-button { display: none; }
+.trek-search-clear {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--line);
+  color: var(--ink);
+}
+.trek-search-clear:hover { background: var(--forest); color: #fff; transform: none; box-shadow: none; }
+
+/* Region buttons */
+.region-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  background: var(--mist);
+  border-radius: var(--pill);
+}
+.region-switch button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 42px;
+  padding: 0 18px;
+  border-radius: var(--pill);
+  background: transparent;
+  color: var(--ink-soft);
+  font-weight: 600;
+  font-size: .9rem;
+  white-space: nowrap;
+  box-shadow: none;
+}
+.region-switch button:hover { background: var(--paper); color: var(--forest); transform: none; box-shadow: none; }
+.region-switch button.active { background: var(--forest); color: #fff; }
+.region-switch em {
+  font-style: normal;
+  font-size: .7rem;
+  padding: 1px 7px;
+  border-radius: var(--pill);
+  background: var(--paper);
+  color: var(--ink-soft);
+}
+.region-switch button.active em { background: rgba(255, 255, 255, .18); color: #fff; }
+.region-switch em.soon { background: var(--amber-soft); color: #A65C0B; }
+
+/* ---------- Departure city picker (in the bar) ---------- */
+.city-picker { position: relative; }
+
+.city-picker-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 50px;
+  padding: 0 16px 0 14px;
+  border-radius: var(--pill);
+  background: var(--paper);
+  border: 1.5px solid var(--line);
+  color: var(--forest);
+  font-weight: 600;
+  text-align: left;
+  line-height: 1.15;
+  box-shadow: none;
+}
+.city-picker-button:hover { border-color: var(--forest); background: var(--paper); transform: none; box-shadow: none; }
+.city-picker-button > svg:first-child { color: var(--amber); }
+.city-picker-button svg { flex: 0 0 auto; transition: transform .18s ease; }
+.city-picker-button svg.flip { transform: rotate(180deg); }
+
+.city-picker-text { display: flex; flex-direction: column; }
+.city-picker-text small {
+  font-size: .62rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.city-picker-text strong { font-size: .95rem; }
+
+.city-picker-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 70;
+  min-width: 250px;
+  max-height: 340px;
+  overflow-y: auto;
+  list-style: none;
+  padding: 6px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+}
+.city-picker-menu button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  font-weight: 500;
+  box-shadow: none;
+}
+.city-picker-menu button:hover:not(:disabled) { background: var(--mist); transform: none; box-shadow: none; }
+.city-picker-menu button.active { background: var(--amber-soft); }
+.city-picker-menu button.active svg { color: var(--amber); }
+.city-picker-menu button:disabled { cursor: default; opacity: .55; }
+.city-picker-menu button span { display: flex; flex-direction: column; line-height: 1.25; }
+.city-picker-menu strong { font-size: .93rem; color: var(--forest); }
+.city-picker-menu small { font-size: .75rem; color: var(--ink-soft); }
+
+/* ---------- Search result line, tabs, empty box ---------- */
+.trek-search-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px 16px;
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+
+.tab.tab-empty { opacity: .5; }
+
+.trek-empty {
+  grid-column: 1 / -1;
+  max-width: 620px;
+  margin: 10px auto 0;
+  padding: 40px 30px;
+  text-align: center;
+  background: var(--paper);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-lg);
+}
+.trek-empty h3 { color: var(--forest); font-size: 1.6rem; }
+.trek-empty p { margin: 10px 0 22px; color: var(--ink-soft); }
+.trek-empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+
+/* ---------- Region / city on cards and the trek page ---------- */
+.card-region {
+  display: block;
+  margin-bottom: 4px;
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--moss);
+}
+.info .info-from {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--amber-soft);
+  color: #A65C0B;
+}
+
+.details-places {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 4px;
+  font-size: .9rem;
+  color: var(--ink-soft);
+}
+.details-places .details-region {
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--moss);
+}
+.details-places .details-from {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: var(--pill);
+  background: var(--amber-soft);
+  color: #A65C0B;
+  font-weight: 600;
+}
+
+/* Phones: search on its own row, then regions and city */
+@media (max-width: 820px) {
+  .trek-filter-bar { padding: 8px; gap: 8px; }
+  .trek-search { flex-basis: 100%; }
+  .region-switch { flex: 1 1 100%; justify-content: center; }
+  .region-switch button { flex: 1 1 auto; justify-content: center; padding: 0 12px; }
+  .city-picker { flex: 1 1 100%; }
+  .city-picker-button { width: 100%; justify-content: flex-start; }
+  .city-picker-button svg:last-child { margin-left: auto; }
+  .city-picker-menu { left: 0; right: 0; }
+}
+
+/* ---------- Bigger bar, search in the middle ----------
+   Regions on the left, search in the centre, departure city on the right. */
+#trips .trek-filter-bar {
+  gap: 14px;
+  padding: 14px;
+  margin-bottom: 36px;
+  border-radius: 28px;
+  box-shadow: var(--shadow-lg);
+}
+#trips .region-switch { order: 1; padding: 5px; }
+#trips .region-switch button { height: 52px; padding: 0 22px; font-size: .98rem; }
+#trips .trek-search {
+  order: 2;
+  flex: 1 1 380px;
+  height: 64px;
+  padding: 0 10px 0 22px;
+  gap: 12px;
+  font-size: 1.05rem;
+}
+#trips .trek-search svg { width: 22px; height: 22px; }
+#trips .trek-search input { font-size: 1.05rem; }
+#trips .trek-search-clear { width: 40px; height: 40px; }
+#trips .city-picker { order: 3; }
+#trips .city-picker-button { height: 64px; padding: 0 20px 0 18px; }
+#trips .city-picker-text strong { font-size: 1.02rem; }
+
+@media (max-width: 1100px) {
+  /* Not enough room for one row: search on top, centred, full width */
+  #trips .trek-search { order: 0; flex-basis: 100%; }
+  #trips .region-switch { flex: 1 1 auto; justify-content: center; }
+  #trips .city-picker { flex: 0 0 auto; }
+}
+
+@media (max-width: 820px) {
+  #trips .trek-filter-bar { padding: 10px; gap: 10px; border-radius: 22px; }
+  #trips .trek-search { height: 56px; }
+  #trips .region-switch { flex: 1 1 100%; }
+  #trips .region-switch button { height: 46px; padding: 0 12px; font-size: .9rem; }
+  #trips .city-picker { flex: 1 1 100%; }
+  #trips .city-picker-button { height: 56px; }
+}
+
+/* Wider than the trek grid: up to 1500px, always 16px from the screen edges */
+#trips .trek-filter-bar {
+  width: min(1500px, calc(100vw - 32px));
+  margin-left: calc(50% - min(750px, 50vw - 16px));
+  margin-right: 0;
+}
+
+/* Region dropdown on the left, city dropdown on the right */
+#trips .picker-region { order: 1; }
+#trips .picker-city { order: 3; }
+#trips .picker-region .city-picker-menu { left: 0; right: auto; }
+#trips .city-picker-button { min-width: 210px; }
+#trips .city-picker-button svg:last-child { margin-left: auto; }
+
+@media (max-width: 1100px) {
+  #trips .picker-region,
+  #trips .picker-city { flex: 1 1 260px; }
+  #trips .city-picker-button { width: 100%; }
+}
+
+/* Region and city dropdowns on the left, search at the right end */
+#trips .picker-region { order: 1; }
+#trips .picker-city { order: 2; }
+#trips .trek-search { order: 3; }
+#trips .picker-city .city-picker-menu { left: 0; right: auto; }
+
+@media (max-width: 1100px) {
+  /* Two rows: dropdowns side by side, search below them */
+  #trips .trek-search { order: 3; flex-basis: 100%; }
+}
+
+/* Smaller search box, kept at the right end */
+#trips .trek-search {
+  flex: 0 1 400px;
+  margin-left: auto;
+  height: 56px;
+}
+#trips .trek-search input { font-size: 1rem; }
+
+@media (max-width: 1100px) {
+  #trips .trek-search { flex: 1 1 100%; margin-left: 0; }
+}

@@ -39,7 +39,7 @@ const { cleanRichText, plainText } = require('./richText');
 const BLURB_MAX = 300; // characters of text in the short description
 
 const TRIP_FIELDS = [
-  'slug', 'name', 'category_id', 'blurb', 'description', 'itinerary',
+  'slug', 'name', 'category_id', 'region_id', 'blurb', 'description', 'itinerary',
   'duration_label', 'duration_days', 'difficulty', 'distance_label',
   'price', 'without_transport_price', 'with_transport_price', 'price_note',
   'badge_text', 'badge_style', 'is_featured', 'featured_label',
@@ -57,6 +57,7 @@ function cleanTrip(body) {
   }
 
   if (data.is_featured !== undefined) data.is_featured = data.is_featured ? 1 : 0;
+  if (data.region_id !== undefined) data.region_id = Number(data.region_id) || null;
 
   // Rich text from the editor: cleaned HTML (formatting kept)
   for (const key of ['blurb', 'description', 'itinerary']) {
@@ -107,6 +108,7 @@ function checkPickupPoints(list) {
   const points = list
     .map((p) => ({
       id: Number(p?.id) || null,
+      city_id: Number(p?.city_id) || null,
       name: String(p?.name || '').trim(),
       address: String(p?.address || '').trim() || null,
     }))
@@ -137,6 +139,7 @@ async function savePickupPoints(tripId, points) {
       existing.find((e) => !kept.has(e.id) && e.name.toLowerCase() === point.name.toLowerCase());
 
     const data = { name: point.name, address: point.address, sort_order: index + 1, is_active: 1 };
+    if (point.city_id) data.city_id = point.city_id;
 
     try {
       if (match) {
@@ -164,21 +167,19 @@ async function findTrip(id) {
   return trip;
 }
 
-// Trip cards: each with its cover photo and brochure status
+// Trip cards: each with its cover photo and brochure status.
+// Brochures: one Hostinger folder listing for all treks (not one per trek).
 async function getTrips() {
-  const trips = await dbops.getTrips();
+  const [trips, brochureOf] = await Promise.all([dbops.getTrips(), ftpBrochure.brochureIndex()]);
 
   return Promise.all(
     trips.map(async (trip) => {
-      const [images, brochure] = await Promise.all([
-        tripFiles.listImages(trip.slug),
-        brochureFor(trip.slug),
-      ]);
+      const images = await tripFiles.listImages(trip.slug);
       return {
         ...trip,
         cover_url: images[0]?.url || null,
         image_count: images.length,
-        brochure_file: brochure,
+        brochure_file: brochureOf ? brochureOf(trip.slug) : null,
       };
     })
   );
@@ -203,7 +204,7 @@ async function getTrip(id) {
 }
 
 async function createTrip(admin, body) {
-  requireFields(body, ['slug', 'name', 'category_id', 'blurb', 'duration_label', 'price']);
+  requireFields(body, ['slug', 'name', 'category_id', 'region_id', 'blurb', 'duration_label', 'price']);
   const data = cleanTrip(body);
   const pickups = checkPickupPoints(body.pickup_points);
 

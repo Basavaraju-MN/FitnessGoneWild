@@ -13,6 +13,8 @@ const controller = require('../controller/controller');
 
 router.get('/trek-category', controller.getTrekCategories);
 
+router.get('/site-filters', controller.getSiteFilters);
+
 router.get('/get-all-trek-details', controller.getTrekDetails);
 
 router.get('/featured-trips', controller.getFeaturedTrips);

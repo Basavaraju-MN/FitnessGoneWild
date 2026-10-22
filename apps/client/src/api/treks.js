@@ -157,3 +157,19 @@ export async function getHero() {
   const result = await parseResponse(response);
   return result.data;
 }
+
+// Regions and departure cities for the "Departing from" picker and region
+// filter. Empty lists when the server does not have them yet.
+export async function getSiteFilters(options) {
+  try {
+    const data = await getWithRetry('/site-filters', { retries: 1, ...options });
+    return {
+      regions: Array.isArray(data?.regions) ? data.regions : [],
+      cities: Array.isArray(data?.cities) ? data.cities : [],
+      treks: Array.isArray(data?.treks) ? data.treks : [],
+    };
+  } catch (error) {
+    if (error?.name === 'AbortError') throw error;
+    return { regions: [], cities: [], treks: [] };
+  }
+}

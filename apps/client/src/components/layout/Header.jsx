@@ -94,7 +94,7 @@ export default function Header({ onNavigate }) {
           href="/#featured"
           onClick={(event) => go(event, 'featured')}
         >
-            Trips
+            Featured
           </a>
 
           <a

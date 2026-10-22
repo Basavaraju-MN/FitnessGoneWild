@@ -101,17 +101,28 @@ class Cmds {
 
   /* ================= LOOKUPS ================= */
   async getLookups() {
-    const [trips, categories, guides, pickupPoints, users, leadStatuses, gstPercent] = await Promise.all([
+    // Regions / cities are newer tables: empty lists until regions_cities.sql has run
+    const orEmpty = (sql) => executeQuery(sql).catch((error) => {
+      if (['ER_NO_SUCH_TABLE', 'ER_BAD_FIELD_ERROR'].includes(error?.code)) return [];
+      throw error;
+    });
+    const [trips, categories, guides, pickupPoints, users, leadStatuses, gstPercent, regions, departureCities] = await Promise.all([
       executeQuery(sqlQueries.lookupTrips),
       executeQuery(sqlQueries.lookupCategories),
       executeQuery(sqlQueries.lookupGuides),
-      executeQuery(sqlQueries.lookupPickupPoints),
+      // Before regions_cities.sql: the same list without the city
+      executeQuery(sqlQueries.lookupPickupPoints).catch((error) => {
+        if (error?.code === 'ER_BAD_FIELD_ERROR') return executeQuery(sqlQueries.lookupPickupPointsNoCity);
+        throw error;
+      }),
       executeQuery(sqlQueries.lookupUsers),
       executeQuery(sqlQueries.lookupLeadStatuses),
       this.getGstPercent(),
+      orEmpty(sqlQueries.lookupRegions),
+      orEmpty(sqlQueries.lookupDepartureCities),
     ]);
 
-    return { trips, categories, guides, pickupPoints, users, leadStatuses, gstPercent };
+    return { trips, categories, guides, pickupPoints, users, leadStatuses, gstPercent, regions, departureCities };
   }
 
   // GST % from Settings (5 when not set)
@@ -387,6 +398,14 @@ class Cmds {
 
   async getMasterRow(table, id) {
     return first(await executeQuery(sqlQueries.getMasterRow, [table, id]));
+  }
+
+  // The tabs (categories) a region shows, in order; [] = every category
+  async setRegionCategories(regionId, categoryIds) {
+    await executeQuery(sqlQueries.clearRegionCategories, [regionId]);
+    if (categoryIds.length) {
+      await executeQuery(sqlQueries.addRegionCategories, [categoryIds.map((id, i) => [regionId, id, i + 1])]);
+    }
   }
 
   async createMaster(table, data) {

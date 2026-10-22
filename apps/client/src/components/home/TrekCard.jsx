@@ -3,6 +3,8 @@ import '../../styles/trekcard.css'
 import RichText from '../common/RichText';
 import { API_BASE_URL, getDownloadFileName } from '../../api/treks';
 import useTrekImages, { FALLBACK_IMAGE } from '../../hooks/useTrekImages';
+import { MapPin } from 'lucide-react';
+import { fromLabel, usePlaces } from '../../context/PlacesContext';
 import {
   getDisplayPrice,
   showsDifficulty,
@@ -38,6 +40,8 @@ const getPriceNote = (trip) => {
 };
 
 export default function TrekCard({ trek, onClick }) {
+  const { city } = usePlaces();
+  const from = fromLabel(trek, city);
   const [currentImage, setCurrentImage] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -418,11 +422,17 @@ export default function TrekCard({ trek, onClick }) {
         {/* ========================= */}
 
         <div className="card-body">
+          {trek.region && <span className="card-region">{trek.region.name}</span>}
           <h3>{trek.name}</h3>
 
           <RichText className="card-blurb" html={trek.blurb} />
 
           <div className="info">
+            {from && (
+              <span className="info-from">
+                <MapPin size={12} aria-hidden="true" /> From {from}
+              </span>
+            )}
             <span>{trek.duration_label}</span>
             {showsDifficulty(trek) && <span>{trek.difficulty}</span>}
             {showsDistance(trek) && <span>{trek.distance_label}</span>}

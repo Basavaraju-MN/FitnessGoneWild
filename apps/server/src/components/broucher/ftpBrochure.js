@@ -87,6 +87,42 @@ async function findPath(client, slug) {
   return null;
 }
 
+/**
+ * For the admin's trek list: ONE folder listing (one FTP connection, shared
+ * for 2 minutes by everyone) instead of one connection per trek.
+ * Returns slug -> what is on Hostinger ("kudremukh.pdf" or "kudremukh/"),
+ * or null when FTP is not set up / cannot be reached. The exact file is
+ * checked in the trek's edit panel (findBrochure with fresh).
+ */
+let indexRun = null;
+async function brochureIndex() {
+  if (!isConfigured()) return null;
+  if (!indexRun) {
+    indexRun = (async () => {
+      let client;
+      try {
+        client = await connect();
+        const entries = await listFolder(client);
+        return (slug) => {
+          const lower = String(slug || '').toLowerCase();
+          const pdfs = entries.filter((e) => !e.isDir && isPdf(e.name));
+          const pdf = pdfs.find((e) => e.name.toLowerCase() === `${lower}.pdf`)
+            || pdfs.filter((e) => e.name.toLowerCase().startsWith(lower)).sort((a, b) => a.name.localeCompare(b.name))[0];
+          if (pdf) return pdf.name;
+          const folder = entries.find((e) => e.isDir && e.name.toLowerCase() === lower);
+          return folder ? `${folder.name}/` : null;
+        };
+      } catch (error) {
+        console.error('Hostinger FTP (brochure list) failed:', error?.message || error);
+        return null;
+      } finally {
+        client?.close();
+      }
+    })().finally(() => { setTimeout(() => { indexRun = null; }, 2 * 60 * 1000).unref?.(); });
+  }
+  return indexRun;
+}
+
 /** { file, size } when the trek's brochure is on Hostinger, else null (never throws). */
 async function findBrochure(slug, { fresh = false } = {}) {
   if (!isConfigured() || !validSlug(slug)) return null;
@@ -247,4 +283,4 @@ async function listBrochures() {
   }
 }
 
-module.exports = { isConfigured, findBrochure, openBrochure, listBrochures, warmUp, folder: () => env().dir };
+module.exports = { isConfigured, findBrochure, brochureIndex, openBrochure, listBrochures, warmUp, folder: () => env().dir };

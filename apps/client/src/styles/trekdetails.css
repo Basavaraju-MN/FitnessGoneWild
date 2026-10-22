@@ -247,10 +247,16 @@
   margin-bottom: 35px;
 }
 
+/* Space between the heading and the first price */
+.pricing-block h2 {
+  margin-bottom: 20px;
+}
+
 .pricing-main {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
+  margin-top: 32px;
 }
 
 .pricing-option {
@@ -578,3 +584,18 @@
 .rich-text th, .rich-text td { border: 1px solid #e3e3e3; padding: 8px 10px; text-align: left; vertical-align: top; }
 .rich-text th { background: #F2F5F1; font-weight: 700; }
 .rich-text pre, .rich-text code { white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: .92em; }
+
+/* Phones: tab names centred in their pill, all three the same height */
+@media (max-width: 768px) {
+  .details-tab-buttons {
+    align-items: stretch;
+  }
+
+  .details-tab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 46px;
+    text-align: center;
+  }
+}

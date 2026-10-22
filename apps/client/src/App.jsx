@@ -4,6 +4,7 @@ import Home from './pages/Home';
 import PaymentOptions from './pages/PaymentOptions';
 import PaymentResult from './pages/PaymentResult';
 import Placeholder from './pages/Placeholder';
+import { PlacesProvider } from './context/PlacesContext';
 
 import './styles/global.css';
 
@@ -50,6 +51,7 @@ function FloatingSocialDock() {
 export default function App() {
   return (
     <BrowserRouter>
+     <PlacesProvider>
       <FloatingSocialDock />
       <Routes>
 
@@ -92,6 +94,7 @@ export default function App() {
         />
 
       </Routes>
+     </PlacesProvider>
     </BrowserRouter>
   );
 }
