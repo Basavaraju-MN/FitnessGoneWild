@@ -8,6 +8,7 @@ dotenv.config({
 });
 
 const trekRoutes = require('./routes/routes');
+const { cachePublicApi, clearOnAdminChange } = require('./utils/apiCache');
 const { clientOrigins } = require('./config/config');
 const { checkDatabaseConnection } = require('./db/connection');
 const { db } = require('./config/database');
@@ -199,7 +200,8 @@ app.get('/api/health', async (req, res) => {
 
 try {
   const { createAdminRouter } = require('../../admin-server/app');
-  app.use('/api/admin', createAdminRouter());
+  // A change saved in the admin clears the website's API cache
+  app.use('/api/admin', clearOnAdminChange, createAdminRouter());
   console.log('Admin API mounted at /api/admin');
 } catch (error) {
   console.error('Admin API not mounted:', error);
@@ -228,7 +230,8 @@ app.get(/^\/admin(\/.*)?$/, (req, res, next) => {
 app.get('/invoice/:token', invoicePage);
 app.get('/invoice/:token/pdf', invoicePdfPage);
 
-app.use('/api', trekRoutes);
+// Public website data is cached for 2 minutes (fewer database connections)
+app.use('/api', cachePublicApi, trekRoutes);
 
 app.use(
   express.static(CLIENT_DIST_PATH)

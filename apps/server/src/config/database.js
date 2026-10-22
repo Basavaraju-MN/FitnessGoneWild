@@ -25,7 +25,8 @@ const db = {
   user: process.env.DB_USER || dbDefaults.user,
   password: process.env.DB_PASSWORD ?? dbDefaults.password,
   database: process.env.DB_NAME || dbDefaults.database,
-  connectionLimit: Number(process.env.DB_CONNECTION_LIMIT || 10),
+  // Few connections, kept open (Hostinger: 500 new connections per hour)
+  connectionLimit: Number(process.env.DB_CONNECTION_LIMIT || 4),
   timezone: '+05:30',
   dateStrings: true,
 };
