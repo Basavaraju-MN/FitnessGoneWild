@@ -30,6 +30,25 @@ class Cmds {
       executeQuery(sqlQueries.getTripTermsHighlights, [tripId]),
     ]);
     return { sections: sections || [], highlights: meta?.[0]?.terms_highlights || '' };
+ 
+  async getRegions() {
+    return (await executeQuery(sqlQueries.getRegions)) || [];
+  }
+
+  async getRegionCategories() {
+    return (await executeQuery(sqlQueries.getRegionCategories)) || [];
+  }
+
+  async getDepartureCities() {
+    return (await executeQuery(sqlQueries.getDepartureCities)) || [];
+  }
+
+  async getTripPlaces() {
+    return (await executeQuery(sqlQueries.getTripPlaces)) || [];
+  }
+
+  async getPickupCities(tripId) {
+    return (await executeQuery(sqlQueries.getPickupCities, [tripId])) || [];
   }
 
   async getPickupPoints(tripId) {

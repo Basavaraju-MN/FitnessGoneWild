@@ -247,10 +247,16 @@
   margin-bottom: 35px;
 }
 
+/* Space between the heading and the first price */
+.pricing-block h2 {
+  margin-bottom: 20px;
+}
+
 .pricing-main {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
+  margin-top: 32px;
 }
 
 .pricing-option {
@@ -581,7 +587,6 @@
 
 /* =========================================
    TERMS & POLICIES TAB (accordion)
-========================================= */
 
 .trek-terms { display: flex; flex-direction: column; gap: 22px; }
 .terms-top { display: flex; justify-content: space-between; align-items: center; gap: 16px 20px; flex-wrap: wrap; }
@@ -626,10 +631,23 @@
 
 /* =========================================
    BACK + SHARE (top of the trek page)
-========================================= */
 .trek-top-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px 16px; flex-wrap: wrap; margin-bottom: 16px; }
 .trek-top-bar .trek-back-button { margin-bottom: 0; }
 .trek-share { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .trek-share-btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px; border: 1.5px solid #0F3D36; border-radius: 999px; background: #fff; color: #0F3D36; font-weight: 600; font-size: 14px; cursor: pointer; box-shadow: none; }
 .trek-share-btn:hover { background: #0F3D36; color: #fff; transform: none; box-shadow: none; }
 .trek-share-note { font-size: 13px; font-weight: 600; color: #1f7a50; background: #E9F3E4; padding: 6px 12px; border-radius: 999px; max-width: 60vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Phones: tab names centred in their pill, all three the same height */
+@media (max-width: 768px) {
+  .details-tab-buttons {
+    align-items: stretch;
+  }
+
+  .details-tab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 46px;
+    text-align: center;
+  }
+}

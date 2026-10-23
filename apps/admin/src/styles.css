@@ -814,3 +814,65 @@ button.avatar:hover { background: var(--cp-brand-blue-90); }
 .terms-suggest { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; }
 .terms-chip { background: var(--mist); border: 1px solid var(--line); color: var(--forest); border-radius: 999px; padding: 5px 11px; font-size: 12px; font-weight: 600; cursor: pointer; }
 .terms-chip:hover { border-color: var(--forest); }
+/* Several ticks in a form (e.g. a region's category tabs) */
+.checklist { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 4px 0; }
+.checklist-item { display: inline-flex; align-items: center; gap: 7px; font-weight: 500; cursor: pointer; }
+.checklist-item input { width: auto; margin: 0; }
+/* Trek form: pickup rows with a departure city */
+.pickup-row:has(.pickup-city) { grid-template-columns: 28px 150px 1fr 1.3fr auto; }
+@media (max-width: 720px) {
+  .pickup-row:has(.pickup-city) { grid-template-columns: 28px 1fr; }
+  .pickup-row .pickup-city, .pickup-row:has(.pickup-city) input { grid-column: 2; }
+}
+
+/* Users & Roles → Role permissions */
+.perms { margin-top: 18px; overflow: hidden; }
+.perms-head { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+.perms-head h2 { margin: 0; font-family: var(--display); font-size: 16px; font-weight: 700; color: var(--heading); }
+.perms-head p { margin: 3px 0 0; font-size: 12.5px; color: var(--muted); }
+.perms-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.perms-unsaved { font-size: 12px; font-weight: 700; color: var(--tint-amber); background: var(--tint-amber-bg); padding: 5px 10px; border-radius: 999px; }
+.perms-scroll { overflow-x: auto; }
+.perms-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13.5px; }
+.perms-table th, .perms-table td { border-bottom: 1px solid var(--line); }
+.perms-table thead th { position: sticky; top: 0; z-index: 1; background: var(--cp-input, #fff); vertical-align: top; padding: 14px 12px; }
+.perms-screen-col { text-align: left; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; padding-left: 18px !important; vertical-align: bottom !important; min-width: 210px; }
+.perms-role { width: 190px; text-align: center; }
+.perms-role-name { display: block; font-size: 13.5px; font-weight: 700; color: var(--heading); }
+.perms-role-note { display: block; font-size: 11.5px; font-weight: 500; color: var(--muted); margin-top: 2px; }
+.perms-count { display: inline-block; margin-top: 8px; font-size: 11.5px; font-weight: 600; color: var(--muted); background: var(--mist); padding: 3px 10px; border-radius: 999px; }
+.perms-count b { color: var(--forest); font-size: 12.5px; }
+.perms-bulk { display: flex; justify-content: center; gap: 6px; margin-top: 7px; font-size: 11.5px; color: var(--muted); }
+.perms-bulk button { background: none; border: 0; padding: 0; color: var(--forest); font-weight: 700; font-size: 11.5px; cursor: pointer; }
+.perms-bulk button:hover { text-decoration: underline; }
+.perms-group td { background: var(--mist); color: var(--muted); font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; padding: 7px 18px; }
+.perms-table tbody tr:not(.perms-group):hover td { background: var(--cp-sorted-cell, #f6f9fe); }
+.perms-screen { padding: 11px 18px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+.perms-icon { display: inline-grid; place-items: center; width: 26px; height: 26px; margin-right: 10px; border-radius: 7px; background: var(--amber-soft); color: var(--forest); font-size: 13px; }
+.perms-cell { text-align: center; padding: 8px 12px; transition: background .15s; }
+.perms-cell.changed { background: var(--tint-amber-bg) !important; }
+.perms-always { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 700; color: var(--tint-green); background: var(--tint-green-bg); padding: 4px 10px; border-radius: 999px; }
+
+/* On / off switch */
+.switch { position: relative; display: inline-flex; cursor: pointer; }
+.switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.switch-track { width: 40px; height: 22px; border-radius: 999px; background: var(--line); transition: background .18s; position: relative; }
+.switch-thumb { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .18s; }
+.switch input:checked + .switch-track { background: var(--forest); }
+.switch input:checked + .switch-track .switch-thumb { transform: translateX(18px); }
+.switch input:focus-visible + .switch-track { outline: 2px solid var(--forest); outline-offset: 2px; }
+.switch input:disabled + .switch-track { opacity: .55; cursor: not-allowed; }
+@media (max-width: 700px) {
+  .perms-role { width: 120px; }
+  .perms-role-note { display: none; }
+  .perms-screen { white-space: normal; min-width: 150px; }
+}
+
+/* Pickup Points: treks list */
+.pp-count { font-weight: 700; color: var(--forest); }
+.pp-count small { font-weight: 500; color: var(--muted); }
+.pp-none { font-size: 12px; font-weight: 600; color: var(--tint-amber); background: var(--tint-amber-bg); padding: 3px 9px; border-radius: 999px; }
+.pp-cities { display: inline-flex; flex-wrap: wrap; gap: 5px; }
+.pp-city { font-size: 11.5px; font-weight: 600; color: var(--forest); background: var(--amber-soft); padding: 3px 9px; border-radius: 999px; }
+.pp-names { display: inline-block; max-width: 420px; font-size: 12.5px; color: var(--muted); white-space: normal; line-height: 1.4; }
+.pickup-modal { max-width: 860px; }

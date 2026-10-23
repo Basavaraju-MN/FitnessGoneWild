@@ -4,6 +4,7 @@ import '../../styles/payment.css';
 import { PaymentMethodChooser } from '../../pages/PaymentOptions';
 import { getPickupPoints, getTripTerms } from '../../api/treks';
 import RichText from '../common/RichText';
+import { usePlaces } from '../../context/PlacesContext';
 import { isWithTransportOnly } from '../../utils/tripPricing';
 import useTrekImages from '../../hooks/useTrekImages';
 
@@ -177,6 +178,34 @@ export default function BookingModal({
   const [pickupPoints, setPickupPoints] = useState([]);
   const [pickupLoading, setPickupLoading] = useState(true);
 
+  // Pickups in more than one city: choose the city first (the one picked
+  // in the header when the trek leaves from it)
+  const { city: chosenCity } = usePlaces();
+  const pickupCities = useMemo(() => {
+    const seen = new Map();
+    pickupPoints.forEach((point) => {
+      if (point.city_id && !seen.has(point.city_id)) seen.set(point.city_id, point.city_name);
+    });
+    return [...seen].map(([id, name]) => ({ id, name }));
+  }, [pickupPoints]);
+  const [pickupCityId, setPickupCityId] = useState(null);
+
+  useEffect(() => {
+    if (pickupCities.length < 2) {
+      setPickupCityId(null);
+      return;
+    }
+    setPickupCityId((current) =>
+      pickupCities.some((c) => c.id === current)
+        ? current
+        : pickupCities.find((c) => c.id === chosenCity?.id)?.id ?? pickupCities[0].id
+    );
+  }, [pickupCities, chosenCity?.id]);
+
+  const visiblePickups = pickupCityId
+    ? pickupPoints.filter((point) => point.city_id === pickupCityId)
+    : pickupPoints;
+
   const [transportTickets, setTransportTickets] =
     useState(0);
 
@@ -341,7 +370,7 @@ export default function BookingModal({
       return;
     }
 
-    if (pickupPoints.length > 0 && !pickupLocation) {
+    if (visiblePickups.length > 0 && !pickupLocation) {
       setError('Please select a pickup location.');
       return;
     }
@@ -664,9 +693,26 @@ export default function BookingModal({
                   }
                 />
 
+                {pickupCities.length > 1 && (
+                  <select
+                    value={pickupCityId || ''}
+                    aria-label="Departing from"
+                    onChange={(event) => {
+                      setPickupCityId(Number(event.target.value));
+                      setPickupLocation('');
+                    }}
+                  >
+                    {pickupCities.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        Departing from {c.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+
                 <select
                   value={pickupLocation}
-                  disabled={pickupLoading || pickupPoints.length === 0}
+                  disabled={pickupLoading || visiblePickups.length === 0}
                   onChange={(event) =>
                     setPickupLocation(
                       event.target.value
@@ -676,12 +722,12 @@ export default function BookingModal({
                   <option value="">
                     {pickupLoading
                       ? 'Loading pickup points...'
-                      : pickupPoints.length === 0
+                      : visiblePickups.length === 0
                         ? 'No pickup points for this trek'
                         : 'Select pickup location'}
                   </option>
 
-                  {pickupPoints.map((point) => (
+                  {visiblePickups.map((point) => (
                     <option
                       key={point.id}
                       value={point.name}

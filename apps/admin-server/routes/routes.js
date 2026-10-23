@@ -10,7 +10,7 @@ const can = requireModule;
 
 // Guides and pickup points have their own menus; categories are managed
 // from the Treks & Trips screen
-const MASTER_MODULES = { guides: 'guides', 'pickup-points': 'pickup-points', categories: 'packages', 'lead-statuses': 'enquiries' };
+const MASTER_MODULES = { guides: 'guides', 'pickup-points': 'pickup-points', categories: 'packages', 'lead-statuses': 'enquiries', regions: 'regions', 'departure-cities': 'regions' };
 const canMaster = (req, res, next) => requireModule(MASTER_MODULES[req.params.type] || 'none')(req, res, next);
 
 /* ---------- Public ---------- */
@@ -77,6 +77,9 @@ router.get('/payments', can('payments'), controller.getPayments);
 router.get('/masters/:type', canMaster, controller.getMasterList);
 router.post('/masters/:type', canMaster, controller.createMaster);
 router.put('/masters/:type/:id', canMaster, controller.updateMaster);
+
+router.get('/role-permissions', can('users'), controller.getRolePermissions);
+router.put('/role-permissions', can('users'), controller.saveRolePermissions);
 
 router.get('/users', can('users'), controller.getUsers);
 router.post('/users', can('users'), controller.createUser);

@@ -26,6 +26,7 @@ import Guides from './pages/Guides';
 import PickupPoints from './pages/PickupPoints';
 import Users from './pages/Users';
 import Settings from './pages/Settings';
+import Regions from './pages/Regions';
 
 const PAGES = [
   { id: 'dashboard', label: 'Dashboard', icon: '▦', component: Dashboard },
@@ -39,6 +40,7 @@ const PAGES = [
   { id: 'reports', label: 'Reports & Exports', icon: '▥', component: Reports, group: 'MANAGEMENT' },
   { id: 'guides', label: 'Guides', icon: '⛰', component: Guides, group: 'MANAGEMENT' },
   { id: 'pickup-points', label: 'Pickup Points', icon: '⚑', component: PickupPoints, group: 'MANAGEMENT' },
+  { id: 'regions', label: 'Regions & Cities', icon: '◎', component: Regions, group: 'MANAGEMENT' },
   { id: 'hero', label: 'Website Hero', icon: '▭', component: WebsiteHero, group: 'MANAGEMENT' },
   { id: 'activity', label: 'Activity Log', icon: '☰', component: Activity, group: 'MANAGEMENT' },
   { id: 'users', label: 'Users & Roles', icon: '♟', component: Users, group: 'MANAGEMENT' },

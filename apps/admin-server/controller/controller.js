@@ -462,6 +462,30 @@ exports.resetUserPassword = async (req, res, next) => {
 };
 
 /* =====================================================================
+   ROLE PERMISSIONS (which role sees which screen)
+   ===================================================================== */
+
+const permissionManager = require('../components/permission/permissionManager');
+
+exports.getRolePermissions = async (req, res, next) => {
+  try {
+    const data = await permissionManager.getMatrix();
+    return res.status(200).json({ success: true, message: 'Role permissions fetched', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.saveRolePermissions = async (req, res, next) => {
+  try {
+    const data = await permissionManager.saveMatrix(req.admin, req.body || {});
+    return res.status(200).json({ success: true, message: 'Role permissions saved', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/* =====================================================================
    SETTINGS
    ===================================================================== */
 

@@ -1,4 +1,5 @@
-const { cookieName, permissions } = require('../config');
+const { cookieName } = require('../config');
+const permissionManager = require('../components/permission/permissionManager');
 const authManager = require('../components/auth/authManager');
 const { HttpError } = require('../utils/http');
 
@@ -8,6 +9,9 @@ async function requireAuth(req, res, next) {
   if (!token) return next(new HttpError(401, 'Please log in'));
 
   try {
+    // Who may open what (kept in memory, re-read every minute)
+    await permissionManager.ensureLoaded();
+
     // Re-checks the user, so deactivated accounts lose access straight away
     const admin = await authManager.getAdminFromToken(token);
     if (!admin) return next(new HttpError(401, 'Session expired, please log in again'));
@@ -21,7 +25,7 @@ async function requireAuth(req, res, next) {
 
 // Allows the request only for roles that may open the module
 const requireModule = (module) => (req, res, next) => {
-  const roles = permissions[module] || [];
+  const roles = permissionManager.rolesFor(module);
   if (!roles.includes(req.admin?.role)) {
     return next(new HttpError(403, 'You do not have access to this section'));
   }

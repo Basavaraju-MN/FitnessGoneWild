@@ -23,6 +23,15 @@ function getRequestOrigin(req) {
   }
 }
 
+// Regions and departure cities for the website filters
+exports.getSiteFilters = async (req, res) => {
+  const result = await component.getSiteFilters();
+  if (!result.success) {
+    return res.status(500).json({ success: false, message: 'Error fetching filters' });
+  }
+  return res.status(200).json({ success: true, data: result.data });
+};
+
 exports.getTrekCategories = async (req, res) => {
   try {
     const result = await component.getTrekCategories();

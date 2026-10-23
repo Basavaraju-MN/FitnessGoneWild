@@ -117,6 +117,30 @@ const sqlqueries = {
   // Terms & policies of one trek (Terms & Policies tab)
   getTripTerms: 'SELECT id, title, body, updated_at FROM trip_terms WHERE trip_id = ? ORDER BY sort_order, id',
   getTripTermsHighlights: 'SELECT terms_highlights FROM trips WHERE id = ?',
+  // Regions and departure cities (website "Departing from" picker and region filter)
+  getRegions: `SELECT id, slug, name, tagline, image_path, sort_order FROM regions WHERE is_active = 1 ORDER BY sort_order ASC, id ASC`,
+  // Optional: which category tabs each region shows
+  getRegionCategories: 'SELECT region_id, category_id FROM region_categories ORDER BY region_id, sort_order, category_id',
+  getDepartureCities: `SELECT id, name, state, sort_order FROM departure_cities WHERE is_active = 1 ORDER BY sort_order ASC, id ASC`,
+  // Each trek's region, and the cities it leaves from (cities of its active pickup points)
+  getTripPlaces: `
+    SELECT
+      t.id AS trip_id,
+      t.category_id,
+      t.is_featured,
+      r.id AS region_id,
+      r.slug AS region_slug,
+      r.name AS region_name,
+      (
+        SELECT GROUP_CONCAT(DISTINCT CONCAT(dc.id, ':', dc.name) ORDER BY dc.sort_order, dc.id SEPARATOR '|')
+        FROM pickup_points pp
+        JOIN departure_cities dc ON dc.id = pp.city_id AND dc.is_active = 1
+        WHERE pp.trip_id = t.id AND pp.is_active = 1
+      ) AS cities
+    FROM trips t
+    LEFT JOIN regions r ON r.id = t.region_id AND r.is_active = 1
+  `,
+  getPickupCities: `SELECT pp.id, dc.id AS city_id, dc.name AS city_name FROM pickup_points pp LEFT JOIN departure_cities dc ON dc.id = pp.city_id WHERE pp.trip_id = ?`,
   getPickupPoints: `SELECT id, trip_id, name, address, map_url, sort_order FROM pickup_points WHERE is_active = 1 AND trip_id = ? ORDER BY sort_order ASC, id ASC`,
   createTripInterest: `INSERT INTO trip_interests (trip_id, type, source, created_at) VALUES (?, ?, ?, NOW())`,
   createCustomer: `INSERT INTO customers (name, phone, email, city, trip_id, created_at) VALUES (?, ?, ?, ?, ?, NOW())`,
