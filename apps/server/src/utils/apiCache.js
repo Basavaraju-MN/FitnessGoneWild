@@ -13,6 +13,7 @@ const CACHED_PATHS = new Set([
   '/trek-category',
   '/get-all-trek-details',
   '/featured-trips',
+  '/trek',
   '/reviews',
   '/hero',
   '/why-us',

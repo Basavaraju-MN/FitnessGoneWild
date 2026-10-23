@@ -56,6 +56,9 @@ export default function App() {
         {/* Client website */}
         <Route path="/" element={<Home />} />
 
+        {/* Shareable trek page, e.g. /treks/netravati */}
+        <Route path="/treks/:slug" element={<Home />} />
+
         <Route
           path="/treks"
           element={<Placeholder title="Treks" />}

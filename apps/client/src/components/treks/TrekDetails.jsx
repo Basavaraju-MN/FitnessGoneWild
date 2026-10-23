@@ -19,6 +19,32 @@ export default function TrekDetails({ trek, onBack }) {
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [activeTab, setActiveTab] = useState('itinerary');
 
+  // Share this trek's own link (/treks/<slug>)
+  const [shareNote, setShareNote] = useState('');
+  const shareUrl = `${window.location.origin}/treks/${trek.slug}`;
+  const shareTrek = async () => {
+    const text = `${trek.name} with The Fitness Gone Wild`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: trek.name, text, url: shareUrl });
+        return;
+      } catch (error) {
+        if (error?.name === 'AbortError') return; // closed the share sheet
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShareNote('Link copied');
+    } catch {
+      setShareNote(shareUrl);
+    }
+    setTimeout(() => setShareNote(''), 3000);
+  };
+  const shareOnWhatsApp = () => {
+    const message = `${trek.name} with The Fitness Gone Wild: ${shareUrl}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+  };
+
   // Terms & Policies tab: shown only when the trek has terms
   const [terms, setTerms] = useState(null);
   useEffect(() => {
@@ -300,14 +326,28 @@ export default function TrekDetails({ trek, onBack }) {
 
       <div className="trek-details-container">
 
-        {/* BACK */}
-        <button
-          type="button"
-          className="trek-back-button"
-          onClick={onBack}
-        >
-          ← Back to treks
-        </button>
+        {/* BACK + SHARE */}
+        <div className="trek-top-bar">
+          <button
+            type="button"
+            className="trek-back-button"
+            onClick={onBack}
+          >
+            ← Back to treks
+          </button>
+
+          <div className="trek-share">
+            {shareNote && <span className="trek-share-note" role="status">{shareNote}</span>}
+            <button type="button" className="trek-share-btn" onClick={shareOnWhatsApp} aria-label="Share on WhatsApp">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.05 4.95A9.9 9.9 0 0 0 12.02 2a9.91 9.91 0 0 0-8.48 15.06L2 22l5.13-1.35a9.9 9.9 0 0 0 4.89 1.35h.01a9.9 9.9 0 0 0 6.99-3.02 9.9 9.9 0 0 0 2.07-7.03Zm-7.03 15.3a8.18 8.18 0 0 1-4.18-1.14l-.3-.18-3.04.8.81-2.96-.2-.3A8.2 8.2 0 1 1 12.02 20.25Z" /></svg>
+              WhatsApp
+            </button>
+            <button type="button" className="trek-share-btn" onClick={shareTrek}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="m8.6 13.5 6.8 4" /><path d="m15.4 6.5-6.8 4" /></svg>
+              Share link
+            </button>
+          </div>
+        </div>
 
         {/* ================================= */}
         {/* IMAGE GALLERY */}

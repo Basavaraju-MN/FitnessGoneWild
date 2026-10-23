@@ -58,6 +58,18 @@ exports.getTrekDetails = async (req, res) => {
   }
 };
 
+// GET /api/trek?slug=netravati — one trek for its shareable page
+exports.getTrekBySlug = async (req, res) => {
+  const result = await component.getTrekBySlug(String(req.query.slug || ''));
+  if (!result.success) {
+    return res.status(500).json({ success: false, message: 'Error fetching trek' });
+  }
+  if (!result.data) {
+    return res.status(404).json({ success: false, message: 'Trek not found' });
+  }
+  return res.status(200).json({ success: true, data: result.data });
+};
+
 exports.getFeaturedTrips = async (req, res) => {
   try {
     const result = await component.getFeaturedTrips();

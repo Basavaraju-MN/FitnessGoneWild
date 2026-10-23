@@ -17,6 +17,8 @@ router.get('/get-all-trek-details', controller.getTrekDetails);
 
 router.get('/featured-trips', controller.getFeaturedTrips);
 
+router.get('/trek', controller.getTrekBySlug);
+
 router.get('/reviews', controller.getReviews);
 
 router.get('/hero', controller.getHero);

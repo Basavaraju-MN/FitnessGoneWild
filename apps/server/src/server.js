@@ -9,6 +9,7 @@ dotenv.config({
 
 const trekRoutes = require('./routes/routes');
 const { cachePublicApi, clearOnAdminChange } = require('./utils/apiCache');
+const { trekPage } = require('./utils/trekShare');
 const { clientOrigins } = require('./config/config');
 const { checkDatabaseConnection } = require('./db/connection');
 const { db } = require('./config/database');
@@ -279,6 +280,9 @@ app.get('/invoice/:token/pdf', invoicePdfPage);
 
 // Public website data is cached for 2 minutes (fewer database connections)
 app.use('/api', cachePublicApi, trekRoutes);
+
+// Shareable trek link: the page with that trek's title and photo for previews
+app.get('/treks/:slug', trekPage(CLIENT_DIST_PATH));
 
 app.use(
   express.static(CLIENT_DIST_PATH)

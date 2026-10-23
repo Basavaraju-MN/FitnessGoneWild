@@ -1,6 +1,41 @@
 const sqlqueries = {
   // Only active categories, in the order set by sort_order
   getTrekCategories: `SELECT * FROM categories WHERE is_active = 1 ORDER BY sort_order ASC, id ASC`,
+  // One trek by its web address (/treks/<slug>), featured or not
+  getTrekBySlug: `
+    SELECT
+      t.id,
+      t.slug,
+      t.name,
+      t.category_id,
+      t.blurb,
+      t.description,
+      t.itinerary,
+      t.duration_label,
+      t.duration_days,
+      t.difficulty,
+      t.distance_label,
+      t.price,
+      t.without_transport_price,
+      t.with_transport_price,
+      t.price_note,
+      t.image_path,
+      t.badge_text,
+      t.badge_style,
+      t.is_featured,
+      t.featured_label,
+      t.featured_order,
+      t.status,
+      t.created_at,
+      t.updated_at,
+      GROUP_CONCAT(DISTINCT ie.inclusion ORDER BY ie.id SEPARATOR '||') AS includes,
+      GROUP_CONCAT(DISTINCT ie.exclusion ORDER BY ie.id SEPARATOR '||') AS exclusions
+    FROM trips t
+    LEFT JOIN inclusion_exclusion ie ON ie.trip_id = t.id
+    WHERE t.slug = ?
+    GROUP BY t.id
+    LIMIT 1
+  `,
   getTrekDetails: `
     SELECT
       t.id,

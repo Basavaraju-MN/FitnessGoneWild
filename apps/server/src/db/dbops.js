@@ -13,6 +13,12 @@ class Cmds {
     return rows || [];
   }
 
+  async getTrekBySlug(slug) {
+    if (!/^[a-z0-9_-]{1,80}$/i.test(String(slug || ''))) return null;
+    const rows = await executeQuery(sqlQueries.getTrekBySlug, [slug]);
+    return rows?.[0] || null;
+  }
+
   async getFeaturedTrips() {
     const rows = await executeQuery(sqlQueries.getFeaturedTrips);
     return rows || [];

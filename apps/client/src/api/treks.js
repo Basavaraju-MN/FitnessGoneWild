@@ -90,6 +90,17 @@ export async function getTreksByCategory(categoryId, options) {
   return Array.isArray(data) ? data : [];
 }
 
+// One trek for its own page (/treks/<slug>); null when there is no such trek
+export async function getTrekBySlug(slug, options) {
+  const response = await fetch(`${API_BASE_URL}/trek?slug=${encodeURIComponent(slug)}`, {
+    credentials: 'include',
+    signal: options?.signal,
+  });
+  if (response.status === 404) return null;
+  const result = await parseResponse(response);
+  return result.data;
+}
+
 export async function getFeaturedTrips(options) {
   const data = await getWithRetry('/featured-trips', options);
   return Array.isArray(data) ? data : [];

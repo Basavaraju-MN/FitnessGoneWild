@@ -31,6 +31,20 @@ const getTrekDetails = async (categoryId) => {
     return result;
 }
 
+// One trek for its own page (/treks/<slug>)
+const getTrekBySlug = async (slug) => {
+    const result = {};
+    try {
+        result.data = await dbCmds.getTrekBySlug(slug);
+        result.success = true;
+    } catch (error) {
+        result.success = false;
+        result.message = 'Error fetching trek';
+        console.error('Error fetching trek:', error?.message || error);
+    }
+    return result;
+};
+
 const getFeaturedTrips = async () => {
     const result = {};
     try {
@@ -183,6 +197,7 @@ const getPickupPoints = async (tripId) => {
 }
 
 module.exports = {
+    getTrekBySlug,
     getTripTerms,
     getPickupPoints,
     getTrekCategories,
