@@ -1,6 +1,41 @@
 const sqlqueries = {
   // Only active categories, in the order set by sort_order
   getTrekCategories: `SELECT * FROM categories WHERE is_active = 1 ORDER BY sort_order ASC, id ASC`,
+  // One trek by its web address (/treks/<slug>), featured or not
+  getTrekBySlug: `
+    SELECT
+      t.id,
+      t.slug,
+      t.name,
+      t.category_id,
+      t.blurb,
+      t.description,
+      t.itinerary,
+      t.duration_label,
+      t.duration_days,
+      t.difficulty,
+      t.distance_label,
+      t.price,
+      t.without_transport_price,
+      t.with_transport_price,
+      t.price_note,
+      t.image_path,
+      t.badge_text,
+      t.badge_style,
+      t.is_featured,
+      t.featured_label,
+      t.featured_order,
+      t.status,
+      t.created_at,
+      t.updated_at,
+      GROUP_CONCAT(DISTINCT ie.inclusion ORDER BY ie.id SEPARATOR '||') AS includes,
+      GROUP_CONCAT(DISTINCT ie.exclusion ORDER BY ie.id SEPARATOR '||') AS exclusions
+    FROM trips t
+    LEFT JOIN inclusion_exclusion ie ON ie.trip_id = t.id
+    WHERE t.slug = ?
+    GROUP BY t.id
+    LIMIT 1
+  `,
   getTrekDetails: `
     SELECT
       t.id,
@@ -79,6 +114,9 @@ const sqlqueries = {
   getHeroSlides: `SELECT id, image_path, eyebrow, headline_line1, headline_line2, message, primary_label, primary_target, secondary_label, secondary_target, facts FROM hero_slides WHERE is_active = 1 ORDER BY sort_order, id`,
   getWhyUs: `SELECT id, title, description, created_at, updated_at FROM why_us WHERE 1 ORDER BY id ASC`,
   getFaq: `SELECT id, question, answer, created_at, updated_at FROM faq WHERE 1 ORDER BY id ASC`,
+  // Terms & policies of one trek (Terms & Policies tab)
+  getTripTerms: 'SELECT id, title, body, updated_at FROM trip_terms WHERE trip_id = ? ORDER BY sort_order, id',
+  getTripTermsHighlights: 'SELECT terms_highlights FROM trips WHERE id = ?',
   // Regions and departure cities (website "Departing from" picker and region filter)
   getRegions: `SELECT id, slug, name, tagline, image_path, sort_order FROM regions WHERE is_active = 1 ORDER BY sort_order ASC, id ASC`,
   // Optional: which category tabs each region shows

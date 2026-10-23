@@ -31,6 +31,9 @@ router.get('/notifications', controller.getNotifications);
 
 router.get('/trips', can('packages'), controller.getTrips);
 router.get('/trips/:id/brochure-check', can('packages'), controller.getBrochureCheck);
+// Terms & policies: treks to copy from, and one trek's sections
+router.get('/trip-terms-sources', can('packages'), controller.getTermsSources);
+router.get('/trips/:id/terms', can('packages'), controller.getTripTerms);
 router.get('/trips/:id', can('packages'), controller.getTrip);
 router.post('/trips', can('packages'), controller.createTrip);
 router.put('/trips/:id', can('packages'), controller.updateTrip);

@@ -9,6 +9,7 @@ dotenv.config({
 
 const trekRoutes = require('./routes/routes');
 const { cachePublicApi, clearOnAdminChange } = require('./utils/apiCache');
+const { trekPage } = require('./utils/trekShare');
 const { clientOrigins } = require('./config/config');
 const { checkDatabaseConnection } = require('./db/connection');
 const { db } = require('./config/database');
@@ -31,6 +32,47 @@ const ADMIN_DIST_PATH = path.resolve(
 );
 
 app.set('trust proxy', 1);
+app.disable('x-powered-by');
+
+/* =========================================================
+   SECURITY HEADERS (website, admin and API)
+   Scripts only from this site: no inline scripts, no eval.
+   Styles may be inline (React style={...}, the rich text editor).
+   ========================================================= */
+
+const isProduction = process.env.NODE_ENV === 'production';
+
+const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "frame-ancestors 'none'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  // Trek photos, Unsplash heroes, Google review photos, uploads being previewed
+  "img-src 'self' data: blob: https:",
+  "connect-src 'self'",
+  "frame-src 'self' blob:",
+  "worker-src 'self' blob:",
+  "form-action 'self'",
+  // Live site only: on http://localhost it would break local testing
+  ...(isProduction ? ['upgrade-insecure-requests'] : []),
+].join('; ');
+
+app.use((_req, res, next) => {
+  res.setHeader('Content-Security-Policy', CONTENT_SECURITY_POLICY);
+  // Browsers use HTTPS only for the next 2 years (the site has no HTTP pages)
+  if (isProduction) {
+    res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
+  }
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
 
 /* =========================================================
    CORS CONFIGURATION
@@ -227,11 +269,20 @@ app.get(/^\/admin(\/.*)?$/, (req, res, next) => {
 });
 
 // Customer invoice (link sent on WhatsApp from the admin)
+// Print button of the invoice page (a file, so the CSP needs no inline script)
+app.get('/invoice-print.js', (_req, res) => {
+  res.type('application/javascript');
+  res.set('Cache-Control', 'public, max-age=86400');
+  res.send("document.getElementById('print-invoice')?.addEventListener('click', () => window.print());");
+});
 app.get('/invoice/:token', invoicePage);
 app.get('/invoice/:token/pdf', invoicePdfPage);
 
 // Public website data is cached for 2 minutes (fewer database connections)
 app.use('/api', cachePublicApi, trekRoutes);
+
+// Shareable trek link: the page with that trek's title and photo for previews
+app.get('/treks/:slug', trekPage(CLIENT_DIST_PATH));
 
 app.use(
   express.static(CLIENT_DIST_PATH)

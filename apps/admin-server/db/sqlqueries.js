@@ -212,6 +212,18 @@ const sqlqueries = {
   updateTrip: 'UPDATE trips SET ? WHERE id = ?',
   // What's included / not included (website trek details page); one item per line
   getTripInclusions: 'SELECT inclusion, exclusion FROM inclusion_exclusion WHERE trip_id = ? ORDER BY id',
+  // Terms & policies: one fold-out section per row
+  getTripTerms: 'SELECT id, title, body, sort_order, updated_at FROM trip_terms WHERE trip_id = ? ORDER BY sort_order, id',
+  getTripTermsHighlights: 'SELECT terms_highlights FROM trips WHERE id = ?',
+  clearTripTerms: 'DELETE FROM trip_terms WHERE trip_id = ?',
+  addTripTerms: 'INSERT INTO trip_terms (trip_id, title, body, sort_order) VALUES ?',
+  setTripTermsHighlights: 'UPDATE trips SET terms_highlights = ? WHERE id = ?',
+  // Treks that have terms (to copy from in the trek form)
+  tripsWithTerms: `
+    SELECT t.id, t.name, COUNT(tt.id) AS sections
+    FROM trips t JOIN trip_terms tt ON tt.trip_id = t.id
+    GROUP BY t.id, t.name
+    ORDER BY t.name`,
   deleteTripInclusions: 'DELETE FROM inclusion_exclusion WHERE trip_id = ?',
   // A trip's pickup points (website booking form)
   getTripPickupPoints: 'SELECT id, city_id, name, address, map_url, sort_order, is_active FROM pickup_points WHERE trip_id = ? ORDER BY sort_order, id',

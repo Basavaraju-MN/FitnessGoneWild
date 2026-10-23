@@ -13,11 +13,24 @@ class Cmds {
     return rows || [];
   }
 
+  async getTrekBySlug(slug) {
+    if (!/^[a-z0-9_-]{1,80}$/i.test(String(slug || ''))) return null;
+    const rows = await executeQuery(sqlQueries.getTrekBySlug, [slug]);
+    return rows?.[0] || null;
+  }
+
   async getFeaturedTrips() {
     const rows = await executeQuery(sqlQueries.getFeaturedTrips);
     return rows || [];
   }
 
+  async getTripTerms(tripId) {
+    const [sections, meta] = await Promise.all([
+      executeQuery(sqlQueries.getTripTerms, [tripId]),
+      executeQuery(sqlQueries.getTripTermsHighlights, [tripId]),
+    ]);
+    return { sections: sections || [], highlights: meta?.[0]?.terms_highlights || '' };
+ 
   async getRegions() {
     return (await executeQuery(sqlQueries.getRegions)) || [];
   }

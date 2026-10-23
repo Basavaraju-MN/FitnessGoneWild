@@ -118,6 +118,20 @@ const getTrekDetails = async (categoryId) => {
     return result;
 }
 
+// One trek for its own page (/treks/<slug>)
+const getTrekBySlug = async (slug) => {
+    const result = {};
+    try {
+        result.data = await dbCmds.getTrekBySlug(slug);
+        result.success = true;
+    } catch (error) {
+        result.success = false;
+        result.message = 'Error fetching trek';
+        console.error('Error fetching trek:', error?.message || error);
+    }
+    return result;
+};
+
 const getFeaturedTrips = async () => {
     const result = {};
     try {
@@ -228,6 +242,32 @@ const createTripInterest = async ({ trip_id, type = 'interested', source = 'webs
     return result;
 }
 
+// A trek's terms: key points (chips) and sections (heading + rich text).
+// Empty until trip_terms.sql has run on the database.
+const getTripTerms = async (tripId) => {
+    const result = {};
+    try {
+        const { sections, highlights } = await dbCmds.getTripTerms(tripId);
+        const updated = sections.reduce((latest, s) => (s.updated_at > latest ? s.updated_at : latest), '');
+        result.success = true;
+        result.data = {
+            highlights: String(highlights || '').split('\n').map((line) => line.trim()).filter(Boolean),
+            sections: sections.map((s) => ({ id: s.id, title: s.title, body: s.body })),
+            updated_at: updated || null,
+        };
+    } catch (error) {
+        if (['ER_NO_SUCH_TABLE', 'ER_BAD_FIELD_ERROR'].includes(error?.code)) {
+            result.success = true;
+            result.data = { highlights: [], sections: [], updated_at: null };
+        } else {
+            result.success = false;
+            result.message = 'Error fetching trek terms';
+            console.error('Error fetching trek terms:', error?.message || error);
+        }
+    }
+    return result;
+};
+
 const getPickupPoints = async (tripId) => {
     const result = {};
     try {
@@ -256,6 +296,8 @@ const getPickupPoints = async (tripId) => {
 }
 
 module.exports = {
+    getTrekBySlug,
+    getTripTerms,
     getSiteFilters,
     getPickupPoints,
     getTrekCategories,

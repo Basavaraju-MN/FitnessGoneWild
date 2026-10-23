@@ -67,6 +67,18 @@ exports.getTrekDetails = async (req, res) => {
   }
 };
 
+// GET /api/trek?slug=netravati — one trek for its shareable page
+exports.getTrekBySlug = async (req, res) => {
+  const result = await component.getTrekBySlug(String(req.query.slug || ''));
+  if (!result.success) {
+    return res.status(500).json({ success: false, message: 'Error fetching trek' });
+  }
+  if (!result.data) {
+    return res.status(404).json({ success: false, message: 'Trek not found' });
+  }
+  return res.status(200).json({ success: true, data: result.data });
+};
+
 exports.getFeaturedTrips = async (req, res) => {
   try {
     const result = await component.getFeaturedTrips();
@@ -143,6 +155,19 @@ exports.getFaq = async (req, res) => {
       message: 'Error fetching FAQ items',
     });
   }
+};
+
+// Terms & policies of one trek (Terms & Policies tab on the trek page)
+exports.getTripTerms = async (req, res) => {
+  const tripId = Number(req.query.trip_id);
+  if (!tripId) {
+    return res.status(400).json({ success: false, message: 'trip_id is required' });
+  }
+  const result = await component.getTripTerms(tripId);
+  if (!result.success) {
+    return res.status(500).json({ success: false, message: 'Error fetching trek terms' });
+  }
+  return res.status(200).json({ success: true, data: result.data });
 };
 
 exports.getPickupPoints = async (req, res) => {

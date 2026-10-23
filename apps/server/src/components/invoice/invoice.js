@@ -187,9 +187,10 @@ function renderInvoice({ booking: b, payments, refunds, settings }) {
 
   <div class="actions">
     <a class="print" href="./${esc(b.invoice_token || '')}/pdf?download=1">Download PDF</a>
-    <button class="print" style="background:#0F3D36" onclick="window.print()">Print</button>
+    <button class="print" id="print-invoice" style="background:#0F3D36">Print</button>
   </div>
 </div>
+<script src="/invoice-print.js" defer></script>
 </body>
 </html>`;
 }

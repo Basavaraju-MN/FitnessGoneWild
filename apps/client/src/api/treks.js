@@ -90,6 +90,17 @@ export async function getTreksByCategory(categoryId, options) {
   return Array.isArray(data) ? data : [];
 }
 
+// One trek for its own page (/treks/<slug>); null when there is no such trek
+export async function getTrekBySlug(slug, options) {
+  const response = await fetch(`${API_BASE_URL}/trek?slug=${encodeURIComponent(slug)}`, {
+    credentials: 'include',
+    signal: options?.signal,
+  });
+  if (response.status === 404) return null;
+  const result = await parseResponse(response);
+  return result.data;
+}
+
 export async function getFeaturedTrips(options) {
   const data = await getWithRetry('/featured-trips', options);
   return Array.isArray(data) ? data : [];
@@ -101,6 +112,21 @@ export async function getPickupPoints(tripId, options) {
     options
   );
   return Array.isArray(data) ? data : [];
+}
+
+// Terms & Policies tab of one trek; empty when the trek has none
+export async function getTripTerms(tripId, options) {
+  try {
+    const data = await getWithRetry(`/trip-terms?trip_id=${encodeURIComponent(tripId)}`, { retries: 1, ...options });
+    return {
+      highlights: Array.isArray(data?.highlights) ? data.highlights : [],
+      sections: Array.isArray(data?.sections) ? data.sections : [],
+      updated_at: data?.updated_at || null,
+    };
+  } catch (error) {
+    if (error?.name === 'AbortError') throw error;
+    return { highlights: [], sections: [], updated_at: null };
+  }
 }
 
 export async function getReviews() {

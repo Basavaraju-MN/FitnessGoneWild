@@ -585,6 +585,58 @@
 .rich-text th { background: #F2F5F1; font-weight: 700; }
 .rich-text pre, .rich-text code { white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: .92em; }
 
+/* =========================================
+   TERMS & POLICIES TAB (accordion)
+
+.trek-terms { display: flex; flex-direction: column; gap: 22px; }
+.terms-top { display: flex; justify-content: space-between; align-items: center; gap: 16px 20px; flex-wrap: wrap; }
+.trek-terms .terms-top h2 { margin: 0; font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; font-size: 30px; text-transform: uppercase; color: #063f40; }
+.terms-sub { margin: 4px 0 0; color: #56655F; font-size: 15px; }
+.terms-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.terms-chip { font-size: 13.5px; font-weight: 600; padding: 8px 14px; border-radius: 999px; }
+.terms-chip.tone-0 { background: #E9F3E4; color: #1f7a50; }
+.terms-chip.tone-1 { background: #FBEBD6; color: #A65C0B; }
+.terms-chip.tone-2 { background: #eef2ef; color: #0F3D36; }
+
+.terms-accordion { display: flex; flex-direction: column; gap: 12px; }
+.terms-item { border: 1px solid #DDE4DE; border-radius: 14px; overflow: hidden; background: #fff; transition: border-color .18s ease; }
+.terms-item.open { border: 1.5px solid #0b7d7f; }
+.terms-head { width: 100%; display: flex; align-items: center; gap: 14px; padding: 16px 20px; border: 0; border-radius: 0; background: #fff; color: #0F3D36; cursor: pointer; text-align: left; font-weight: 400; box-shadow: none; }
+.terms-head:hover { background: #f5f8f6; transform: none; box-shadow: none; }
+.terms-item.open .terms-head { background: #eef7f6; }
+.terms-num { flex: 0 0 34px; width: 34px; height: 34px; border-radius: 10px; background: #F2F5F1; color: #0F3D36; display: grid; place-items: center; font-weight: 700; font-family: Inter, system-ui, sans-serif; font-size: 14px; }
+.terms-item.open .terms-num { background: #0b7d7f; color: #fff; }
+.terms-title { flex: 1; font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; font-size: 22px; text-transform: uppercase; line-height: 1.15; }
+.terms-count { font-size: 13px; color: #56655F; white-space: nowrap; }
+.terms-arrow { flex: 0 0 auto; transition: transform .18s ease; }
+.terms-item.open .terms-arrow { transform: rotate(180deg); }
+.terms-body { padding: 6px 22px 20px 68px; color: #3d4b46; font-size: 15px; line-height: 1.75; }
+.terms-body table { width: 100%; border-collapse: collapse; margin: 6px 0; }
+.terms-body th, .terms-body td { border-bottom: 1px solid #DDE4DE; padding: 10px 8px; text-align: left; }
+
+.terms-help { display: flex; justify-content: space-between; align-items: center; gap: 12px 16px; flex-wrap: wrap; background: #F2F5F1; border-radius: 14px; padding: 16px 20px; color: #3d4b46; font-size: 14.5px; }
+.terms-help button { background: #E4881F; color: #fff; border: 0; border-radius: 999px; padding: 10px 20px; font-weight: 700; cursor: pointer; }
+
+@media (max-width: 768px) {
+  /* 4 tabs: two rows of two */
+  .details-tab-buttons:has(.details-tab:nth-child(4)) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .trek-terms .terms-top h2 { font-size: 24px; }
+  .terms-head { padding: 14px; gap: 10px; }
+  .terms-title { font-size: 19px; }
+  .terms-count { display: none; }
+  .terms-body { padding: 4px 16px 16px; }
+  .terms-help { flex-direction: column; align-items: stretch; text-align: center; }
+}
+
+
+/* =========================================
+   BACK + SHARE (top of the trek page)
+.trek-top-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px 16px; flex-wrap: wrap; margin-bottom: 16px; }
+.trek-top-bar .trek-back-button { margin-bottom: 0; }
+.trek-share { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.trek-share-btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px; border: 1.5px solid #0F3D36; border-radius: 999px; background: #fff; color: #0F3D36; font-weight: 600; font-size: 14px; cursor: pointer; box-shadow: none; }
+.trek-share-btn:hover { background: #0F3D36; color: #fff; transform: none; box-shadow: none; }
+.trek-share-note { font-size: 13px; font-weight: 600; color: #1f7a50; background: #E9F3E4; padding: 6px 12px; border-radius: 999px; max-width: 60vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* Phones: tab names centred in their pill, all three the same height */
 @media (max-width: 768px) {
   .details-tab-buttons {

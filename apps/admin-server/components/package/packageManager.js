@@ -97,6 +97,42 @@ async function saveInclusions(tripId, body) {
   );
 }
 
+/* ---------- Terms & policies ---------- */
+
+const MAX_TERM_SECTIONS = 30;
+
+// body.terms_sections: [{ title, body }] in order; body.terms_highlights:
+// key points, one per line. undefined = not sent, leave as they are.
+function checkTerms(body) {
+  let sections;
+  if (body.terms_sections !== undefined) {
+    if (!Array.isArray(body.terms_sections)) throw badRequest('Terms must be a list of sections');
+    sections = body.terms_sections
+      .map((s) => ({ title: String(s?.title || '').trim().slice(0, 150), body: cleanRichText(s?.body || '') }))
+      .filter((s) => s.title || plainText(s.body));
+    if (sections.length > MAX_TERM_SECTIONS) throw badRequest(`Terms: up to ${MAX_TERM_SECTIONS} sections`);
+    const untitled = sections.findIndex((s) => !s.title);
+    if (untitled >= 0) throw badRequest(`Terms: section ${untitled + 1} needs a heading`);
+    const empty = sections.findIndex((s) => !plainText(s.body));
+    if (empty >= 0) throw badRequest(`Terms: write the text of "${sections[empty].title}"`);
+  }
+  let highlights;
+  if (body.terms_highlights !== undefined) {
+    highlights = String(body.terms_highlights || '')
+      .split(/\r?\n/).map((line) => line.trim().slice(0, 80)).filter(Boolean).slice(0, 6).join('\n');
+    if (highlights.length > 600) throw badRequest('Key points: keep them shorter');
+  }
+  return { sections, highlights };
+}
+
+// Treks that already have terms, to copy from
+const getTermsSources = () => dbops.getTripsWithTerms();
+
+async function getTripTerms(id) {
+  await findTrip(id);
+  return dbops.getTripTerms(id);
+}
+
 const MIN_PICKUP_POINTS = 2;
 
 // Checks the pickup list from the trip form ([{ id?, name, address }] in order)
@@ -188,15 +224,17 @@ async function getTrips() {
 // One trip for the edit panel, with all its photos and brochure
 async function getTrip(id) {
   const trip = await findTrip(id);
-  const [images, brochure, lists, pickups] = await Promise.all([
+  const [images, brochure, lists, pickups, terms] = await Promise.all([
     tripFiles.listImages(trip.slug),
     brochureFor(trip.slug),
     dbops.getTripInclusions(trip.id),
     dbops.getTripPickupPoints(trip.id),
+    dbops.getTripTerms(trip.id),
   ]);
   return {
     ...trip,
     ...lists,
+    ...terms,
     pickup_points: pickups.filter((p) => Number(p.is_active)),
     images,
     brochure_file: brochure,
@@ -207,12 +245,14 @@ async function createTrip(admin, body) {
   requireFields(body, ['slug', 'name', 'category_id', 'region_id', 'blurb', 'duration_label', 'price']);
   const data = cleanTrip(body);
   const pickups = checkPickupPoints(body.pickup_points);
+  const terms = checkTerms(body);
 
   if (await dbops.isSlugTaken(data.slug)) throw badRequest('Another trip already uses this slug');
 
   const id = await dbops.createTrip(data);
   await saveInclusions(id, body);
   await savePickupPoints(id, pickups);
+  await dbops.saveTripTerms(id, terms.sections, terms.highlights);
   await logActivity(admin, 'create', 'trip', id, data.name);
   return { id };
 }
@@ -221,8 +261,10 @@ async function updateTrip(admin, id, body) {
   const trip = await findTrip(id);
   const data = cleanTrip(body);
   const pickups = checkPickupPoints(body.pickup_points);
+  const terms = checkTerms(body);
+  const hasTerms = terms.sections !== undefined || terms.highlights !== undefined;
   const hasLists =
-    body.inclusions !== undefined || body.exclusions !== undefined || body.pickup_points !== undefined;
+    body.inclusions !== undefined || body.exclusions !== undefined || body.pickup_points !== undefined || hasTerms;
   if (!Object.keys(data).length && !hasLists) throw badRequest('Nothing to update');
 
   if (data.slug && (await dbops.isSlugTaken(data.slug, id))) {
@@ -232,13 +274,14 @@ async function updateTrip(admin, id, body) {
   if (Object.keys(data).length) await dbops.updateTrip(id, data);
   await saveInclusions(id, body);
   await savePickupPoints(id, pickups);
+  if (hasTerms) await dbops.saveTripTerms(id, terms.sections, terms.highlights);
 
   // New slug: its photo and brochure folders move with it
   if (data.slug && data.slug !== trip.slug) {
     await tripFiles.renameFolders(trip.slug, data.slug);
   }
 
-  await logActivity(admin, 'update', 'trip', id, [...Object.keys(data), ...(hasLists ? ['inclusions'] : [])].join(', '));
+  await logActivity(admin, 'update', 'trip', id, [...Object.keys(data), ...(hasLists ? ['inclusions'] : []), ...(hasTerms ? ['terms'] : [])].join(', '));
   return { id };
 }
 
@@ -275,6 +318,8 @@ async function deleteTripBrochure(admin, id) {
 }
 
 module.exports = {
+  getTermsSources,
+  getTripTerms,
   getBrochureCheck,
   getTrips,
   getTrip,

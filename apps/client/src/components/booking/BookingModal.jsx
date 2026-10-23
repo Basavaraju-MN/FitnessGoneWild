@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import '../../styles/bookingmodal.css';
 import '../../styles/payment.css';
 import { PaymentMethodChooser } from '../../pages/PaymentOptions';
-import { getPickupPoints } from '../../api/treks';
+import { getPickupPoints, getTripTerms } from '../../api/treks';
+import RichText from '../common/RichText';
 import { usePlaces } from '../../context/PlacesContext';
 import { isWithTransportOnly } from '../../utils/tripPricing';
 import useTrekImages from '../../hooks/useTrekImages';
@@ -211,6 +212,18 @@ export default function BookingModal({
   const [withoutTransportTickets, setWithoutTransportTickets] =
     useState(0);
 
+  // This trek's terms, shown under the tick box when the link is clicked
+  const [showTerms, setShowTerms] = useState(false);
+  const [trekTerms, setTrekTerms] = useState(null);
+  useEffect(() => {
+    if (!trek?.id) return undefined;
+    const controller = new AbortController();
+    getTripTerms(trek.id, { signal: controller.signal })
+      .then((data) => setTrekTerms(data))
+      .catch(() => {});
+    return () => controller.abort();
+  }, [trek?.id]);
+
   const [termsAccepted, setTermsAccepted] =
     useState(false);
 
@@ -373,7 +386,7 @@ export default function BookingModal({
   const handlePayNow = () => {
     if (!termsAccepted) {
       setError(
-        'Please agree to the Refund Policy, Cancellation Policy, and Terms & Conditions.'
+        'Please read and agree to the Terms & Conditions of this trek.'
       );
       return;
     }
@@ -937,20 +950,48 @@ export default function BookingModal({
 
                   <span>
                     I have read and agree to the{' '}
-                    <a href="#refund">
-                      Refund Policy
-                    </a>
-                    ,{' '}
-                    <a href="#cancellation">
-                      Cancellation Policy
-                    </a>
-                    , and{' '}
-                    <a href="#terms">
-                      Terms & Conditions
-                    </a>
-                    .
+                    {trekTerms?.sections?.length ? (
+                      <button
+                        type="button"
+                        className="terms-link"
+                        aria-expanded={showTerms}
+                        aria-controls="booking-terms-panel"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          setShowTerms((open) => !open);
+                        }}
+                      >
+                        Terms & Conditions
+                      </button>
+                    ) : (
+                      'Terms & Conditions'
+                    )}
+                    {' '}of this trek, including the refund and cancellation policy.
                   </span>
                 </label>
+
+                {/* The trek's terms open right here; the form and Pay button stay */}
+                {showTerms && trekTerms?.sections?.length > 0 && (
+                  <div id="booking-terms-panel" className="booking-terms-panel">
+                    <div className="booking-terms-panel-head">
+                      <strong>Terms & Conditions · {trek.name}</strong>
+                      <button type="button" onClick={() => setShowTerms(false)}>Hide</button>
+                    </div>
+                    {trekTerms.highlights.length > 0 && (
+                      <ul className="booking-terms-points">
+                        {trekTerms.highlights.map((point) => <li key={point}>{point}</li>)}
+                      </ul>
+                    )}
+                    <div className="booking-terms-scroll">
+                      {trekTerms.sections.map((section, i) => (
+                        <section key={section.id}>
+                          <h4>{i + 1}. {section.title}</h4>
+                          <RichText html={section.body} />
+                        </section>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
               </div>
 
