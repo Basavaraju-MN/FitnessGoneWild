@@ -30,7 +30,8 @@ class Cmds {
       executeQuery(sqlQueries.getTripTermsHighlights, [tripId]),
     ]);
     return { sections: sections || [], highlights: meta?.[0]?.terms_highlights || '' };
- 
+  }
+
   async getRegions() {
     return (await executeQuery(sqlQueries.getRegions)) || [];
   }

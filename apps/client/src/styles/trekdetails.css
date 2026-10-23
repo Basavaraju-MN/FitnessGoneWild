@@ -587,6 +587,7 @@
 
 /* =========================================
    TERMS & POLICIES TAB (accordion)
+========================================= */
 
 .trek-terms { display: flex; flex-direction: column; gap: 22px; }
 .terms-top { display: flex; justify-content: space-between; align-items: center; gap: 16px 20px; flex-wrap: wrap; }
@@ -631,6 +632,7 @@
 
 /* =========================================
    BACK + SHARE (top of the trek page)
+========================================= */
 .trek-top-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px 16px; flex-wrap: wrap; margin-bottom: 16px; }
 .trek-top-bar .trek-back-button { margin-bottom: 0; }
 .trek-share { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }

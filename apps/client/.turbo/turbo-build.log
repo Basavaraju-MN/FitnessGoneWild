@@ -2,13 +2,13 @@
 > client@1.0.0 build C:\Users\Admin\Documents\GitHub\FitnessGoneWild\apps\client
 > tsc -b && vite build
 
-[36mvite v8.3.1 [32mbuilding client environment for production...[36m[39m
+[36mvite v8.3.4 [32mbuilding client environment for production...[36m[39m
 transforming...
-✓ 1917 modules transformed.
+✓ 1960 modules transformed.
 rendering chunks...
 computing gzip size...
-dist/index.html                   0.61 kB │ gzip:   0.37 kB
-dist/assets/index-B3hII5eG.css   36.52 kB │ gzip:   8.04 kB
-dist/assets/index-CcTkd7IN.js   326.67 kB │ gzip: 101.07 kB
+dist/index.html                   0.74 kB │ gzip:   0.40 kB
+dist/assets/index-ksv10_4O.css   50.39 kB │ gzip:  10.58 kB
+dist/assets/index-COvhY-bO.js   375.20 kB │ gzip: 118.91 kB
 
-[32m✓ built in 883ms[39m
+[32m✓ built in 790ms[39m
