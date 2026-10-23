@@ -5,11 +5,13 @@ import { useAdmin } from '../context';
 import { dateTime } from '../format';
 import DataTable from '../components/DataTable';
 import { FormModal, PageHead, Pill, useToast } from '../components/ui';
+import RolePermissions from '../components/RolePermissions';
 
+// What each role can see is set below, in Role permissions
 const ROLES = [
-  { value: 'admin', label: 'Admin — all sections' },
-  { value: 'sales', label: 'Sales Team — enquiries, brochures, customers, bookings' },
-  { value: 'operations', label: 'Operations Team — coordination, bookings, customers, master data' },
+  { value: 'admin', label: 'Admin — every screen' },
+  { value: 'sales', label: 'Sales Team' },
+  { value: 'operations', label: 'Operations Team' },
 ];
 const roleName = (role) => ({ admin: 'Admin', sales: 'Sales Team', operations: 'Operations Team' }[role] || role);
 
@@ -57,6 +59,8 @@ export default function Users() {
           },
         ]}
       />
+
+      <RolePermissions />
 
       {form === 'new' && (
         <FormModal

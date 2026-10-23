@@ -49,7 +49,8 @@ module.exports = {
   // Where the browser goes back to after connecting Google
   adminAppUrl: process.env.ADMIN_APP_URL || (isProduction ? '/admin/' : 'http://localhost:5175/'),
 
-  // Which roles can open which module
+  // Which roles can open which module: only the starting point. Admins
+  // change it in Users & Roles → Role permissions (table role_permissions).
   permissions: {
     dashboard: ['admin', 'sales', 'operations'],
     packages: ['admin'],
