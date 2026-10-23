@@ -115,11 +115,12 @@ function BrochureOnHostinger({ tripId, slug }) {
   const [check, setCheck] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const run = useCallback(async () => {
+  // Opening: quick answer from the server's folder listing; "Check again": live on Hostinger
+  const run = useCallback(async (fresh = false) => {
     if (!tripId) return;
     setLoading(true);
     try {
-      const { data } = await api(`/trips/${tripId}/brochure-check`);
+      const { data } = await api(`/trips/${tripId}/brochure-check${fresh ? '?fresh=1' : ''}`);
       setCheck(data);
     } catch {
       setCheck(null);
@@ -153,7 +154,7 @@ function BrochureOnHostinger({ tripId, slug }) {
             : <>✕ Not found: upload the PDF to <code>public_html/{place}</code></>}
         </p>
       ) : null}
-      {tripId && <button type="button" className="btn alt small" onClick={run} disabled={loading}>{loading ? 'Checking…' : 'Check again'}</button>}
+      {tripId && <button type="button" className="btn alt small" onClick={() => run(true)} disabled={loading}>{loading ? 'Checking…' : 'Check again'}</button>}
     </div>
   );
 }

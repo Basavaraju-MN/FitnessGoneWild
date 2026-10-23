@@ -711,7 +711,7 @@ exports.getWhatsappStatus = async (req, res, next) => {
 
 exports.getBrochureCheck = async (req, res, next) => {
   try {
-    const data = await packageManager.getBrochureCheck(idParam(req));
+    const data = await packageManager.getBrochureCheck(idParam(req), { fresh: req.query.fresh === '1' });
     return res.status(200).json({ success: true, message: 'Brochure checked', data });
   } catch (error) {
     return next(error);

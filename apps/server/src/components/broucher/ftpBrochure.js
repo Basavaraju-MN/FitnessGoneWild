@@ -88,22 +88,27 @@ async function findPath(client, slug) {
 }
 
 /**
- * For the admin's trek list: ONE folder listing (one FTP connection, shared
- * for 2 minutes by everyone) instead of one connection per trek.
+ * For the admin (trek list, opening a trek): what is in the brochures
+ * folder, from ONE folder listing kept in memory. The admin never waits for
+ * Hostinger: the last listing is used at once and refreshed in the
+ * background when it is older than 2 minutes (only the very first call waits).
  * Returns slug -> what is on Hostinger ("kudremukh.pdf" or "kudremukh/"),
- * or null when FTP is not set up / cannot be reached. The exact file is
- * checked in the trek's edit panel (findBrochure with fresh).
+ * or null when FTP is not set up / has never been reached. The brochure step
+ * of the trek form can still check one trek live ("Check again").
  */
+const INDEX_FRESH_MS = 2 * 60 * 1000;
+let index = null; // { at, lookup }
 let indexRun = null;
-async function brochureIndex() {
-  if (!isConfigured()) return null;
+
+function loadIndex() {
   if (!indexRun) {
     indexRun = (async () => {
       let client;
       try {
         client = await connect();
+        clearCache();
         const entries = await listFolder(client);
-        return (slug) => {
+        const lookup = (slug) => {
           const lower = String(slug || '').toLowerCase();
           const pdfs = entries.filter((e) => !e.isDir && isPdf(e.name));
           const pdf = pdfs.find((e) => e.name.toLowerCase() === `${lower}.pdf`)
@@ -112,15 +117,32 @@ async function brochureIndex() {
           const folder = entries.find((e) => e.isDir && e.name.toLowerCase() === lower);
           return folder ? `${folder.name}/` : null;
         };
+        index = { at: Date.now(), lookup };
       } catch (error) {
         console.error('Hostinger FTP (brochure list) failed:', error?.message || error);
-        return null;
       } finally {
         client?.close();
+        indexRun = null;
       }
-    })().finally(() => { setTimeout(() => { indexRun = null; }, 2 * 60 * 1000).unref?.(); });
+      return index?.lookup || null;
+    })();
   }
   return indexRun;
+}
+
+async function brochureIndex() {
+  if (!isConfigured()) return null;
+  if (index) {
+    if (Date.now() - index.at > INDEX_FRESH_MS) loadIndex(); // refresh in the background
+    return index.lookup;
+  }
+  return loadIndex();
+}
+
+/** The last known listing for one trek, without waiting (null if not known yet). */
+async function brochureFromIndex(slug) {
+  const lookup = await brochureIndex();
+  return lookup ? lookup(slug) : null;
 }
 
 /** { file, size } when the trek's brochure is on Hostinger, else null (never throws). */
@@ -283,4 +305,4 @@ async function listBrochures() {
   }
 }
 
-module.exports = { isConfigured, findBrochure, brochureIndex, openBrochure, listBrochures, warmUp, folder: () => env().dir };
+module.exports = { isConfigured, findBrochure, brochureIndex, brochureFromIndex, openBrochure, listBrochures, warmUp, folder: () => env().dir };

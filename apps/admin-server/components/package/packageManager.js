@@ -5,20 +5,29 @@ const dbops = require('../../db/dbops');
 const tripFiles = require('./tripFiles');
 const ftpBrochure = require('../../../server/src/components/broucher/ftpBrochure');
 
-// Brochures are kept only on Hostinger (public_html/public/brochures/<slug>/), read over FTP
-async function brochureFor(slug) {
-  const found = await ftpBrochure.findBrochure(slug);
-  return found ? found.file : null;
-}
+// Brochures are kept only on Hostinger (public_html/public/brochures/<slug>/).
+// Opening a trek uses the folder listing kept in memory: no FTP wait.
+const brochureFor = (slug) => ftpBrochure.brochureFromIndex(slug);
 
-// Where the trek's brochure must be on Hostinger, and whether it is there (looked up fresh)
-async function getBrochureCheck(id) {
+// Load the listing when the server starts, so the first admin does not wait
+ftpBrochure.brochureIndex().catch(() => {});
+
+// Where the trek's brochure must be on Hostinger, and whether it is there.
+// Quick (from the listing in memory) unless fresh: then checked live on Hostinger.
+async function getBrochureCheck(id, { fresh = false } = {}) {
   const trip = await findTrip(id);
   const configured = ftpBrochure.isConfigured();
-  const found = configured ? await ftpBrochure.findBrochure(trip.slug, { fresh: true }) : null;
+  let found = null;
+  if (configured && fresh) {
+    found = await ftpBrochure.findBrochure(trip.slug, { fresh: true });
+  } else if (configured) {
+    const file = await ftpBrochure.brochureFromIndex(trip.slug);
+    found = file ? { file, size: null } : null;
+  }
   return {
     configured,
     via: 'ftp',
+    checked: fresh ? 'live' : 'listing',
     folder: ftpBrochure.folder(),
     fileName: found?.file || `${trip.slug}/<any name>.pdf`,
     url: null,
