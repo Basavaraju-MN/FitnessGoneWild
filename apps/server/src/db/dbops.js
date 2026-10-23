@@ -18,6 +18,14 @@ class Cmds {
     return rows || [];
   }
 
+  async getTripTerms(tripId) {
+    const [sections, meta] = await Promise.all([
+      executeQuery(sqlQueries.getTripTerms, [tripId]),
+      executeQuery(sqlQueries.getTripTermsHighlights, [tripId]),
+    ]);
+    return { sections: sections || [], highlights: meta?.[0]?.terms_highlights || '' };
+  }
+
   async getPickupPoints(tripId) {
     const rows = await executeQuery(sqlQueries.getPickupPoints, [tripId]);
     return rows || [];

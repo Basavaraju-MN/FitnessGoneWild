@@ -136,6 +136,19 @@ exports.getFaq = async (req, res) => {
   }
 };
 
+// Terms & policies of one trek (Terms & Policies tab on the trek page)
+exports.getTripTerms = async (req, res) => {
+  const tripId = Number(req.query.trip_id);
+  if (!tripId) {
+    return res.status(400).json({ success: false, message: 'trip_id is required' });
+  }
+  const result = await component.getTripTerms(tripId);
+  if (!result.success) {
+    return res.status(500).json({ success: false, message: 'Error fetching trek terms' });
+  }
+  return res.status(200).json({ success: true, data: result.data });
+};
+
 exports.getPickupPoints = async (req, res) => {
   const tripId = Number(req.query.trip_id);
 

@@ -4,6 +4,7 @@ import { api } from '../api';
 import { siteUrl } from '../assets';
 import { useToast } from './ui';
 import RichTextEditor, { plainText } from './RichTextEditor';
+import TermsEditor, { termsProblem } from './TermsEditor';
 
 const MAX_PHOTOS = 5;
 const PHOTO_MAX_WIDTH = 1600;
@@ -15,6 +16,7 @@ const STEPS = [
   { title: 'Description & itinerary', hint: 'The trek page text' },
   { title: 'Inclusions & pickup', hint: 'What is included, where we pick up' },
   { title: 'Photos & brochure', hint: 'Cover, slideshow, PDF' },
+  { title: 'Terms & policies', hint: 'Shown in the trek page tab' },
 ];
 
 const DIFFICULTIES = ['Easy', 'Moderate', 'Hard'];
@@ -177,6 +179,7 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
         status: 'draft', difficulty: 'Easy', badge_style: 'plain',
         category_id: categories[0]?.id || '', is_featured: 0,
         pickup_points: [emptyPickup(), emptyPickup()],
+        terms_sections: [], terms_highlights: '',
       });
       return;
     }
@@ -280,6 +283,7 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
       const named = values.pickup_points.filter((p) => String(p.name || '').trim());
       if (named.length < MIN_PICKUP_POINTS) return `Add at least ${MIN_PICKUP_POINTS} pickup points`;
     }
+    if (index === 4) return termsProblem(values.terms_sections);
     return '';
   };
 
@@ -314,6 +318,10 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
       ...values,
       duration_days: daysFrom(values.duration_label),
       pickup_points: values.pickup_points.filter((p) => String(p.name || '').trim()),
+      terms_sections: (values.terms_sections || [])
+        .map((t) => ({ title: String(t.title || '').trim(), body: t.body || '' }))
+        .filter((t) => t.title || plainText(t.body)),
+      terms_highlights: values.terms_highlights || '',
     };
     if (isNew) body.slug = slug;
     else delete body.slug; // existing trips keep their web address and folders
@@ -631,6 +639,17 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
                 <BrochureOnHostinger tripId={tripId} slug={slug} />
               </div>
             </div>
+          )}
+
+          {/* ===== Step 5: terms & policies (trek page tab) ===== */}
+          {step === 4 && (
+            <TermsEditor
+              tripId={tripId}
+              sections={values.terms_sections || []}
+              highlights={values.terms_highlights || ''}
+              onSections={(list) => set('terms_sections', list)}
+              onHighlights={(text) => set('terms_highlights', text)}
+            />
           )}
 
           {error && <div className="error-box" style={{ marginTop: 14 }}>{error}</div>}

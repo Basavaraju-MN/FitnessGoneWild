@@ -147,6 +147,40 @@ class Cmds {
   }
 
   // { inclusions, exclusions } as text, one item per line
+  /* ----- Terms & policies (empty before trip_terms.sql has run) ----- */
+  async getTripTerms(tripId) {
+    try {
+      const [sections, meta] = await Promise.all([
+        executeQuery(sqlQueries.getTripTerms, [tripId]),
+        executeQuery(sqlQueries.getTripTermsHighlights, [tripId]),
+      ]);
+      return { terms_sections: sections, terms_highlights: meta[0]?.terms_highlights || '' };
+    } catch (error) {
+      if (['ER_NO_SUCH_TABLE', 'ER_BAD_FIELD_ERROR'].includes(error?.code)) return { terms_sections: [], terms_highlights: '' };
+      throw error;
+    }
+  }
+
+  // Replaces the trek's sections (in the order given) and key points
+  async saveTripTerms(tripId, sections, highlights) {
+    if (sections !== undefined) {
+      await executeQuery(sqlQueries.clearTripTerms, [tripId]);
+      if (sections.length) {
+        await executeQuery(sqlQueries.addTripTerms, [sections.map((s, i) => [tripId, s.title, s.body, i + 1])]);
+      }
+    }
+    if (highlights !== undefined) await executeQuery(sqlQueries.setTripTermsHighlights, [highlights || null, tripId]);
+  }
+
+  async getTripsWithTerms() {
+    try {
+      return await executeQuery(sqlQueries.tripsWithTerms);
+    } catch (error) {
+      if (error?.code === 'ER_NO_SUCH_TABLE') return [];
+      throw error;
+    }
+  }
+
   async getTripInclusions(tripId) {
     const rows = await executeQuery(sqlQueries.getTripInclusions, [tripId]);
     const join = (key) => rows.map((r) => (r[key] || '').trim()).filter(Boolean).join('\n');

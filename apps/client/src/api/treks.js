@@ -103,6 +103,21 @@ export async function getPickupPoints(tripId, options) {
   return Array.isArray(data) ? data : [];
 }
 
+// Terms & Policies tab of one trek; empty when the trek has none
+export async function getTripTerms(tripId, options) {
+  try {
+    const data = await getWithRetry(`/trip-terms?trip_id=${encodeURIComponent(tripId)}`, { retries: 1, ...options });
+    return {
+      highlights: Array.isArray(data?.highlights) ? data.highlights : [],
+      sections: Array.isArray(data?.sections) ? data.sections : [],
+      updated_at: data?.updated_at || null,
+    };
+  } catch (error) {
+    if (error?.name === 'AbortError') throw error;
+    return { highlights: [], sections: [], updated_at: null };
+  }
+}
+
 export async function getReviews() {
   const response = await fetch(`${API_BASE_URL}/reviews`, {
     credentials: 'include',

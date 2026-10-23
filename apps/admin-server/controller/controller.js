@@ -685,6 +685,24 @@ exports.getWhatsappStatus = async (req, res, next) => {
   }
 };
 
+exports.getTermsSources = async (req, res, next) => {
+  try {
+    const data = await packageManager.getTermsSources();
+    return res.status(200).json({ success: true, message: 'Treks with terms fetched', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.getTripTerms = async (req, res, next) => {
+  try {
+    const data = await packageManager.getTripTerms(idParam(req));
+    return res.status(200).json({ success: true, message: 'Trek terms fetched', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 exports.getBrochureCheck = async (req, res, next) => {
   try {
     const data = await packageManager.getBrochureCheck(idParam(req));

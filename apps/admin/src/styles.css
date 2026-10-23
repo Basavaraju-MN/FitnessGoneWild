@@ -428,8 +428,8 @@ button.avatar:hover { background: var(--cp-brand-blue-90); }
 .trip-modal-head h2 { margin: 0; font-family: var(--display); font-weight: 700; color: var(--heading); font-size: 20px; }
 .trip-modal-head small { color: var(--muted); }
 
-.trip-steps { list-style: none; margin: 0; padding: 12px 22px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; background: var(--cp-card); border-bottom: 1px solid var(--line); }
-.trip-steps button { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; padding: 8px 10px; border: 1px solid transparent; border-radius: 10px; background: transparent; color: var(--muted); }
+.trip-steps { list-style: none; margin: 0; padding: 12px 22px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; background: var(--cp-card); border-bottom: 1px solid var(--line); }
+.trip-steps button { width: 100%; display: flex; align-items: center; gap: 8px; text-align: left; padding: 8px 8px; border: 1px solid transparent; border-radius: 10px; background: transparent; color: var(--muted); }
 .trip-steps button:hover:not(:disabled) { background: var(--mist); }
 .trip-steps button.active { border-color: var(--cp-brand-blue); background: var(--cp-surface-lighter-gray); color: var(--heading); }
 .step-num { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--line); color: var(--muted); font-weight: 700; font-size: 12px; }
@@ -480,7 +480,7 @@ button.avatar:hover { background: var(--cp-brand-blue-90); }
 @media (max-width: 650px) {
   .trip-grid { grid-template-columns: 1fr; }
   .trip-step-grid { grid-template-columns: 1fr; }
-  .trip-steps { grid-template-columns: repeat(4, auto); overflow-x: auto; }
+  .trip-steps { grid-template-columns: repeat(5, auto); overflow-x: auto; }
   .step-text small { display: none; }
   .pickup-row { grid-template-columns: 28px 1fr; }
   .pickup-row input:nth-of-type(2), .pickup-actions { grid-column: 2; }
@@ -800,3 +800,17 @@ button.avatar:hover { background: var(--cp-brand-blue-90); }
 .brochure-status.ok { color: #1f7a50; }
 .brochure-status.missing { color: var(--cp-error); }
 .brochure-status.warn { color: #9a5a12; font-weight: 500; }
+
+/* Trek form → Terms & policies */
+.terms-copy-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.terms-copy-row select { flex: 1 1 260px; }
+.terms-list { display: flex; flex-direction: column; gap: 12px; }
+.terms-empty { padding: 18px; border: 1px dashed var(--line); border-radius: 10px; color: var(--muted); text-align: center; font-size: 13px; }
+.terms-section { border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: var(--cp-card, #fff); display: flex; flex-direction: column; gap: 10px; }
+.terms-section-head { display: grid; grid-template-columns: 30px 1fr auto; gap: 8px; align-items: center; }
+.terms-section-head input { font-weight: 700; }
+.terms-num { width: 28px; height: 28px; border-radius: 8px; background: var(--amber-soft); color: var(--forest); display: grid; place-items: center; font-weight: 700; font-size: 13px; }
+.terms-add { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.terms-suggest { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; }
+.terms-chip { background: var(--mist); border: 1px solid var(--line); color: var(--forest); border-radius: 999px; padding: 5px 11px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.terms-chip:hover { border-color: var(--forest); }

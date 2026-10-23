@@ -18,6 +18,7 @@ const CACHED_PATHS = new Set([
   '/why-us',
   '/faq',
   '/pickup-points',
+  '/trip-terms',
   '/site-filters',
 ]);
 

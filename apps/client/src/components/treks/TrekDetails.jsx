@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import '../../styles/trekdetails.css';
 import BookingModal from '../booking/BookingModal';
 import RichText from '../common/RichText';
+import TrekTerms from './TrekTerms';
 import useTrekImages, { FALLBACK_IMAGE } from '../../hooks/useTrekImages';
 import {
   getDisplayPrice,
@@ -11,12 +12,25 @@ import {
   showsDifficulty,
   showsDistance,
 } from '../../utils/tripPricing';
-import { API_BASE_URL, getDownloadFileName } from '../../api/treks';
+import { API_BASE_URL, getDownloadFileName, getTripTerms } from '../../api/treks';
 
 export default function TrekDetails({ trek, onBack }) {
   const [currentImage, setCurrentImage] = useState(0);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [activeTab, setActiveTab] = useState('itinerary');
+
+  // Terms & Policies tab: shown only when the trek has terms
+  const [terms, setTerms] = useState(null);
+  useEffect(() => {
+    if (!trek?.id) return undefined;
+    const controller = new AbortController();
+    setTerms(null);
+    getTripTerms(trek.id, { signal: controller.signal })
+      .then((data) => setTerms(data))
+      .catch(() => {});
+    return () => controller.abort();
+  }, [trek?.id]);
+  const hasTerms = Boolean(terms?.sections?.length);
 
   const [showBrochureModal, setShowBrochureModal] =
     useState(false);
@@ -472,6 +486,22 @@ export default function TrekDetails({ trek, onBack }) {
               Inclusion & Exclusion
             </button>
 
+            {hasTerms && (
+              <button
+                type="button"
+                className={
+                  activeTab === 'terms'
+                    ? 'details-tab active'
+                    : 'details-tab'
+                }
+                onClick={() =>
+                  setActiveTab('terms')
+                }
+              >
+                Terms & Policies
+              </button>
+            )}
+
           </div>
 
           {/* ================================= */}
@@ -607,6 +637,14 @@ export default function TrekDetails({ trek, onBack }) {
               </div>
 
             </div>
+          )}
+
+          {/* ================================= */}
+          {/* TERMS & POLICIES */}
+          {/* ================================= */}
+
+          {activeTab === 'terms' && hasTerms && (
+            <TrekTerms trek={trek} terms={terms} />
           )}
 
         </section>

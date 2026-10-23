@@ -79,6 +79,9 @@ const sqlqueries = {
   getHeroSlides: `SELECT id, image_path, eyebrow, headline_line1, headline_line2, message, primary_label, primary_target, secondary_label, secondary_target, facts FROM hero_slides WHERE is_active = 1 ORDER BY sort_order, id`,
   getWhyUs: `SELECT id, title, description, created_at, updated_at FROM why_us WHERE 1 ORDER BY id ASC`,
   getFaq: `SELECT id, question, answer, created_at, updated_at FROM faq WHERE 1 ORDER BY id ASC`,
+  // Terms & policies of one trek (Terms & Policies tab)
+  getTripTerms: 'SELECT id, title, body, updated_at FROM trip_terms WHERE trip_id = ? ORDER BY sort_order, id',
+  getTripTermsHighlights: 'SELECT terms_highlights FROM trips WHERE id = ?',
   getPickupPoints: `SELECT id, trip_id, name, address, map_url, sort_order FROM pickup_points WHERE is_active = 1 AND trip_id = ? ORDER BY sort_order ASC, id ASC`,
   createTripInterest: `INSERT INTO trip_interests (trip_id, type, source, created_at) VALUES (?, ?, ?, NOW())`,
   createCustomer: `INSERT INTO customers (name, phone, email, city, trip_id, created_at) VALUES (?, ?, ?, ?, ?, NOW())`,
