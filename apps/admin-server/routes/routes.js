@@ -75,6 +75,9 @@ router.get('/masters/:type', canMaster, controller.getMasterList);
 router.post('/masters/:type', canMaster, controller.createMaster);
 router.put('/masters/:type/:id', canMaster, controller.updateMaster);
 
+router.get('/role-permissions', can('users'), controller.getRolePermissions);
+router.put('/role-permissions', can('users'), controller.saveRolePermissions);
+
 router.get('/users', can('users'), controller.getUsers);
 router.post('/users', can('users'), controller.createUser);
 router.put('/users/:id', can('users'), controller.updateUser);

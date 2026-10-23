@@ -1,5 +1,4 @@
 // Rules used by several screens.
-const { permissions } = require('../../config');
 const { badRequest } = require('../../utils/http');
 
 const ROLES = ['admin', 'sales', 'operations'];
@@ -14,8 +13,8 @@ const isActiveBooking = (status) => status === 'confirmed' || status === 'comple
 const paymentStatusFor = (amount, paid) =>
   paid <= 0 ? 'unpaid' : paid + 0.009 >= amount ? 'paid' : 'partial';
 
-const modulesForRole = (role) =>
-  Object.keys(permissions).filter((module) => permissions[module].includes(role));
+// Screens a role may open (set in Users & Roles → Role permissions)
+const modulesForRole = (role) => require('../permission/permissionManager').modulesForRole(role);
 
 const checkPassword = (password) => {
   if (String(password || '').length < 8) {
