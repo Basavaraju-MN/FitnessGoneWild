@@ -15,15 +15,16 @@ export const FALLBACK_IMAGE = '/images/hero1.jpg';
 // One check per slug, shared by every card and the details page.
 const imageCache = new Map();
 
-// Resolves true only when the file loads as a real image. A missing
-// file served as index.html by the SPA fallback also counts as missing.
+// Resolves true only when the file is a real image. Asks for the headers
+// only (HEAD), so photos are not downloaded just to check they exist.
+// A missing file served as index.html by the SPA fallback also counts as missing.
 const imageExists = (src) =>
-  new Promise((resolve) => {
-    const image = new Image();
-    image.onload = () => resolve(true);
-    image.onerror = () => resolve(false);
-    image.src = src;
-  });
+  fetch(src, { method: 'HEAD' })
+    .then((response) =>
+      response.ok &&
+      (response.headers.get('content-type') || '').startsWith('image/')
+    )
+    .catch(() => false);
 
 // Path of image <number> in whichever format exists, or null.
 // .jpg is tried first, so the usual case needs one request.
