@@ -284,8 +284,20 @@ app.use('/api', cachePublicApi, trekRoutes);
 // Shareable trek link: the page with that trek's title and photo for previews
 app.get('/treks/:slug', trekPage(CLIENT_DIST_PATH));
 
+// Browsers keep website files instead of downloading them on every visit.
+// Built JS/CSS have a content hash in their name, so they never change;
+// photos can be replaced from the admin, so they are kept for a day.
 app.use(
-  express.static(CLIENT_DIST_PATH)
+  express.static(CLIENT_DIST_PATH, {
+    setHeaders(res, filePath) {
+      const relative = path.relative(CLIENT_DIST_PATH, filePath);
+      if (relative.startsWith(`assets${path.sep}`)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      } else if (relative.startsWith(`images${path.sep}`)) {
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+      }
+    },
+  })
 );
 
 app.use('/api', (req, res) => {
