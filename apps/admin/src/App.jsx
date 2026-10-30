@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { LOGO_URL } from './assets';
 
 import { api } from './api';
+import { clearPhotoCache } from './imageCache';
 import { pageFromLocation, pagePath } from './router';
 import { AdminContext } from './context';
 import { FormModal, useToast } from './components/ui';
@@ -13,6 +14,7 @@ import { applyTheme, saveTheme, savedTheme } from './theme';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Packages from './pages/Packages';
+import Brochures, { clearBrochureList } from './pages/Brochures';
 import Bookings from './pages/Bookings';
 import Coordination from './pages/Coordination';
 import Customers from './pages/Customers';
@@ -31,6 +33,7 @@ import Regions from './pages/Regions';
 const PAGES = [
   { id: 'dashboard', label: 'Dashboard', icon: '▦', component: Dashboard },
   { id: 'packages', label: 'Treks & Trips', icon: '▣', component: Packages },
+  { id: 'brochures', label: 'Brochures', icon: '❐', component: Brochures },
   { id: 'bookings', label: 'Bookings', icon: '▤', component: Bookings },
   { id: 'coordination', label: 'Trip Coordination', icon: '⌖', component: Coordination },
   { id: 'customers', label: 'Customers', icon: '♙', component: Customers },
@@ -123,6 +126,8 @@ export default function App() {
 
   const logout = async () => {
     await api('/auth/logout', { method: 'POST' }).catch(() => {});
+    await clearPhotoCache();
+    clearBrochureList();
     setUser(null);
     setLookups(null);
   };

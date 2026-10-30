@@ -14,7 +14,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { PassThrough } = require('stream');
+const { PassThrough, Readable } = require('stream');
 const ftp = require('basic-ftp');
 
 // The admin can run on its own locally: the settings live in apps/server/.env
@@ -88,39 +88,88 @@ async function findPath(client, slug) {
 }
 
 /**
- * For the admin's trek list: ONE folder listing (one FTP connection, shared
- * for 2 minutes by everyone) instead of one connection per trek.
- * Returns slug -> what is on Hostinger ("kudremukh.pdf" or "kudremukh/"),
- * or null when FTP is not set up / cannot be reached. The exact file is
- * checked in the trek's edit panel (findBrochure with fresh).
+ * For the admin's Brochures screen: each trek's PDF, looked up fresh over
+ * ONE FTP connection. Returns slug -> { file, size } (null = no brochure).
  */
-let indexRun = null;
-async function brochureIndex() {
+async function brochuresFor(slugs) {
   if (!isConfigured()) return null;
-  if (!indexRun) {
-    indexRun = (async () => {
-      let client;
-      try {
-        client = await connect();
-        const entries = await listFolder(client);
-        return (slug) => {
-          const lower = String(slug || '').toLowerCase();
-          const pdfs = entries.filter((e) => !e.isDir && isPdf(e.name));
-          const pdf = pdfs.find((e) => e.name.toLowerCase() === `${lower}.pdf`)
-            || pdfs.filter((e) => e.name.toLowerCase().startsWith(lower)).sort((a, b) => a.name.localeCompare(b.name))[0];
-          if (pdf) return pdf.name;
-          const folder = entries.find((e) => e.isDir && e.name.toLowerCase() === lower);
-          return folder ? `${folder.name}/` : null;
-        };
-      } catch (error) {
-        console.error('Hostinger FTP (brochure list) failed:', error?.message || error);
-        return null;
-      } finally {
-        client?.close();
-      }
-    })().finally(() => { setTimeout(() => { indexRun = null; }, 2 * 60 * 1000).unref?.(); });
+  const client = await connect();
+  try {
+    clearCache();
+    const found = {};
+    for (const slug of slugs) {
+      found[slug] = validSlug(slug) ? await findPath(client, slug) : null;
+    }
+    return found;
+  } finally {
+    client.close();
   }
-  return indexRun;
+}
+
+// A brochure was changed from the admin: the next download reads it fresh
+function forget(slug) {
+  clearCache();
+  known.delete(slug);
+  copies.delete(slug.toLowerCase());
+}
+
+/**
+ * Admin upload: saved in the trek's folder (brochures/<slug>/) under its own
+ * file name, which is the name visitors download. The folder's other PDFs and
+ * a <slug>.pdf beside it are removed, so the new file is the one shown.
+ * Uploaded under a temporary name, then renamed: visitors never get half a file.
+ * Returns { file, size } as the website now finds it.
+ */
+async function uploadBrochure(slug, fileName, buffer) {
+  if (!isConfigured()) throw new Error('Hostinger FTP is not set up');
+  if (!validSlug(slug)) throw new Error('This trek has no valid slug');
+
+  let name = path.basename(String(fileName || `${slug}.pdf`)).replace(/[\\/:*?"<>|]+/g, '-').trim();
+  if (!isPdf(name)) name += '.pdf';
+
+  const client = await connect();
+  try {
+    clearCache();
+    const lower = slug.toLowerCase();
+    const entries = await listFolder(client);
+    const folderName = entries.find((e) => e.isDir && e.name.toLowerCase() === lower)?.name || slug;
+    const folder = `${env().dir}/${folderName}`;
+
+    const home = await client.pwd();
+    await client.ensureDir(folder); // also moves into it
+    await client.cd(home);
+
+    const part = `${folder}/${name}.part`;
+    await client.uploadFrom(Readable.from(buffer), part);
+    for (const old of await client.list(folder)) {
+      if (!old.isDirectory && isPdf(old.name)) await client.remove(`${folder}/${old.name}`);
+    }
+    await client.rename(part, `${folder}/${name}`);
+
+    const beside = entries.find((e) => !e.isDir && e.name.toLowerCase() === `${lower}.pdf`);
+    if (beside) await client.remove(`${env().dir}/${beside.name}`);
+
+    forget(slug);
+    return await findPath(client, slug);
+  } finally {
+    client.close();
+  }
+}
+
+/** Admin delete: removes the file now shown for the trek; returns the next one found, if any. */
+async function removeBrochure(slug) {
+  if (!isConfigured()) throw new Error('Hostinger FTP is not set up');
+  if (!validSlug(slug)) throw new Error('This trek has no valid slug');
+  const client = await connect();
+  try {
+    clearCache();
+    const found = await findPath(client, slug);
+    if (found) await client.remove(`${env().dir}/${found.file}`);
+    forget(slug);
+    return await findPath(client, slug);
+  } finally {
+    client.close();
+  }
 }
 
 /** { file, size } when the trek's brochure is on Hostinger, else null (never throws). */
@@ -283,4 +332,14 @@ async function listBrochures() {
   }
 }
 
-module.exports = { isConfigured, findBrochure, brochureIndex, openBrochure, listBrochures, warmUp, folder: () => env().dir };
+module.exports = {
+  isConfigured,
+  findBrochure,
+  brochuresFor,
+  uploadBrochure,
+  removeBrochure,
+  openBrochure,
+  listBrochures,
+  warmUp,
+  folder: () => env().dir,
+};

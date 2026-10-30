@@ -1,4 +1,5 @@
 const express = require('express');
+const compression = require('compression');
 const cors = require('cors');
 const path = require('path');
 const dotenv = require('dotenv');
@@ -33,6 +34,10 @@ const ADMIN_DIST_PATH = path.resolve(
 
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
+
+// Gzip text answers (HTML, JS, CSS, JSON): about 70% less bandwidth.
+// Photos and PDFs are already compressed, so they are sent as they are.
+app.use(compression());
 
 /* =========================================================
    SECURITY HEADERS (website, admin and API)
