@@ -39,6 +39,29 @@ app.disable('x-powered-by');
 // Photos and PDFs are already compressed, so they are sent as they are.
 app.use(compression());
 
+// Data (GET /api/… for the website and the admin): the browser keeps the
+// last answer and asks "has it changed?". When it has not, a short
+// "304 Not Modified" is sent instead of the whole list again.
+app.use('/api', (req, res, next) => {
+  if (req.method === 'GET') res.setHeader('Cache-Control', 'private, no-cache');
+  next();
+});
+
+// How long browsers keep the website's and the admin's files.
+// Built JS/CSS have a content hash in their name, so they never change.
+// index.html is checked every time, so a new deploy shows at once.
+// Photos and the logo can be replaced, so they are kept for a day.
+const keepFiles = (root) => (res, filePath) => {
+  const relative = path.relative(root, filePath);
+  if (relative.startsWith(`assets${path.sep}`)) {
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  } else if (relative.endsWith('.html')) {
+    res.setHeader('Cache-Control', 'no-cache');
+  } else {
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+  }
+};
+
 /* =========================================================
    SECURITY HEADERS (website, admin and API)
    Scripts only from this site: no inline scripts, no eval.
@@ -264,7 +287,7 @@ try {
   });
 }
 
-app.use('/admin', express.static(ADMIN_DIST_PATH));
+app.use('/admin', express.static(ADMIN_DIST_PATH, { setHeaders: keepFiles(ADMIN_DIST_PATH) }));
 
 // The admin is a single-page app: any /admin URL loads its index.html
 app.get(/^\/admin(\/.*)?$/, (req, res, next) => {
@@ -289,21 +312,7 @@ app.use('/api', cachePublicApi, trekRoutes);
 // Shareable trek link: the page with that trek's title and photo for previews
 app.get('/treks/:slug', trekPage(CLIENT_DIST_PATH));
 
-// Browsers keep website files instead of downloading them on every visit.
-// Built JS/CSS have a content hash in their name, so they never change;
-// photos can be replaced from the admin, so they are kept for a day.
-app.use(
-  express.static(CLIENT_DIST_PATH, {
-    setHeaders(res, filePath) {
-      const relative = path.relative(CLIENT_DIST_PATH, filePath);
-      if (relative.startsWith(`assets${path.sep}`)) {
-        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-      } else if (relative.startsWith(`images${path.sep}`)) {
-        res.setHeader('Cache-Control', 'public, max-age=86400');
-      }
-    },
-  })
-);
+app.use(express.static(CLIENT_DIST_PATH, { setHeaders: keepFiles(CLIENT_DIST_PATH) }));
 
 app.use('/api', (req, res) => {
   return res.status(404).json({
