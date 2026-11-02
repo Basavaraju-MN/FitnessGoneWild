@@ -1,7 +1,7 @@
-// Trip photos and brochures on disk — the same folders the website reads:
-//   photos:    apps/client/public/images/treks/<slug>/1.jpg … 5.jpg
-//              (also copied into apps/client/dist so the running site shows them at once)
-//   brochure:  apps/server/brochures/<slug>/<any name>.pdf
+// Trip photos on disk — the same folders the website reads:
+//   apps/client/public/images/treks/<slug>/1.jpg … 5.jpg
+//   (also copied into apps/client/dist so the running site shows them at once)
+// Brochures are on Hostinger (see the Brochures screen and ftpBrochure.js).
 const fs = require('fs');
 const fsp = require('fs/promises');
 const path = require('path');
@@ -13,7 +13,6 @@ const MAX_IMAGES = 5;
 const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp'];
 const IMAGE_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
-const MAX_BROCHURE_BYTES = 20 * 1024 * 1024;
 
 // Slugs are folder names; anything else could point outside the folder
 function checkSlug(slug) {
@@ -30,8 +29,6 @@ const imageDirs = (slug) => [
   path.join(paths.clientPublic, 'images', 'treks', checkSlug(slug)),
   ...(exists(paths.clientDist) ? [path.join(paths.clientDist, 'images', 'treks', slug)] : []),
 ];
-
-const brochureDir = (slug) => path.join(paths.brochures, checkSlug(slug));
 
 // "data:image/png;base64,AAAA" -> { mime, buffer }
 function decodeDataUrl(dataUrl) {
@@ -95,57 +92,14 @@ async function deleteImage(slug, number) {
   }
 }
 
-/* ---------------- Brochure ---------------- */
-
-// File name of the trip's brochure PDF, or null
-async function getBrochure(slug) {
-  if (!/^[a-z0-9_-]+$/i.test(String(slug || ''))) return null;
-  const dir = path.join(paths.brochures, slug);
-  if (!exists(dir)) return null;
-
-  const pdfs = (await fsp.readdir(dir)).filter((name) => /\.pdf$/i.test(name)).sort();
-  return pdfs[0] || null;
-}
-
-async function saveBrochure(slug, fileName, dataUrl) {
-  const { mime, buffer } = decodeDataUrl(dataUrl);
-  if (mime !== 'application/pdf' || buffer.subarray(0, 4).toString() !== '%PDF') {
-    throw badRequest('The brochure must be a PDF file');
-  }
-  if (buffer.length > MAX_BROCHURE_BYTES) throw badRequest('Brochure is too large (max 20 MB)');
-
-  // The file name is what visitors download; keep it safe for any system
-  let name = path.basename(String(fileName || 'brochure.pdf')).replace(/[\\/:*?"<>|]+/g, '-').trim();
-  if (!/\.pdf$/i.test(name)) name += '.pdf';
-
-  const dir = brochureDir(slug);
-  await fsp.mkdir(dir, { recursive: true });
-
-  // One brochure per trip: remove the old PDF(s) first
-  for (const old of (await fsp.readdir(dir)).filter((f) => /\.pdf$/i.test(f))) {
-    await fsp.rm(path.join(dir, old), { force: true });
-  }
-  await fsp.writeFile(path.join(dir, name), buffer);
-  return name;
-}
-
-async function deleteBrochure(slug) {
-  const dir = brochureDir(slug);
-  if (!exists(dir)) return;
-  for (const old of (await fsp.readdir(dir)).filter((f) => /\.pdf$/i.test(f))) {
-    await fsp.rm(path.join(dir, old), { force: true });
-  }
-}
-
 /* ---------------- Whole folders ---------------- */
 
 const tripFolders = (slug) => [
   path.join(paths.clientPublic, 'images', 'treks', slug),
   path.join(paths.clientDist, 'images', 'treks', slug),
-  path.join(paths.brochures, slug),
 ];
 
-// Slug changed: move its photo and brochure folders along
+// Slug changed: move its photo folders along
 async function renameFolders(oldSlug, newSlug) {
   if (!oldSlug || oldSlug === newSlug) return;
   checkSlug(oldSlug);
@@ -162,8 +116,5 @@ module.exports = {
   listImages,
   saveImage,
   deleteImage,
-  getBrochure,
-  saveBrochure,
-  deleteBrochure,
   renameFolders,
 };

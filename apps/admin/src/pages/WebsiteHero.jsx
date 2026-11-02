@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api, useApi } from '../api';
 import { siteUrl, SITE_URL } from '../assets';
 import { Modal, PageHead, useToast } from '../components/ui';
+import { CachedImg, useCachedPhoto } from '../imageCache';
 
 const PHOTO_MAX_WIDTH = 1920;
 const MAX_HEROES = 8;
@@ -55,10 +56,11 @@ const photoOf = (hero) => hero?.dataUrl || siteUrl(hero?.image_path) || '';
 /* ---------- How the hero looks on the website ---------- */
 function HeroPreview({ hero, large = false }) {
   const facts = (hero.facts || []).filter((f) => f.value || f.label);
+  const photo = useCachedPhoto(photoOf(hero)) || '';
   return (
     <div
       className={`hero-preview ${large ? 'large' : ''}`}
-      style={{ backgroundImage: `linear-gradient(180deg, rgba(10,43,38,.78), rgba(10,43,38,.55) 45%, rgba(10,43,38,.92)), url("${photoOf(hero)}")` }}
+      style={{ backgroundImage: `linear-gradient(180deg, rgba(10,43,38,.78), rgba(10,43,38,.55) 45%, rgba(10,43,38,.92)), url("${photo}")` }}
     >
       <div className="hero-preview-inner">
         {hero.eyebrow && <small>{hero.eyebrow}</small>}
@@ -351,7 +353,7 @@ export default function WebsiteHero() {
           {heroes.map((hero, index) => (
             <div className={`card hero-card ${hero.is_active ? '' : 'off'}`} key={hero.id}>
               <button type="button" className="hero-card-photo" onClick={() => setPreviewing(hero)} title="Preview">
-                <img src={photoOf(hero)} alt="" />
+                <CachedImg src={photoOf(hero)} alt="" />
                 <span className="hero-card-order">#{index + 1}</span>
                 <span className={`pill ${hero.is_active ? '' : 'grey'} hero-card-status`}>{hero.is_active ? 'Showing' : 'Hidden'}</span>
               </button>

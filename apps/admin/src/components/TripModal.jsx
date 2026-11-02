@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { api } from '../api';
 import { siteUrl } from '../assets';
+import { CachedImg } from '../imageCache';
 import { useAdmin } from '../context';
 import { useToast } from './ui';
+import { saveTrekInBrochureList } from '../pages/Brochures';
 import RichTextEditor, { plainText } from './RichTextEditor';
 import TermsEditor, { termsProblem } from './TermsEditor';
 
@@ -16,7 +18,7 @@ const STEPS = [
   { title: 'Trek details', hint: 'Name, price, category' },
   { title: 'Description & itinerary', hint: 'The trek page text' },
   { title: 'Inclusions & pickup', hint: 'What is included, where we pick up' },
-  { title: 'Photos & brochure', hint: 'Cover, slideshow, PDF' },
+  { title: 'Photos', hint: 'Cover and slideshow' },
   { title: 'Terms & policies', hint: 'Shown in the trek page tab' },
 ];
 
@@ -55,14 +57,6 @@ function resizePhoto(file) {
     img.src = url;
   });
 }
-
-const readAsDataUrl = (file) =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(new Error('Could not read the file'));
-    reader.readAsDataURL(file);
-  });
 
 /* ---------- Drop zone (click or drag a file onto it) ---------- */
 function DropZone({ accept, onFile, className = '', children }) {
@@ -109,57 +103,8 @@ function DropZone({ accept, onFile, className = '', children }) {
  * together when you press Save:
  *   details, inclusions/exclusions, pickup points -> database
  *   photos   -> website folder images/treks/<slug>/1.jpg … 5.jpg (1 = cover)
- *   brochure -> brochures/<slug>/<file>.pdf
+ * Brochures have their own screen (Brochures).
  */
-// Brochures are kept only on Hostinger (File Manager → public_html/public/brochures/<slug>/).
-// Shown here: where to put this trek's PDF and whether it is there.
-function BrochureOnHostinger({ tripId, slug }) {
-  const [check, setCheck] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  const run = useCallback(async () => {
-    if (!tripId) return;
-    setLoading(true);
-    try {
-      const { data } = await api(`/trips/${tripId}/brochure-check`);
-      setCheck(data);
-    } catch {
-      setCheck(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [tripId]);
-
-  useEffect(() => {
-    run();
-  }, [run]);
-
-  const folder = check?.folder || 'public/brochures';
-  const place = `${folder}/${slug || '<slug>'}/`;
-  return (
-    <div className="brochure-host">
-      <p>
-        Brochures are managed in <b>Hostinger File Manager</b> → <code>public_html/{place}</code>.
-        Put this trek's PDF in that folder (any file name; replace the file to update it).
-      </p>
-      {!tripId ? (
-        <p className="muted">Save the trip first, then upload the PDF on Hostinger.</p>
-      ) : check && !check.configured ? (
-        <p className="brochure-status warn">
-          Hostinger FTP is not set up on the server (<code>HOSTINGER_FTP_HOST</code>, <code>HOSTINGER_FTP_USER</code>, <code>HOSTINGER_FTP_PASSWORD</code>), so brochures cannot be downloaded.
-        </p>
-      ) : check ? (
-        <p className={`brochure-status ${check.found ? 'ok' : 'missing'}`}>
-          {check.found
-            ? <>✓ Found on Hostinger: <code>{check.fileName}</code>{check.size ? ` · ${Math.round(check.size / 1024)} KB` : ''}</>
-            : <>✕ Not found: upload the PDF to <code>public_html/{place}</code></>}
-        </p>
-      ) : null}
-      {tripId && <button type="button" className="btn alt small" onClick={run} disabled={loading}>{loading ? 'Checking…' : 'Check again'}</button>}
-    </div>
-  );
-}
-
 export default function TripModal({ tripId, categories, onClose, onSaved }) {
   const toast = useToast();
   const isNew = !tripId;
@@ -168,8 +113,6 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
   const [values, setValues] = useState(null);
   const [photos, setPhotos] = useState({}); // number -> saved photo
   const [photoChanges, setPhotoChanges] = useState({}); // number -> { dataUrl } | { remove: true }
-  const [brochure, setBrochure] = useState(null); // saved file name
-  const [brochureChange, setBrochureChange] = useState(null); // { name, dataUrl } | { remove: true }
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -199,7 +142,6 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
         while (pickups.length < MIN_PICKUP_POINTS) pickups.push(emptyPickup(firstCityId));
         setValues({ ...data, pickup_points: pickups });
         setPhotos(Object.fromEntries((data.images || []).map((img) => [img.number, img])));
-        setBrochure(data.brochure_file);
       })
       .catch((err) => {
         toast(err.message, 'error');
@@ -240,7 +182,7 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
     set('pickup_points', list);
   };
 
-  /* ---------- Photos & brochure ---------- */
+  /* ---------- Photos ---------- */
   const photoAt = (n) => {
     const change = photoChanges[n];
     if (change?.remove) return null;
@@ -269,18 +211,6 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
       else delete next[n];
       return next;
     });
-
-  const pickBrochure = async (file) => {
-    if (file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) {
-      toast('The brochure must be a PDF file', 'error');
-      return;
-    }
-    if (file.size > 20 * 1024 * 1024) {
-      toast('Brochure is too large (max 20 MB)', 'error');
-      return;
-    }
-    setBrochureChange({ name: file.name, dataUrl: await readAsDataUrl(file) });
-  };
 
   /* ---------- Checks per step ---------- */
   const problemIn = (index) => {
@@ -358,16 +288,10 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
         }
       }
 
-      if (brochureChange?.remove) {
-        await api(`/trips/${id}/brochure`, { method: 'DELETE' });
-      } else if (brochureChange?.dataUrl) {
-        await api(`/trips/${id}/brochure`, {
-          method: 'POST',
-          body: { fileName: brochureChange.name, dataUrl: brochureChange.dataUrl },
-        });
-      }
+      // The Brochures screen shows the new or renamed trek without reading Hostinger
+      saveTrekInBrochureList({ id: Number(id), name: values.name, status: values.status, ...(isNew ? { slug } : {}) });
 
-      toast(isNew ? 'Trip added' : 'Trip saved');
+      toast(isNew ? 'Trip added. Add its brochure on the Brochures screen.' : 'Trip saved');
       onSaved(id);
     } catch (err) {
       setError(err.message);
@@ -376,7 +300,6 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
   };
 
   const cover = photoAt(1);
-  const shownBrochure = brochureChange?.remove ? null : brochureChange?.name || brochure;
   const isLast = step === STEPS.length - 1;
 
   return (
@@ -628,7 +551,7 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
             </div>
           )}
 
-          {/* ===== Step 4: photos & brochure ===== */}
+          {/* ===== Step 4: photos ===== */}
           {step === 3 && (
             <div className="trip-step-grid">
               <div className="field full">
@@ -636,7 +559,7 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
                 <DropZone accept="image/jpeg,image/png,image/webp" onFile={(f) => pickPhoto(1, f)} className="cover-drop">
                   {cover ? (
                     <>
-                      <img src={cover} alt="Cover" />
+                      <CachedImg src={cover} alt="Cover" />
                       <span className="drop-change">Click or drop to change</span>
                     </>
                   ) : (
@@ -660,7 +583,7 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
                     return (
                       <div key={n} className="photo-slot">
                         <DropZone accept="image/jpeg,image/png,image/webp" onFile={(f) => pickPhoto(n, f)} className="slot-drop">
-                          {src ? <img src={src} alt={`Photo ${n}`} /> : <span>＋<br />{n}</span>}
+                          {src ? <CachedImg src={src} alt={`Photo ${n}`} /> : <span>＋<br />{n}</span>}
                         </DropZone>
                         {src && (
                           <button type="button" className="slot-remove" onClick={() => removePhoto(n)} aria-label={`Remove photo ${n}`}>✕</button>
@@ -671,10 +594,7 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
                 </div>
               </div>
 
-              <div className="field full">
-                <label>Brochure (PDF)</label>
-                <BrochureOnHostinger tripId={tripId} slug={slug} />
-              </div>
+              <p className="muted field full">Add or change the brochure PDF on the <b>Brochures</b> screen.</p>
             </div>
           )}
 

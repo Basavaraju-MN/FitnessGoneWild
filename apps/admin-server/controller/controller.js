@@ -727,10 +727,10 @@ exports.getTripTerms = async (req, res, next) => {
   }
 };
 
-exports.getBrochureCheck = async (req, res, next) => {
+exports.getBrochures = async (req, res, next) => {
   try {
-    const data = await packageManager.getBrochureCheck(idParam(req));
-    return res.status(200).json({ success: true, message: 'Brochure checked', data });
+    const data = await packageManager.getBrochures({ fresh: req.query.fresh === '1' });
+    return res.status(200).json({ success: true, message: 'Brochures fetched successfully', data });
   } catch (error) {
     return next(error);
   }

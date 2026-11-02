@@ -1,32 +1,10 @@
 // Packages & Trips screen (the treks shown on the website).
 // Called by controller/controller.js; reads and writes through db/dbops.js.
-// Photos and brochures are files on disk (see tripFiles.js).
+// Photos are files on disk (see tripFiles.js). Brochures are on Hostinger
+// and have their own screen (Brochures), so this screen never waits for FTP.
 const dbops = require('../../db/dbops');
 const tripFiles = require('./tripFiles');
 const ftpBrochure = require('../../../server/src/components/broucher/ftpBrochure');
-
-// Brochures are kept only on Hostinger (public_html/public/brochures/<slug>/), read over FTP
-async function brochureFor(slug) {
-  const found = await ftpBrochure.findBrochure(slug);
-  return found ? found.file : null;
-}
-
-// Where the trek's brochure must be on Hostinger, and whether it is there (looked up fresh)
-async function getBrochureCheck(id) {
-  const trip = await findTrip(id);
-  const configured = ftpBrochure.isConfigured();
-  const found = configured ? await ftpBrochure.findBrochure(trip.slug, { fresh: true }) : null;
-  return {
-    configured,
-    via: 'ftp',
-    folder: ftpBrochure.folder(),
-    fileName: found?.file || `${trip.slug}/<any name>.pdf`,
-    url: null,
-    found: Boolean(found),
-    size: found?.size || null,
-    localFile: null,
-  };
-}
 const {
   badRequest,
   notFound,
@@ -203,10 +181,9 @@ async function findTrip(id) {
   return trip;
 }
 
-// Trip cards: each with its cover photo and brochure status.
-// Brochures: one Hostinger folder listing for all treks (not one per trek).
+// Trip cards: each with its cover photo
 async function getTrips() {
-  const [trips, brochureOf] = await Promise.all([dbops.getTrips(), ftpBrochure.brochureIndex()]);
+  const trips = await dbops.getTrips();
 
   return Promise.all(
     trips.map(async (trip) => {
@@ -215,18 +192,16 @@ async function getTrips() {
         ...trip,
         cover_url: images[0]?.url || null,
         image_count: images.length,
-        brochure_file: brochureOf ? brochureOf(trip.slug) : null,
       };
     })
   );
 }
 
-// One trip for the edit panel, with all its photos and brochure
+// One trip for the edit panel, with all its photos
 async function getTrip(id) {
   const trip = await findTrip(id);
-  const [images, brochure, lists, pickups, terms] = await Promise.all([
+  const [images, lists, pickups, terms] = await Promise.all([
     tripFiles.listImages(trip.slug),
-    brochureFor(trip.slug),
     dbops.getTripInclusions(trip.id),
     dbops.getTripPickupPoints(trip.id),
     dbops.getTripTerms(trip.id),
@@ -237,7 +212,6 @@ async function getTrip(id) {
     ...terms,
     pickup_points: pickups.filter((p) => Number(p.is_active)),
     images,
-    brochure_file: brochure,
   };
 }
 
@@ -301,26 +275,88 @@ async function deleteTripImage(admin, id, number) {
   return { images: await tripFiles.listImages(trip.slug) };
 }
 
-/* ---------------- Brochure ---------------- */
+/* ---------------- Brochures screen (Hostinger, over FTP) ---------------- */
+
+const MAX_BROCHURE_BYTES = 20 * 1024 * 1024;
+
+function requireFtp() {
+  if (!ftpBrochure.isConfigured()) {
+    throw badRequest('Hostinger FTP is not set up on the server (HOSTINGER_FTP_HOST, HOSTINGER_FTP_USER, HOSTINGER_FTP_PASSWORD)');
+  }
+}
+
+// What Hostinger has for each trek (slug -> { file, size } | null). Read
+// over FTP once, then kept: uploads and deletes from the admin update it,
+// so the Brochures screen opens without FTP. "Refresh" (fresh) reads it again,
+// e.g. after files were changed in Hostinger File Manager.
+let brochureCache = null;
+let brochureRun = null; // the FTP read in progress, shared by every caller
+
+async function readBrochures(slugs) {
+  if (!brochureRun) {
+    brochureRun = ftpBrochure.brochuresFor(slugs)
+      .then((found) => { brochureCache = found; return found; })
+      .finally(() => { brochureRun = null; });
+  }
+  return brochureRun;
+}
+
+const setCachedBrochure = (slug, brochure) => {
+  if (brochureCache) brochureCache[slug] = brochure || null;
+};
+
+// Every trek with its brochure on Hostinger
+async function getBrochures({ fresh = false } = {}) {
+  const trips = await dbops.getTrips();
+  const configured = ftpBrochure.isConfigured();
+  let found = {};
+  if (configured) {
+    found = !fresh && brochureCache ? brochureCache : await readBrochures(trips.map((t) => t.slug));
+    // A trek added since the read: just created, so no brochure yet
+    for (const t of trips) if (!(t.slug in found)) found[t.slug] = null;
+  }
+  return {
+    configured,
+    folder: ftpBrochure.folder(),
+    trips: trips.map((t) => ({
+      id: t.id,
+      name: t.name,
+      slug: t.slug,
+      status: t.status,
+      brochure: found[t.slug] || null, // { file, size }
+    })),
+  };
+}
 
 async function uploadTripBrochure(admin, id, { fileName, dataUrl }) {
+  requireFtp();
   const trip = await findTrip(id);
-  const name = await tripFiles.saveBrochure(trip.slug, fileName, dataUrl);
-  await logActivity(admin, 'upload_brochure', 'trip', trip.id, name);
-  return { brochure_file: name };
+  const match = /^data:application\/pdf;base64,(.+)$/s.exec(String(dataUrl || ''));
+  const buffer = match ? Buffer.from(match[1], 'base64') : null;
+  if (!buffer || buffer.subarray(0, 4).toString() !== '%PDF') throw badRequest('The brochure must be a PDF file');
+  if (buffer.length > MAX_BROCHURE_BYTES) throw badRequest('Brochure is too large (max 20 MB)');
+
+  // What the website now serves; another file name means an older
+  // "<slug>…pdf" beside the folder still comes first on Hostinger
+  const brochure = await ftpBrochure.uploadBrochure(trip.slug, fileName, buffer);
+  setCachedBrochure(trip.slug, brochure);
+  await logActivity(admin, 'upload_brochure', 'trip', trip.id, brochure?.file || fileName);
+  return { brochure };
 }
 
 async function deleteTripBrochure(admin, id) {
+  requireFtp();
   const trip = await findTrip(id);
-  await tripFiles.deleteBrochure(trip.slug);
+  const next = await ftpBrochure.removeBrochure(trip.slug);
+  setCachedBrochure(trip.slug, next);
   await logActivity(admin, 'delete_brochure', 'trip', trip.id);
-  return { brochure_file: null };
+  return { brochure: next }; // another PDF for this trek, if Hostinger has one
 }
 
 module.exports = {
   getTermsSources,
   getTripTerms,
-  getBrochureCheck,
+  getBrochures,
   getTrips,
   getTrip,
   createTrip,

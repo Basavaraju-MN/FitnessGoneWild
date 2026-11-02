@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 
 import { api, useApi } from '../api';
 import { siteUrl } from '../assets';
+import { CachedImg } from '../imageCache';
 import { useAdmin } from '../context';
 import { exportCsv, money } from '../format';
 import { Modal, PageHead, useToast } from '../components/ui';
@@ -58,7 +59,7 @@ function TripCard({ trip, onEdit }) {
   return (
     <article className={`trip-card ${trip.status !== 'published' ? 'is-hidden' : ''}`}>
       <div className="trip-cover">
-        {cover ? <img src={cover} alt={trip.name} loading="lazy" /> : <div className="trip-cover-empty">No photo yet</div>}
+        {cover ? <CachedImg src={cover} alt={trip.name} /> : <div className="trip-cover-empty">No photo yet</div>}
         {Number(trip.is_featured) === 1 && <span className="trip-star" title="Featured">★</span>}
         {trip.status !== 'published' && <span className="trip-status">{trip.status}</span>}
         {trip.image_count > 1 && <span className="trip-photos">{trip.image_count} photos</span>}
@@ -76,9 +77,6 @@ function TripCard({ trip, onEdit }) {
         </div>
 
         <div className="trip-meta">
-          <span className={trip.brochure_file ? 'ok' : 'missing'} title={trip.brochure_file || ''}>
-            {trip.brochure_file ? '📄 Brochure' : '✕ No brochure'}
-          </span>
           {dates > 0 && <span className="chip">{dates} upcoming date{dates > 1 ? 's' : ''}</span>}
           {trip.badge_text && <span className="chip">{trip.badge_text}</span>}
         </div>
@@ -146,13 +144,12 @@ export default function Packages() {
       { key: 'status', label: 'Status' },
       { key: 'is_featured', label: 'Featured', csv: (r) => (Number(r.is_featured) ? 'Yes' : 'No') },
       { key: 'image_count', label: 'Photos' },
-      { key: 'brochure_file', label: 'Brochure' },
       { key: 'upcoming_departures', label: 'Upcoming dates' },
     ], trips);
 
   return (
     <>
-      <PageHead title="Treks & Trips" subtitle="Add a trip, swap its photos, change the price or attach a brochure.">
+      <PageHead title="Treks & Trips" subtitle="Add a trip, swap its photos or change the price. Brochures are on the Brochures screen.">
         <button className="btn alt" onClick={exportTrips} disabled={!trips.length}>Export data</button>
       </PageHead>
 

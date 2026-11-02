@@ -30,7 +30,6 @@ router.get('/dashboard', can('dashboard'), controller.getDashboard);
 router.get('/notifications', controller.getNotifications);
 
 router.get('/trips', can('packages'), controller.getTrips);
-router.get('/trips/:id/brochure-check', can('packages'), controller.getBrochureCheck);
 // Terms & policies: treks to copy from, and one trek's sections
 router.get('/trip-terms-sources', can('packages'), controller.getTermsSources);
 router.get('/trips/:id/terms', can('packages'), controller.getTripTerms);
@@ -39,8 +38,11 @@ router.post('/trips', can('packages'), controller.createTrip);
 router.put('/trips/:id', can('packages'), controller.updateTrip);
 router.post('/trips/:id/images', can('packages'), controller.uploadTripImage);
 router.delete('/trips/:id/images/:number', can('packages'), controller.deleteTripImage);
-router.post('/trips/:id/brochure', can('packages'), controller.uploadTripBrochure);
-router.delete('/trips/:id/brochure', can('packages'), controller.deleteTripBrochure);
+
+// Brochures screen (PDFs on Hostinger)
+router.get('/brochures', can('brochures'), controller.getBrochures);
+router.post('/trips/:id/brochure', can('brochures'), controller.uploadTripBrochure);
+router.delete('/trips/:id/brochure', can('brochures'), controller.deleteTripBrochure);
 
 router.get('/departures', can('coordination'), controller.getDepartures);
 router.get('/departures/:id', can('coordination'), controller.getDeparture);

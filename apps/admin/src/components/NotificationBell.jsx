@@ -144,10 +144,17 @@ export default function NotificationBell() {
     }
   }, [toast]);
 
+  // Checks only while the admin tab is on screen; coming back checks at once
   useEffect(() => {
+    const visible = () => document.visibilityState === 'visible';
     check();
-    const timer = setInterval(check, POLL_MS);
-    return () => clearInterval(timer);
+    const timer = setInterval(() => visible() && check(), POLL_MS);
+    const onShow = () => visible() && check();
+    document.addEventListener('visibilitychange', onShow);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onShow);
+    };
   }, [check]);
 
   // Closing the list marks everything shown as read, so it disappears

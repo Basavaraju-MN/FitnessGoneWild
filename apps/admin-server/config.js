@@ -54,6 +54,7 @@ module.exports = {
   permissions: {
     dashboard: ['admin', 'sales', 'operations'],
     packages: ['admin'],
+    brochures: ['admin'],
     bookings: ['admin', 'sales', 'operations'],
     coordination: ['admin', 'operations'],
     customers: ['admin', 'sales', 'operations'],
