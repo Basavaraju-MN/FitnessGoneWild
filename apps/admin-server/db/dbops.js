@@ -295,6 +295,24 @@ class Cmds {
     return first(await executeQuery(sql, [id]));
   }
 
+  async isActiveAdminUser(id) {
+    return (await executeQuery(sqlQueries.isActiveAdminUser, [id])).length > 0;
+  }
+
+  // Bookings per sales representative; from / to are YYYY-MM-DD or null
+  async getSalesByRep(from = null, to = null) {
+    return executeQuery(sqlQueries.salesByRep, [from, from, to, to]);
+  }
+
+  // One rep's bookings (soldBy null = not assigned) between from / to (booking date)
+  async getSalesBookings(soldBy, from = null, to = null) {
+    const sql = `${withWhere(sqlQueries.bookingsBase, [
+      soldBy == null ? 'b.sold_by IS NULL' : 'b.sold_by = ?',
+      sqlQueries.salesBookingsWhere,
+    ])} ORDER BY b.booked_at DESC`;
+    return executeQuery(sql, [...(soldBy == null ? [] : [soldBy]), from, from, to, to]);
+  }
+
   // Raw bookings row (for updates)
   async getBookingRow(id) {
     return first(await executeQuery(sqlQueries.getBookingRow, [id]));

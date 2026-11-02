@@ -881,3 +881,15 @@ button.avatar:hover { background: var(--cp-brand-blue-90); }
 .coord-tabs { margin-bottom: 0; }
 .tab-count { display: inline-block; min-width: 20px; padding: 1px 7px; margin-left: 4px; border-radius: 999px; background: var(--tint-grey-bg); color: var(--muted); font-size: 11px; font-weight: 600; }
 .tabs button.active .tab-count { background: var(--cp-brand-blue); color: #fff; }
+
+/* Bookings list: "Sold by" chosen in the table */
+.sold-by-select { min-width: 150px; max-width: 200px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--cp-card); color: var(--ink); font-size: 12px; }
+.sold-by-select:disabled { opacity: .6; }
+
+/* Bookings / Reports: Sold by + booking date filters */
+.booking-filters { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.booking-filters label { display: flex; flex-direction: column; gap: 4px; }
+.booking-filters label span { font-size: 12px; font-weight: bold; color: var(--muted); }
+.booking-filters select, .booking-filters input { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--cp-card); color: var(--ink); min-width: 150px; }
+.booking-filters.inline { margin: 0; align-items: center; gap: 8px; }
+.booking-filters.inline input { min-width: 0; }

@@ -27,6 +27,7 @@ const REPORTS = [
       { key: 'payment_type', label: 'Payment type' },
       { key: 'payment_status', label: 'Payment status' },
       { key: 'status', label: 'Status' },
+      { key: 'sold_by_name', label: 'Sold by', csv: (r) => r.sold_by_name || '' },
       { key: 'booked_at', label: 'Booked on', csv: (r) => dateTime(r.booked_at) },
     ],
   },

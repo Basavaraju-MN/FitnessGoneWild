@@ -84,6 +84,10 @@ router.get('/role-permissions', can('users'), controller.getRolePermissions);
 router.put('/role-permissions', can('users'), controller.saveRolePermissions);
 
 router.get('/users', can('users'), controller.getUsers);
+// Sales performance (Users & Roles): bookings per sales representative,
+// and one representative's bookings
+router.get('/users/sales', can('users'), controller.getSalesByRep);
+router.get('/users/sales/bookings', can('users'), controller.getSalesBookings);
 router.post('/users', can('users'), controller.createUser);
 router.put('/users/:id', can('users'), controller.updateUser);
 router.post('/users/:id/reset-password', can('users'), controller.resetUserPassword);

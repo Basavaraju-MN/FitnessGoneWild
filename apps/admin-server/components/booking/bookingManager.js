@@ -11,6 +11,7 @@ const {
   pick,
   requireFields,
   toMoney,
+  isDate,
   logActivity,
 } = require('../../utils/http');
 const {
@@ -39,6 +40,18 @@ async function findOrCreateCustomer({ name, phone, email, tripId }) {
     (await dbops.createCustomer({ name, phone, email, tripId }));
   await dbops.linkLeadsToCustomer(customerId, phone).catch(() => {});
   return customerId;
+}
+
+// Sales representative who sold the booking (an admin user), or null.
+// Admin only: never shown to the customer.
+async function soldByFrom(value) {
+  if (value === undefined) return undefined;
+  if (value === null || value === '') return null;
+  const id = Number(value);
+  if (!Number.isInteger(id) || !(await dbops.isActiveAdminUser(id))) {
+    throw badRequest('Choose a sales representative from the list');
+  }
+  return id;
 }
 
 // Booking taken by phone / WhatsApp / walk-in
@@ -70,6 +83,8 @@ async function createBooking(admin, body) {
   if (paid > 0 && !PAYMENT_METHODS.includes(method)) throw badRequest('Unknown payment method');
 
   const status = BOOKING_STATUSES.includes(body.status) ? body.status : 'confirmed';
+  // Not chosen: the person entering the booking sold it
+  const soldBy = (await soldByFrom(body.sold_by)) ?? admin.id ?? null;
 
   const customerId = await findOrCreateCustomer({
     name: String(body.name).trim(),
@@ -107,6 +122,7 @@ async function createBooking(admin, body) {
     status,
     payment_status: paymentStatusFor(amount, paid),
     notes: body.notes || null,
+    sold_by: soldBy,
     paid_at: paid > 0 ? new Date() : null,
   });
 
@@ -142,6 +158,11 @@ async function updateBooking(admin, id, body) {
   if (!booking) throw notFound('Booking not found');
 
   const data = pick(body, ['status', 'pickup_point_id', 'notes', 'amount']);
+  // Sold by: change it, or empty to clear it. Checked only when it changes,
+  // so a booking keeps a rep who has since been deactivated.
+  if (body.sold_by !== undefined && String(body.sold_by ?? '') !== String(booking.sold_by ?? '')) {
+    data.sold_by = await soldByFrom(body.sold_by);
+  }
   // Edited as the trip amount without GST: total = amount + GST
   if (body.trip_amount !== undefined && body.trip_amount !== '') {
     data.amount = Number(body.trip_amount) * (1 + (await dbops.getGstPercent()) / 100);
@@ -317,7 +338,40 @@ const getWhatsappStatus = () => ({
   template: whatsappCloud.templateName(),
 });
 
+const checkDates = (from, to) => {
+  for (const value of [from, to]) {
+    if (value && !isDate(value)) throw badRequest('Dates must be YYYY-MM-DD');
+  }
+};
+
+// Sales performance: bookings, people and amounts per sales representative.
+// from / to: YYYY-MM-DD (booking date), either may be left out
+async function getSalesByRep({ from, to } = {}) {
+  checkDates(from, to);
+  const rows = await dbops.getSalesByRep(from || null, to || null);
+  return rows.map((r) => ({
+    ...r,
+    // Website bookings nobody has been credited with yet
+    sold_by_name: r.sold_by ? r.sold_by_name || `User #${r.sold_by}` : 'Not assigned',
+    bookings: Number(r.bookings),
+    people: Number(r.people),
+    booking_value: toMoney(r.booking_value),
+    collected: toMoney(r.collected),
+    online_bookings: Number(r.online_bookings),
+  }));
+}
+
+// One representative's bookings in the period (soldBy = user id, or 'none'
+// for bookings nobody has been credited with); cancelled ones left out
+async function getSalesBookings({ soldBy, from, to } = {}) {
+  checkDates(from, to);
+  if (soldBy !== 'none' && !Number.isInteger(Number(soldBy))) throw badRequest('Choose a sales representative');
+  return dbops.getSalesBookings(soldBy === 'none' ? null : Number(soldBy), from || null, to || null);
+}
+
 module.exports = {
+  getSalesByRep,
+  getSalesBookings,
   sendInvoiceWhatsApp,
   getWhatsappMessages,
   getWhatsappStatus,

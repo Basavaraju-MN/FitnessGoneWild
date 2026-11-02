@@ -223,6 +223,24 @@ exports.updateDeparture = async (req, res, next) => {
    BOOKINGS
    ===================================================================== */
 
+exports.getSalesByRep = async (req, res, next) => {
+  try {
+    const data = await bookingManager.getSalesByRep({ from: req.query.from, to: req.query.to });
+    return res.status(200).json({ success: true, message: 'Sales by representative fetched successfully', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.getSalesBookings = async (req, res, next) => {
+  try {
+    const data = await bookingManager.getSalesBookings({ soldBy: req.query.sold_by, from: req.query.from, to: req.query.to });
+    return res.status(200).json({ success: true, message: 'Bookings fetched successfully', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 exports.getBookings = async (req, res, next) => {
   try {
     const data = await bookingManager.getBookings({
