@@ -37,6 +37,14 @@ const searchText = (trek) => [
   ...(trek.departure_cities || []).map((c) => c.name),
 ].filter(Boolean).join(' ').toLowerCase();
 
+// "View more …" in one word for the open tab: treks, tours, or trips (anything else)
+const moreLabel = (category) => {
+  const name = String(category?.name || '').toLowerCase();
+  if (!name || name.includes('trek')) return 'treks';
+  if (name.includes('tour')) return 'tours';
+  return 'trips';
+};
+
 // Section text: which city the transport leaves from
 const describe = (city) =>
   `Every trip below has confirmed dates, transport from ${city ? city.name : 'your departure city'} and a leader assigned.`;
@@ -446,7 +454,7 @@ export default function TrekCategories({ onTrekSelect }) {
                 setVisibleCount((count) => count + TREKS_PER_PAGE)
               }
             >
-              View more treks ({shownTreks.length - visibleCount} more)
+              View more {searching ? 'results' : moreLabel(categories.find((c) => c.id === activeCategoryId))} ({shownTreks.length - visibleCount} more)
             </button>
           )}
 

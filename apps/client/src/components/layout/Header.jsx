@@ -12,6 +12,15 @@ export const scrollToSection = (id) => {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
+const LINKS = [
+  ['top', 'Home'],
+  ['trips', 'Treks'],
+  ['featured', 'Featured'],
+  ['why', 'Why us'],
+  ['reviews', 'Reviews'],
+  ['faq', 'FAQ'],
+];
+
 /**
  * onNavigate(id): set by the home page so a link can first close an open
  * trek page (its sections are hidden while a trek is shown).
@@ -31,98 +40,29 @@ export default function Header({ onNavigate }) {
   };
 
   return (
-    <header
-      className="site-header"
-      style={{
-        backgroundColor: '#008b8b',
-      }}
-    >
-      <nav
-        className="nav"
-        aria-label="Main navigation"
-      >
-        <a
-          className="brand"
-          href="/#top"
-          onClick={(event) => go(event, 'top')}
-        >
-          <img
-            src="/images/logo.png"
-            alt="The Fitness Gone Wild"
-            style={{
-              height: '85px',
-              width: '130px',
-            }}
-          />
+    <header className="site-header">
+      <nav className="nav" aria-label="Main navigation">
+        <a className="brand" href="/#top" onClick={(event) => go(event, 'top')}>
+          <img className="brand-logo" src="/images/logo.png" alt="The Fitness Gone Wild" />
         </a>
 
         <button
+          type="button"
           className="mobile-menu"
           aria-label="Toggle menu"
+          aria-expanded={open}
           onClick={() => setOpen((v) => !v)}
         >
-          {open ? (
-            <X size={22} />
-          ) : (
-            <Menu size={22} />
-          )}
+          {open ? <X size={24} /> : <Menu size={24} />}
         </button>
 
-        <div
-          className={`nav-links ${open ? 'open' : ''
-            }`}
-          style={{
-            fontSize: '1.3rem',
-            fontWeight: 'bold',
-          }}
-        >
-          <a
-          href="/#top"
-          onClick={(event) => go(event, 'top')}
-        >
-            Home
-          </a>
-
-          <a
-          href="/#trips"
-          onClick={(event) => go(event, 'trips')}
-        >
-            Treks
-          </a>
-
-          <a
-          href="/#featured"
-          onClick={(event) => go(event, 'featured')}
-        >
-            Featured
-          </a>
-
-          <a
-          href="/#why"
-          onClick={(event) => go(event, 'why')}
-        >
-            Why us
-          </a>
-
-          <a
-          href="/#reviews"
-          onClick={(event) => go(event, 'reviews')}
-        >
-            Reviews
-          </a>
-
-          <a
-          href="/#faq"
-          onClick={(event) => go(event, 'faq')}
-        >
-            FAQ
-          </a>
-
-          <a
-            className="btn btn-sm"
-          href="/#contact"
-          onClick={(event) => go(event, 'contact')}
-        >
+        <div className={`nav-links ${open ? 'open' : ''}`}>
+          {LINKS.map(([id, label]) => (
+            <a key={id} href={`/#${id}`} onClick={(event) => go(event, id)}>
+              {label}
+            </a>
+          ))}
+          <a className="btn btn-sm" href="/#contact" onClick={(event) => go(event, 'contact')}>
             Talk to us
           </a>
         </div>

@@ -3,7 +3,8 @@ import { getWhyUs } from '../../api/treks';
 import { stats } from '../../data/content';
 import SectionHeader from '../common/SectionHeader';
 
-const DEFAULT_ICONS = ['🧭', '👥', '🚌', '🩹', '🧾', '🌿'];
+// One per card, in the order of the why_us rows
+const DEFAULT_ICONS = ['🥾', '👥', '🚌', '🧰', '💬', '🌿'];
 
 export default function WhyChooseUs() {
   const [whyUs, setWhyUs] = useState([]);
@@ -31,7 +32,7 @@ export default function WhyChooseUs() {
 
   return (
     <section className="section" id="why">
-      <SectionHeader eyebrow="Why choose us" title="Six reasons people rebook" description="We've been running Western Ghats trips since 2018. These are the things our regulars actually tell us they came back for." />
+      <SectionHeader eyebrow="Why choose us" title="Adventure with confidence" description="Thoughtful planning, great people and memories that last." />
       <div className="why-grid">
         {whyUs.length === 0 ? (
           <p>Loading reasons to travel with us...</p>
