@@ -243,7 +243,7 @@ const PILL_TONES = {
   // amber
   pending: 'pending', in_process: 'pending', partial: 'pending', processing: 'pending', contacted: 'pending', upcoming: 'pending', draft: 'pending', interested: 'pending',
   // red
-  cancelled: 'red', failed: 'red', unpaid: 'red', not_contacted: 'red', full: 'red', not_interested: 'red', inactive: 'red',
+  cancelled: 'red', failed: 'red', unpaid: 'red', not_contacted: 'red', full: 'red', 'sold out': 'red', not_interested: 'red', inactive: 'red',
   // blue
   new: 'blue', ongoing: 'blue', custom: 'blue', replied: 'blue', sent: 'blue', delivered: '', read: '', sending: 'pending',
   // grey

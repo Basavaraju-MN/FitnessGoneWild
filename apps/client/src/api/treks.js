@@ -106,6 +106,16 @@ export async function getFeaturedTrips(options) {
   return Array.isArray(data) ? data : [];
 }
 
+// Booking dates of a trek, set up in the admin's Trip Coordination:
+// [{ id, start_date, end_date, sold_out, seats_left }]
+export async function getTrekDates(tripId, options) {
+  const data = await getWithRetry(
+    `/trek-dates?trip_id=${encodeURIComponent(tripId)}`,
+    options
+  );
+  return Array.isArray(data) ? data : [];
+}
+
 export async function getPickupPoints(tripId, options) {
   const data = await getWithRetry(
     `/pickup-points?trip_id=${encodeURIComponent(tripId)}`,

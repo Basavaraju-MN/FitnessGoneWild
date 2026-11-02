@@ -219,6 +219,24 @@
   font-weight: 600;
 }
 
+/* Trip Coordination dates: sold out (cannot be picked) or nearly full */
+.date-option.sold-out {
+  cursor: not-allowed;
+  color: #9aa5a0;
+  background: #f4f4f4;
+}
+.date-option.sold-out:hover { transform: none; box-shadow: none; background: #f4f4f4; }
+.date-tag {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.date-tag.sold { color: #c0392b; }
+.date-tag.few { color: #db7718; }
+.date-note { margin: 0; font-size: 13px; color: #64746d; }
+
 .date-help {
   margin: 10px 0 0;
   font-size: 12px;

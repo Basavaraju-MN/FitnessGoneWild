@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import '../../styles/bookingmodal.css';
 import '../../styles/payment.css';
 import { PaymentMethodChooser } from '../../pages/PaymentOptions';
-import { getPickupPoints, getTripTerms } from '../../api/treks';
+import { getPickupPoints, getTrekDates, getTripTerms } from '../../api/treks';
 import RichText from '../common/RichText';
 import { usePlaces } from '../../context/PlacesContext';
 import { isWithTransportOnly } from '../../utils/tripPricing';
@@ -25,7 +25,7 @@ function toLocalId(date) {
 // Customised trips can be 1, 2 or 3 days long
 const CUSTOM_DAY_OPTIONS = [1, 2, 3];
 
-// A trip date range. Weekend departures are Fri-Sun (3 days);
+// A trip date range. Public dates come from the admin's Trip Coordination;
 // customised trips start on any date for 1-3 days.
 function buildDateRange(start, days, isCustom = false) {
   const end = new Date(start);
@@ -43,45 +43,34 @@ function buildDateRange(start, days, isCustom = false) {
   };
 }
 
-function buildWeekend(friday) {
-  return buildDateRange(friday, 3);
+// "YYYY-MM-DD" -> local midnight Date
+const fromId = (id) => {
+  const [year, month, day] = String(id).split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
+// One Trip Coordination date from /trek-dates, with sold out / seats left
+function buildDeparture(date) {
+  const start = fromId(date.start_date);
+  const end = fromId(date.end_date || date.start_date);
+  const days = Math.max(1, Math.round((end - start) / 86400000) + 1);
+  return {
+    ...buildDateRange(start, days),
+    soldOut: Boolean(date.sold_out),
+    seatsLeft: date.seats_left ?? null,
+  };
 }
+
+// The first date that can still be booked
+const firstOpen = (dates) => dates.find((d) => !d.soldOut) || null;
+
+// "Only 3 left" when a date is nearly full
+const FEW_SEATS = 5;
 
 function formatRange(range) {
   return range.days > 1
     ? `${formatDateWithDay(range.start)} - ${formatDate(range.end)}`
     : formatDateWithDay(range.start);
-}
-
-function getUpcomingWeekends(count = 8) {
-  const weekends = [];
-  const today = new Date();
-
-  today.setHours(0, 0, 0, 0);
-
-  const day = today.getDay();
-
-  let daysUntilFriday = (5 - day + 7) % 7;
-
-  if (daysUntilFriday === 0 && today.getHours() >= 12) {
-    daysUntilFriday = 7;
-  }
-
-  const firstFriday = new Date(today);
-  firstFriday.setDate(
-    today.getDate() + daysUntilFriday
-  );
-
-  for (let i = 0; i < count; i++) {
-    const friday = new Date(firstFriday);
-    friday.setDate(
-      firstFriday.getDate() + i * 7
-    );
-
-    weekends.push(buildWeekend(friday));
-  }
-
-  return weekends;
 }
 
 function formatDate(date) {
@@ -103,10 +92,9 @@ export default function BookingModal({
   trek,
   onClose,
 }) {
-  const weekends = useMemo(
-    () => getUpcomingWeekends(),
-    []
-  );
+  // This trek's dates from the admin's Trip Coordination (open / sold out)
+  const [weekends, setWeekends] = useState([]);
+  const [datesLoading, setDatesLoading] = useState(true);
 
   // First trek photo in whichever format exists (jpg/png/webp)
   const [trekImage] = useTrekImages(trek?.slug);
@@ -114,7 +102,32 @@ export default function BookingModal({
   const [step, setStep] = useState(1);
 
   const [selectedWeekend, setSelectedWeekend] =
-    useState(weekends[0] || null);
+    useState(null);
+
+  useEffect(() => {
+    if (!trek?.id) return undefined;
+    const controller = new AbortController();
+
+    setDatesLoading(true);
+    getTrekDates(trek.id, { signal: controller.signal })
+      .then((rows) => {
+        const dates = rows.map(buildDeparture);
+        setWeekends(dates);
+        // Start on the first date that is not sold out (a customised date stays)
+        setSelectedWeekend((current) => (current?.isCustom ? current : firstOpen(dates)));
+      })
+      .catch((err) => {
+        if (!controller.signal.aborted) {
+          console.error('Failed to load trek dates:', err);
+          setWeekends([]);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setDatesLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [trek?.id]);
 
   // Customised trip: any start date from the calendar, 1-3 days
   const [customStart, setCustomStart] = useState(null);
@@ -154,7 +167,7 @@ export default function BookingModal({
     setCustomDays(1);
 
     if (selectedWeekend?.isCustom) {
-      setSelectedWeekend(weekends[0] || null);
+      setSelectedWeekend(firstOpen(weekends));
     }
 
     setError('');
@@ -572,16 +585,27 @@ export default function BookingModal({
 
                 <div className="date-list">
 
+                  {datesLoading && weekends.length === 0 && (
+                    <p className="date-note">Loading dates…</p>
+                  )}
+
+                  {!datesLoading && weekends.length === 0 && (
+                    <p className="date-note">
+                      No dates are scheduled for this trek yet. Pick your own with
+                      “Customise dates”, or WhatsApp us for the next departure.
+                    </p>
+                  )}
+
                   {weekends.map((weekend) => (
                     <button
                       type="button"
                       key={weekend.id}
-                      className={
-                        selectedWeekend?.id ===
-                          weekend.id
-                          ? 'date-option selected'
-                          : 'date-option'
-                      }
+                      disabled={weekend.soldOut}
+                      className={[
+                        'date-option',
+                        selectedWeekend?.id === weekend.id ? 'selected' : '',
+                        weekend.soldOut ? 'sold-out' : '',
+                      ].filter(Boolean).join(' ')}
                       onClick={() =>
                         handleDateChange(
                           weekend
@@ -589,6 +613,11 @@ export default function BookingModal({
                       }
                     >
                       {formatRange(weekend)}
+                      {weekend.soldOut ? (
+                        <small className="date-tag sold">Sold out</small>
+                      ) : weekend.seatsLeft !== null && weekend.seatsLeft <= FEW_SEATS ? (
+                        <small className="date-tag few">Only {weekend.seatsLeft} left</small>
+                      ) : null}
                     </button>
                   ))}
 
@@ -645,7 +674,7 @@ export default function BookingModal({
                 <p className="date-help">
                   {selectedWeekend?.isCustom
                     ? `Customised trip for ${selectedWeekend.days} day${selectedWeekend.days > 1 ? 's' : ''}.`
-                    : 'Departure Friday night and return Sunday night. Need other dates? Use Customise dates.'}
+                    : 'Need other dates? Use Customise dates.'}
                 </p>
 
               </div>

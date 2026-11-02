@@ -872,3 +872,12 @@ button.avatar:hover { background: var(--cp-brand-blue-90); }
 .pp-city { font-size: 11.5px; font-weight: 600; color: var(--forest); background: var(--amber-soft); padding: 3px 9px; border-radius: 999px; }
 .pp-names { display: inline-block; max-width: 420px; font-size: 12.5px; color: var(--muted); white-space: normal; line-height: 1.4; }
 .pickup-modal { max-width: 860px; }
+
+/* Trip Coordination: trek picker + Upcoming / Completed tabs */
+.coord-filter { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+.coord-trek { display: flex; flex-direction: column; gap: 4px; min-width: 260px; }
+.coord-trek span { font-size: 12px; font-weight: bold; color: var(--muted); }
+.coord-trek select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--cp-card); color: var(--ink); }
+.coord-tabs { margin-bottom: 0; }
+.tab-count { display: inline-block; min-width: 20px; padding: 1px 7px; margin-left: 4px; border-radius: 999px; background: var(--tint-grey-bg); color: var(--muted); font-size: 11px; font-weight: 600; }
+.tabs button.active .tab-count { background: var(--cp-brand-blue); color: #fff; }

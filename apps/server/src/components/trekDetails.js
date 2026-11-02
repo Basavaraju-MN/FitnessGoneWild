@@ -268,6 +268,50 @@ const getTripTerms = async (tripId) => {
     return result;
 };
 
+// A date is sold out when the admin marked it so, or every seat is booked
+const toTrekDate = (row) => {
+    const seatsTotal = Number(row.seats_total) || 0;
+    const seatsLeft = seatsTotal > 0 ? Math.max(0, seatsTotal - (Number(row.seats_booked) || 0)) : null;
+    const soldOut = row.status === 'full' || seatsLeft === 0;
+    return {
+        id: row.id,
+        start_date: row.start_date,
+        end_date: row.end_date || row.start_date,
+        sold_out: soldOut,
+        seats_left: soldOut ? 0 : seatsLeft,
+    };
+};
+
+// Booking dates of a trek, from its Trip Coordination departures
+const getTrekDates = async (tripId) => {
+    const result = {};
+    try {
+        result.data = (await dbCmds.getTrekDates(tripId)).map(toTrekDate);
+        result.success = true;
+        result.message = 'Trek dates fetched successfully';
+    } catch (error) {
+        result.success = false;
+        result.message = 'Error fetching trek dates';
+        console.error('Error fetching trek dates:', error?.message || error);
+    }
+    return result;
+};
+
+/**
+ * Before a payment: why this public date cannot be booked for `people`
+ * (sold out, no longer offered, not enough seats), or null when it can.
+ * Read fresh from the database: the visitor's page may be out of date.
+ */
+const trekDateProblem = async (tripId, startDate, people) => {
+    const date = (await dbCmds.getTrekDates(tripId)).map(toTrekDate).find((d) => d.start_date === startDate);
+    if (!date) return 'This date is no longer available. Please choose another date.';
+    if (date.sold_out) return 'Sorry, this date just sold out. Please choose another date.';
+    if (date.seats_left !== null && people > date.seats_left) {
+        return `Only ${date.seats_left} seat${date.seats_left === 1 ? '' : 's'} left on this date. Please reduce the people or choose another date.`;
+    }
+    return null;
+};
+
 const getPickupPoints = async (tripId) => {
     const result = {};
     try {
@@ -300,6 +344,8 @@ module.exports = {
     getTripTerms,
     getSiteFilters,
     getPickupPoints,
+    getTrekDates,
+    trekDateProblem,
     getTrekCategories,
     getTrekDetails,
     getFeaturedTrips,

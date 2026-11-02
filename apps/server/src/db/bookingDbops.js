@@ -172,6 +172,8 @@ async function recordBooking(transaction) {
 
   await executeQuery(queries.setBookingRef, [result.insertId]);
   await executeQuery(queries.addSeatsBooked, [people, departureId]);
+  // Seats changed: the website's dates (seats left / sold out) are read again
+  require('../utils/apiCache').clearApiCache();
 
   // First booking on this trip: it gets its trip code (Settings pattern)
   await require('../components/trip/tripCode').ensureTripCode(departureId)

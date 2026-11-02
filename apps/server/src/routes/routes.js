@@ -31,6 +31,9 @@ router.get('/faq', controller.getFaq);
 
 router.get('/pickup-points', controller.getPickupPoints);
 
+// Booking dates of a trek (Trip Coordination), open or sold out
+router.get('/trek-dates', controller.getTrekDates);
+
 router.get('/trip-terms', controller.getTripTerms);
 
 router.post('/trip-interest', controller.createTripInterest);

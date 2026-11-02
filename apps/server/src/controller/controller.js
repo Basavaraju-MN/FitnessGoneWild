@@ -170,6 +170,31 @@ exports.getTripTerms = async (req, res) => {
   return res.status(200).json({ success: true, data: result.data });
 };
 
+// Booking dates of a trek (Trip Coordination), each open or sold out
+exports.getTrekDates = async (req, res) => {
+  const tripId = Number(req.query.trip_id);
+
+  if (!tripId) {
+    return res.status(400).json({
+      success: false,
+      message: 'trip_id is required',
+    });
+  }
+
+  const result = await component.getTrekDates(tripId);
+  if (!result.success) {
+    return res.status(500).json({
+      success: false,
+      message: result.message,
+    });
+  }
+  return res.status(200).json({
+    success: true,
+    message: result.message,
+    data: result.data,
+  });
+};
+
 exports.getPickupPoints = async (req, res) => {
   const tripId = Number(req.query.trip_id);
 
@@ -318,6 +343,19 @@ exports.createPhonePePayment = async (req, res) => {
         success: false,
         message: 'A valid payment amount is required',
       });
+    }
+
+    // A public date must still be open with enough seats (the page may be old).
+    // Customised trips choose their own dates, so they are not checked.
+    if (!isCustomTrip) {
+      const people = (Number(withTransportTickets) || 0) + (Number(withoutTransportTickets) || 0);
+      const problem = await component.trekDateProblem(Number(trekId), String(tripStartDate || ''), Math.max(1, people));
+      if (problem) {
+        return res.status(409).json({
+          success: false,
+          message: problem,
+        });
+      }
     }
 
     // Create PhonePe payment

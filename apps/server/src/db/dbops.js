@@ -52,6 +52,10 @@ class Cmds {
     return (await executeQuery(sqlQueries.getPickupCities, [tripId])) || [];
   }
 
+  async getTrekDates(tripId) {
+    return (await executeQuery(sqlQueries.getTrekDates, [tripId])) || [];
+  }
+
   async getPickupPoints(tripId) {
     const rows = await executeQuery(sqlQueries.getPickupPoints, [tripId]);
     return rows || [];
