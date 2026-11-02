@@ -95,6 +95,24 @@ class Cmds {
     return { settings: settings?.[0] || null, slides: slides || [] };
   }
 
+  // One hero's photo { mime, data } from the database, or null
+  async getHeroPhoto(heroId) {
+    const rows = await executeQuery(sqlQueries.getHeroPhoto, [heroId]);
+    return rows?.[0] || null;
+  }
+
+  async getHeroesWithFilePhotos() {
+    return executeQuery(sqlQueries.getHeroesWithFilePhotos);
+  }
+
+  async saveHeroPhoto(heroId, mime, buffer) {
+    await executeQuery(sqlQueries.saveHeroPhoto, [heroId, mime, buffer]);
+  }
+
+  async setHeroImagePath(heroId, imagePath) {
+    await executeQuery(sqlQueries.setHeroImagePath, [imagePath, heroId]);
+  }
+
   async getWhyUs() {
     const rows = await executeQuery(sqlQueries.getWhyUs);
     return rows || [];

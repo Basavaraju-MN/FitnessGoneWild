@@ -511,6 +511,11 @@ const sqlqueries = {
   createHeroSlide: 'INSERT INTO hero_slides SET ?',
   updateHeroSlide: 'UPDATE hero_slides SET ? WHERE id = ?',
   deleteHeroSlide: 'DELETE FROM hero_slides WHERE id = ?',
+  // The hero's photo itself (hero_photos.sql); a new one replaces the old
+  saveHeroPhoto: `
+    INSERT INTO hero_photos (hero_id, mime, data) VALUES (?, ?, ?)
+    ON DUPLICATE KEY UPDATE mime = VALUES(mime), data = VALUES(data), updated_at = CURRENT_TIMESTAMP`,
+  deleteHeroPhoto: 'DELETE FROM hero_photos WHERE hero_id = ?',
 
   /* ================= SETTINGS ================= */
   getSettings: 'SELECT setting_key, setting_value, label, updated_at FROM settings ORDER BY label',
