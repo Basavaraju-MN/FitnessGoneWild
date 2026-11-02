@@ -537,6 +537,14 @@ class Cmds {
     await executeQuery(sqlQueries.deleteHeroSlide, [id]);
   }
 
+  async saveHeroPhoto(heroId, mime, buffer) {
+    await executeQuery(sqlQueries.saveHeroPhoto, [heroId, mime, buffer]);
+  }
+
+  async deleteHeroPhoto(heroId) {
+    await executeQuery(sqlQueries.deleteHeroPhoto, [heroId]);
+  }
+
   /* ================= HEALTH ================= */
   async ping() {
     await executeQuery(sqlQueries.ping);

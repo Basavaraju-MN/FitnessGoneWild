@@ -111,6 +111,13 @@ const sqlqueries = {
   getReviews: `SELECT id, source, trip_id, customer_id, booking_id, author_name, author_photo_url, rating, body, owner_reply, trip_month, avatar_colour, status, moderated_by, created_at, published_at FROM reviews WHERE status = 'published' AND body <> '' ORDER BY published_at DESC, created_at DESC`,
   // Home page hero (edited in the admin)
   getHeroSettings: `SELECT slide_seconds FROM site_hero WHERE id = 1`,
+  getHeroPhoto: 'SELECT mime, data FROM hero_photos WHERE hero_id = ?',
+  // Start-up: heroes whose photo is still a file of the website, moved into hero_photos
+  getHeroesWithFilePhotos: "SELECT id, image_path FROM hero_slides WHERE image_path LIKE '/images/%'",
+  saveHeroPhoto: `
+    INSERT INTO hero_photos (hero_id, mime, data) VALUES (?, ?, ?)
+    ON DUPLICATE KEY UPDATE mime = VALUES(mime), data = VALUES(data), updated_at = CURRENT_TIMESTAMP`,
+  setHeroImagePath: 'UPDATE hero_slides SET image_path = ? WHERE id = ?',
   getHeroSlides: `SELECT id, image_path, eyebrow, headline_line1, headline_line2, message, primary_label, primary_target, secondary_label, secondary_target, facts FROM hero_slides WHERE is_active = 1 ORDER BY sort_order, id`,
   getWhyUs: `SELECT id, title, description, created_at, updated_at FROM why_us WHERE 1 ORDER BY id ASC`,
   getFaq: `SELECT id, question, answer, created_at, updated_at FROM faq WHERE 1 ORDER BY id ASC`,

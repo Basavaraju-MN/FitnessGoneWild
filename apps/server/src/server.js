@@ -11,6 +11,7 @@ dotenv.config({
 const trekRoutes = require('./routes/routes');
 const { cachePublicApi, clearOnAdminChange } = require('./utils/apiCache');
 const { trekPage } = require('./utils/trekShare');
+const { heroPhoto, moveHeroPhotosToDb } = require('./utils/heroPhoto');
 const { clientOrigins } = require('./config/config');
 const { checkDatabaseConnection } = require('./db/connection');
 const { db } = require('./config/database');
@@ -303,6 +304,9 @@ app.get('/invoice-print.js', (_req, res) => {
   res.set('Cache-Control', 'public, max-age=86400');
   res.send("document.getElementById('print-invoice')?.addEventListener('click', () => window.print());");
 });
+// Home page hero photos, kept in the database (Website Hero screen)
+app.get('/hero-photo/:id', heroPhoto);
+
 app.get('/invoice/:token', invoicePage);
 app.get('/invoice/:token/pdf', invoicePdfPage);
 
@@ -369,6 +373,10 @@ app.listen(
     console.log(
       `Client build path: ${CLIENT_DIST_PATH}`
     );
+
+    // Hero photos still in website files: move them into the database once
+    moveHeroPhotosToDb(CLIENT_DIST_PATH)
+      .catch((error) => console.error('Moving hero photos failed:', error?.message || error));
 
     // Copy the Hostinger brochures to this server in the background
     setTimeout(() => {

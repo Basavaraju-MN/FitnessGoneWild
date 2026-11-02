@@ -1,15 +1,13 @@
 // Website Hero screen: the home page heroes. Each hero is its own slide with
 // its own photo, label, headline, line of text, two buttons and stats.
 // Called by controller/controller.js; reads and writes through db/dbops.js.
-// Photos are saved where the website reads them: apps/client/public/images/hero/
-// (and the built site, so they show at once).
-const fs = require('fs');
-const fsp = require('fs/promises');
-const path = require('path');
-
+// Photos are kept in the database (hero_photos), never on the server's disk,
+// so they survive restarts and server moves. The website loads them from
+// /hero-photo/<id>?v=<time> (saved in image_path; a new photo = a new address).
 const dbops = require('../../db/dbops');
-const { paths } = require('../../config');
 const { badRequest, notFound, logActivity } = require('../../utils/http');
+// The website serves the photos (and keeps copies in memory)
+const { forgetHeroPhoto } = require('../../../server/src/utils/heroPhoto');
 
 const MAX_HEROES = 8;
 const MAX_FACTS = 4;
@@ -17,11 +15,6 @@ const IMAGE_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'we
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 // Home page sections a hero button can go to
 const TARGETS = ['trips', 'featured', 'why', 'reviews', 'faq', 'contact'];
-
-const heroDirs = () => [
-  path.join(paths.clientPublic, 'images', 'hero'),
-  ...(fs.existsSync(paths.clientDist) ? [path.join(paths.clientDist, 'images', 'hero')] : []),
-];
 
 const text = (value, max) => {
   const v = String(value ?? '').trim();
@@ -48,30 +41,21 @@ async function getHero() {
   };
 }
 
-// New photo from the admin ("data:image/jpeg;base64,…") -> /images/hero/<file>
-async function savePhoto(dataUrl) {
+// New photo from the admin ("data:image/jpeg;base64,…") -> { mime, buffer }
+function readPhoto(dataUrl) {
   const match = /^data:([\w/+.-]+);base64,(.+)$/s.exec(String(dataUrl || ''));
   if (!match) throw badRequest('The photo could not be read. Please choose it again.');
-  const ext = IMAGE_TYPES[match[1]];
-  if (!ext) throw badRequest('Photos must be JPG, PNG or WebP');
+  if (!IMAGE_TYPES[match[1]]) throw badRequest('Photos must be JPG, PNG or WebP');
   const buffer = Buffer.from(match[2], 'base64');
   if (buffer.length > MAX_IMAGE_BYTES) throw badRequest('The photo is too large (max 8 MB)');
-
-  const file = `hero-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
-  for (const dir of heroDirs()) {
-    await fsp.mkdir(dir, { recursive: true });
-    await fsp.writeFile(path.join(dir, file), buffer);
-  }
-  return `/images/hero/${file}`;
+  return { mime: match[1], buffer };
 }
 
-// Only photos uploaded here (in images/hero/) are deleted, never the originals
-async function removePhoto(imagePath) {
-  const match = /^\/images\/hero\/([\w.-]+)$/.exec(String(imagePath || ''));
-  if (!match) return;
-  for (const dir of heroDirs()) {
-    await fsp.rm(path.join(dir, match[1]), { force: true });
-  }
+// Saves the hero's photo in the database; returns its new web address
+async function savePhoto(heroId, { mime, buffer }) {
+  await dbops.saveHeroPhoto(heroId, mime, buffer);
+  forgetHeroPhoto(heroId);
+  return `/hero-photo/${heroId}?v=${Date.now()}`;
 }
 
 // Fields of one hero from the admin form
@@ -113,16 +97,21 @@ async function createHero(admin, body = {}) {
   if (!body.dataUrl) throw badRequest('Choose a background photo');
 
   const data = cleanHero(body);
-  const imagePath = await savePhoto(body.dataUrl);
+  const photo = readPhoto(body.dataUrl);
+
+  // The photo needs the hero's id: add the hero, then its photo and address.
+  // Hidden until the photo is saved, so the website never shows it without one.
+  const sortOrder = all.reduce((max, h) => Math.max(max, Number(h.sort_order) || 0), 0) + 1;
+  const id = await dbops.createHeroSlide({ ...data, is_active: 0, image_path: '', sort_order: sortOrder });
   try {
-    const sortOrder = all.reduce((max, h) => Math.max(max, Number(h.sort_order) || 0), 0) + 1;
-    const id = await dbops.createHeroSlide({ ...data, image_path: imagePath, sort_order: sortOrder });
-    await logActivity(admin, 'create', 'hero', id, data.headline_line1);
-    return toHero(await findHero(id));
+    const imagePath = await savePhoto(id, photo);
+    await dbops.updateHeroSlide(id, { image_path: imagePath, is_active: data.is_active });
   } catch (error) {
-    await removePhoto(imagePath).catch(() => {});
+    await dbops.deleteHeroSlide(id).catch(() => {});
     throw error;
   }
+  await logActivity(admin, 'create', 'hero', id, data.headline_line1);
+  return toHero(await findHero(id));
 }
 
 async function updateHero(admin, id, body = {}) {
@@ -132,11 +121,10 @@ async function updateHero(admin, id, body = {}) {
     throw badRequest('Keep at least one hero showing on the website');
   }
 
-  let imagePath = hero.image_path;
-  if (body.dataUrl) imagePath = await savePhoto(body.dataUrl);
+  // A new photo replaces the old one in the database (same hero, new address)
+  const imagePath = body.dataUrl ? await savePhoto(hero.id, readPhoto(body.dataUrl)) : hero.image_path;
 
   await dbops.updateHeroSlide(hero.id, { ...data, image_path: imagePath });
-  if (imagePath !== hero.image_path) await removePhoto(hero.image_path);
 
   await logActivity(admin, 'update', 'hero', hero.id, data.headline_line1);
   return toHero(await findHero(hero.id));
@@ -150,8 +138,9 @@ async function deleteHero(admin, id) {
     throw badRequest('This is the only hero showing on the website. Switch on another one first.');
   }
 
+  await dbops.deleteHeroPhoto(hero.id); // also removed by the table's ON DELETE CASCADE
   await dbops.deleteHeroSlide(hero.id);
-  await removePhoto(hero.image_path);
+  forgetHeroPhoto(hero.id);
   await logActivity(admin, 'delete', 'hero', hero.id, hero.headline_line1 || '');
   return true;
 }
