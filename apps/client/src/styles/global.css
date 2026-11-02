@@ -27,3 +27,18 @@
 .featured-dot:hover{background:var(--ink-soft);transform:none;box-shadow:none}
 .featured-dot.active{width:28px;background:var(--amber)}
 @media(max-width:850px){.featured-slide{grid-template-columns:1fr;gap:24px}.featured-slide .trip-thumb img{height:250px}}
+
+/* Trek card: Enquiry + Book Now side by side, brochure underneath */
+.card-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.card-actions button{padding:12px 10px;border-radius:12px;font-weight:800;font-size:.88rem}
+.card-actions .enquiry-btn{background:#fff;color:var(--amber-hover);border:1.5px solid var(--amber)}
+.card-actions .enquiry-btn:hover{background:#fff6ec;color:var(--amber-hover)}
+.card-actions .book-btn{background:var(--amber);color:#fff;border:1.5px solid var(--amber)}
+.card-actions .book-btn:hover{background:var(--amber-hover);border-color:var(--amber-hover)}
+
+/* Hero: all slides' texts share one spot; only the current one shows.
+   The hero keeps the height of its tallest slide, so it never jumps. */
+.hero-stack{display:grid}
+.hero-slide{grid-area:1/1;visibility:hidden;opacity:0;transition:opacity .5s ease,visibility .5s}
+.hero-slide.active{visibility:visible;opacity:1}
+@media (prefers-reduced-motion:reduce){.hero-slide{transition:none}}

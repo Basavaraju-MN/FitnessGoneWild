@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import '../../styles/trekcard.css'
 import RichText from '../common/RichText';
+import BookingModal from '../booking/BookingModal';
 import { API_BASE_URL, getDownloadFileName } from '../../api/treks';
 import useTrekImages, { FALLBACK_IMAGE } from '../../hooks/useTrekImages';
 import { MapPin } from 'lucide-react';
@@ -47,6 +48,8 @@ export default function TrekCard({ trek, onClick }) {
 
   // Brochure modal state
   const [showBrochureModal, setShowBrochureModal] = useState(false);
+  // "Book Now" on the card: the booking pop-up, without opening the trek page
+  const [showBooking, setShowBooking] = useState(false);
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
   const [isDownloading, setIsDownloading] = useState(false);
@@ -438,7 +441,7 @@ export default function TrekCard({ trek, onClick }) {
             {showsDistance(trek) && <span>{trek.distance_label}</span>}
           </div>
 
-          {/* Price with Enquire beside it, brochure underneath */}
+          {/* Price, then Enquiry + Book Now, brochure underneath */}
           <div className="price-row">
             <div className="price">
               <strong>
@@ -450,16 +453,30 @@ export default function TrekCard({ trek, onClick }) {
 
               <small>{getPriceNote(trek)}</small>
             </div>
+          </div>
 
+          <div className="card-actions">
             <button
               type="button"
-              className="btn-sm"
+              className="enquiry-btn"
               onClick={(event) => {
                 event.stopPropagation();
                 handleWhatsApp();
               }}
             >
-              Enquire ↗
+              Enquiry ↗
+            </button>
+
+            {/* Opens the booking pop-up straight away */}
+            <button
+              type="button"
+              className="book-btn"
+              onClick={(event) => {
+                event.stopPropagation();
+                setShowBooking(true);
+              }}
+            >
+              Book Now ↗
             </button>
           </div>
 
@@ -591,6 +608,10 @@ export default function TrekCard({ trek, onClick }) {
             </form>
           </div>
         </div>
+      )}
+
+      {showBooking && (
+        <BookingModal trek={trek} onClose={() => setShowBooking(false)} />
       )}
     </>
   );

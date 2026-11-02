@@ -88,7 +88,14 @@ export default function Hero() {
   };
 
   const slide = heroSlides[currentSlide] || heroSlides[0];
-  const text = slide; // this hero's own texts, buttons and stats
+
+  // Load every hero photo once up front, so changing slide shows the photo
+  // at once instead of a blank moment while it downloads
+  useEffect(() => {
+    heroSlides.forEach((s) => {
+      if (s.image) new Image().src = s.image;
+    });
+  }, [heroSlides]);
 
   return (
     <section
@@ -166,70 +173,73 @@ export default function Hero() {
         ›
       </button>
 
-      <div className="hero-inner">
-
-        {text.eyebrow && (
-          <p className="eyebrow eyebrow-light">
-            {text.eyebrow}
-          </p>
-        )}
-
-        <h1>
-          {text.headline_line1}
-          {text.headline_line2 && (
-            <>
-              <br />
-              <span className="accent">{text.headline_line2}</span>
-            </>
-          )}
-        </h1>
-
-        {/* This hero's line under the headline (removed in the admin = not shown) */}
-        {slide.message ? (
-          <p
-            className="hero-sub"
-            key={currentSlide}
-            style={{
-              transition: 'opacity 0.5s ease',
-            }}
+      {/* Every hero's text is laid in the same place and only the current
+          one shows: the hero is always as tall as its tallest slide, so it
+          does not grow or shrink (and the photo does not jump) between slides */}
+      <div className="hero-inner hero-stack">
+        {heroSlides.map((text, index) => (
+          <div
+            key={index}
+            className={`hero-slide ${index === currentSlide ? 'active' : ''}`}
+            aria-hidden={index !== currentSlide}
           >
-            {slide.message}
-          </p>
-        ) : (
-          <div style={{ height: '22px' }} />
-        )}
+            {text.eyebrow && (
+              <p className="eyebrow eyebrow-light">
+                {text.eyebrow}
+              </p>
+            )}
 
-        <div className="hero-actions">
-          {text.primary_label && (
-            <a
-              className="btn btn-lg"
-              href={`#${text.primary_target || 'trips'}`}
-            >
-              {text.primary_label}
-            </a>
-          )}
+            <h1>
+              {text.headline_line1}
+              {text.headline_line2 && (
+                <>
+                  <br />
+                  <span className="accent">{text.headline_line2}</span>
+                </>
+              )}
+            </h1>
 
-          {text.secondary_label && (
-            <a
-              className="btn-ghost"
-              href={`#${text.secondary_target || 'reviews'}`}
-            >
-              {text.secondary_label} →
-            </a>
-          )}
-        </div>
+            {/* This hero's line under the headline (removed in the admin = not shown) */}
+            {text.message ? (
+              <p className="hero-sub">{text.message}</p>
+            ) : (
+              <div style={{ height: '22px' }} />
+            )}
 
-        {text.facts?.length > 0 && (
-          <ul className="hero-facts">
-            {text.facts.map((fact, index) => (
-              <li key={index}>
-                <strong>{fact.value}</strong>
-                <span>{fact.label}</span>
-              </li>
-            ))}
-          </ul>
-        )}
+            <div className="hero-actions">
+              {text.primary_label && (
+                <a
+                  className="btn btn-lg"
+                  href={`#${text.primary_target || 'trips'}`}
+                  tabIndex={index === currentSlide ? undefined : -1}
+                >
+                  {text.primary_label}
+                </a>
+              )}
 
+              {text.secondary_label && (
+                <a
+                  className="btn-ghost"
+                  href={`#${text.secondary_target || 'reviews'}`}
+                  tabIndex={index === currentSlide ? undefined : -1}
+                >
+                  {text.secondary_label} →
+                </a>
+              )}
+            </div>
+
+            {text.facts?.length > 0 && (
+              <ul className="hero-facts">
+                {text.facts.map((fact, i) => (
+                  <li key={i}>
+                    <strong>{fact.value}</strong>
+                    <span>{fact.label}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ))}
       </div>
 
       {/* Image indicators */}

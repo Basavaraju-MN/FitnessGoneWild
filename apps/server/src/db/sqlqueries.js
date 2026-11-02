@@ -33,6 +33,7 @@ const sqlqueries = {
     FROM trips t
     LEFT JOIN inclusion_exclusion ie ON ie.trip_id = t.id
     WHERE t.slug = ?
+      AND t.status = 'published' -- drafts and archived treks are not on the website
     GROUP BY t.id
     LIMIT 1
   `,
@@ -68,6 +69,7 @@ const sqlqueries = {
     LEFT JOIN inclusion_exclusion ie ON ie.trip_id = t.id
     WHERE t.category_id = ?
       AND COALESCE(t.is_featured, 0) = 0
+      AND t.status = 'published'
     GROUP BY t.id
     ORDER BY t.id ASC
   `,
@@ -105,6 +107,7 @@ const sqlqueries = {
     LEFT JOIN inclusion_exclusion ie ON ie.trip_id = t.id
     LEFT JOIN trip_interests ti ON ti.trip_id = t.id
     WHERE t.is_featured = 1
+      AND t.status = 'published'
     GROUP BY t.id
     ORDER BY t.featured_order ASC, t.id ASC
   `,
@@ -125,7 +128,8 @@ const sqlqueries = {
       AND (c.usage_limit IS NULL OR c.used_count < c.usage_limit)
     ORDER BY c.id DESC`,
   // A trek's own prices: the server works out what a booking costs
-  getTripForPricing: 'SELECT id, category_id, price, without_transport_price, with_transport_price FROM trips WHERE id = ?',
+  // Only published treks can be booked
+  getTripForPricing: "SELECT id, category_id, price, without_transport_price, with_transport_price FROM trips WHERE id = ? AND status = 'published'",
   // Start-up: heroes whose photo is still a file of the website, moved into hero_photos
   getHeroesWithFilePhotos: "SELECT id, image_path FROM hero_slides WHERE image_path LIKE '/images/%'",
   saveHeroPhoto: `
@@ -160,6 +164,7 @@ const sqlqueries = {
       ) AS cities
     FROM trips t
     LEFT JOIN regions r ON r.id = t.region_id AND r.is_active = 1
+    WHERE t.status = 'published'
   `,
   getPickupCities: `SELECT pp.id, dc.id AS city_id, dc.name AS city_name FROM pickup_points pp LEFT JOIN departure_cities dc ON dc.id = pp.city_id WHERE pp.trip_id = ?`,
   // Dates a trek can be booked for: its public (scheduled) Trip Coordination
