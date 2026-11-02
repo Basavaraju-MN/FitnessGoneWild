@@ -1,7 +1,7 @@
-// Shareable trek links: https://<site>/treks/<slug>
+// Shareable trip links: https://<site>/treks/<slug> for treks, /trips/<slug> for other trips
 // The website is one page, so a link preview (WhatsApp, Facebook, Instagram)
-// would only ever show the home page. For /treks/<slug> the server puts the
-// trek's own title, description and photo into index.html before sending it.
+// would only ever show the home page. For these addresses the server puts the
+// trip's own title, description and photo into index.html before sending it.
 const fs = require('fs');
 const path = require('path');
 const dbops = require('../db/dbops');
@@ -40,9 +40,17 @@ function indexHtml(clientDist) {
   return template;
 }
 
+// A trip's own address: /treks/<slug> for the trek categories
+// (1 = Weekend treks, 2 = One day treks), /trips/<slug> for every other one
+const TREK_CATEGORY_IDS = [1, 2];
+const isTrek = (trek) => TREK_CATEGORY_IDS.includes(Number(trek.category_id));
+const tripPath = (trek) => `/${isTrek(trek) ? 'treks' : 'trips'}/${encodeURIComponent(trek.slug)}`;
+
 /**
- * Express handler for GET /treks/:slug — the website's index.html with this
- * trek's preview tags. Unknown trek: the normal page (it shows "not found").
+ * Express handler for GET /treks/:slug and /trips/:slug — the website's
+ * index.html with this trip's preview tags. The wrong one of the two (e.g.
+ * /treks/goa for a trip) moves to the right address. Unknown trip: the
+ * normal page (it shows "not found").
  */
 function trekPage(clientDist) {
   return async (req, res, next) => {
@@ -61,11 +69,18 @@ function trekPage(clientDist) {
     }
     if (!trek) return res.type('html').send(html);
 
+    // Treks under /treks/, other trips under /trips/ (old shared links still work)
+    const path = tripPath(trek);
+    if (req.path !== path) {
+      const query = req.originalUrl.includes('?') ? req.originalUrl.slice(req.originalUrl.indexOf('?')) : '';
+      return res.redirect(301, `${path}${query}`);
+    }
+
     const base = siteUrl(req);
     const title = `${trek.name} | ${SITE_NAME}`;
-    const description = (plain(trek.blurb) || `${trek.duration_label || ''} trek with ${SITE_NAME}`).slice(0, 200);
+    const description = (plain(trek.blurb) || `${trek.duration_label || ''} ${isTrek(trek) ? 'trek' : 'trip'} with ${SITE_NAME}`).slice(0, 200);
     const image = `${base}${coverPath(clientDist, trek.slug)}`;
-    const url = `${base}/treks/${encodeURIComponent(trek.slug)}`;
+    const url = `${base}${path}`;
 
     const tags = [
       `<meta property="og:type" content="website" />`,

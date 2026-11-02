@@ -4,6 +4,7 @@ const cookieParser = require('cookie-parser');
 const routes = require('./routes/routes');
 const reviewManager = require('./components/review/reviewManager');
 const refundManager = require('./components/refund/refundManager');
+const { HttpError } = require('./utils/http');
 
 /**
  * The whole admin API as one router, so it can run on its own
@@ -38,9 +39,11 @@ function createAdminRouter() {
 
     if (res.headersSent) return next(error);
 
+    // Our own errors (HttpError, e.g. "PhonePe: …") say what went wrong;
+    // anything unexpected (database, bugs) gets a general message
     res.status(status).json({
       success: false,
-      message: status >= 500 ? 'Something went wrong on the server' : error.message,
+      message: error instanceof HttpError ? error.message : 'Something went wrong on the server',
     });
   });
 

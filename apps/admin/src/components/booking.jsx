@@ -19,10 +19,75 @@ export const PAYMENT_METHODS = [
 
 const BOOKING_STATUSES = ['confirmed', 'pending', 'completed', 'cancelled'].map((v) => ({ value: v, label: label(v) }));
 
+// "Sold by": the sales representative who sold a booking (any admin user,
+// sales people first). Admin only: the customer never sees it.
+const salesRepOptions = (lookups) =>
+  [...(lookups?.users || [])]
+    .sort((a, b) => (a.role === 'sales' ? 0 : 1) - (b.role === 'sales' ? 0 : 1) || String(a.full_name).localeCompare(b.full_name))
+    .map((u) => ({ value: u.id, label: `${u.full_name}${u.role ? ` (${label(u.role)})` : ''}` }));
+
+// current: the booking's present rep, kept as a choice even if no longer active
+const soldByField = (lookups, current) => {
+  const options = salesRepOptions(lookups);
+  if (current?.sold_by && !options.some((o) => String(o.value) === String(current.sold_by))) {
+    options.push({ value: current.sold_by, label: `${current.sold_by_name || `User #${current.sold_by}`} (inactive)` });
+  }
+  return {
+    name: 'sold_by', label: 'Sold by', type: 'select', placeholder: 'Not assigned', options,
+    hint: 'Sales representative · only for the admin, the customer never sees it',
+  };
+};
+
+/* ---------- "Sold by" dropdown in the bookings list ----------
+ * Changes the booking's sales representative straight from the table
+ * (e.g. a website booking, which has none). Saved as soon as it changes.
+ */
+export function SoldBySelect({ booking, onSaved }) {
+  const toast = useToast();
+  const { lookups } = useAdmin();
+  const [value, setValue] = useState(booking.sold_by ?? '');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => setValue(booking.sold_by ?? ''), [booking.sold_by]);
+
+  const { options } = soldByField(lookups, booking);
+
+  const change = async (next) => {
+    const before = value;
+    setValue(next);
+    setSaving(true);
+    try {
+      await api(`/bookings/${booking.id}`, { method: 'PATCH', body: { sold_by: next } });
+      const name = options.find((o) => String(o.value) === String(next))?.label;
+      toast(name ? `${booking.booking_ref}: sold by ${name}` : `${booking.booking_ref}: sales representative removed`);
+      onSaved?.();
+    } catch (error) {
+      setValue(before);
+      toast(error.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <select
+      className="sold-by-select"
+      value={value}
+      disabled={saving}
+      aria-label={`Sold by for ${booking.booking_ref}`}
+      onClick={(event) => event.stopPropagation()}
+      onChange={(event) => change(event.target.value)}
+    >
+      <option value="">Not assigned</option>
+      {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+    </select>
+  );
+}
+
 /* ---------- New booking (phone / WhatsApp / walk-in) ---------- */
 export function NewBookingModal({ departureId, onClose, onSaved }) {
   const toast = useToast();
-  const { lookups } = useAdmin();
+  const { lookups, user } = useAdmin();
   const [departures, setDepartures] = useState(null);
 
   useEffect(() => {
@@ -66,6 +131,8 @@ export function NewBookingModal({ departureId, onClose, onSaved }) {
         paid_amount: 0,
         payment_method: 'upi',
         status: 'confirmed',
+        // Whoever enters the booking, unless someone else sold it
+        sold_by: user?.id || '',
       }}
       fields={[
         {
@@ -120,6 +187,7 @@ export function NewBookingModal({ departureId, onClose, onSaved }) {
         { name: 'payment_method', label: 'Payment method', type: 'select', options: PAYMENT_METHODS },
         { name: 'payment_reference', label: 'Payment reference', placeholder: 'UPI / transaction ID' },
         { name: 'status', label: 'Booking status', type: 'select', options: BOOKING_STATUSES },
+        soldByField(lookups),
         { name: 'notes', label: 'Notes', type: 'textarea', full: true },
       ]}
       onClose={onClose}
@@ -344,9 +412,11 @@ export function BookingDetailModal({ bookingId, onClose, onChanged }) {
     ['Dates', `${date(booking.trek_start_date)}${booking.trek_end_date && booking.trek_end_date !== booking.trek_start_date ? ` → ${date(booking.trek_end_date)}` : ''}${Number(booking.is_custom_trip) ? ' (custom)' : ''}`],
     ['People', `${booking.people} (${booking.with_transport_people} with transport, ${booking.without_transport_people} without)`],
     ['Pickup', booking.pickup_name || '—'],
-    ['Booked on', dateTime(booking.booked_at)],
+    ['Booked on', `${dateTime(booking.booked_at)}${booking.merchant_order_id ? ' · on the website' : ''}`],
+    ['Sold by', booking.sold_by_name || 'Not assigned'],
     ['Trip amount (without GST)', money(Number(booking.amount) / (1 + Number(lookups?.gstPercent ?? 5) / 100))],
     [`GST (${Number(lookups?.gstPercent ?? 5)}%)`, money(Number(booking.amount) - Number(booking.amount) / (1 + Number(lookups?.gstPercent ?? 5) / 100))],
+    ...(booking.coupon_code ? [['Coupon', `${booking.coupon_code} · −${money(booking.discount_amount)} (before GST)`]] : []),
     ['Total (incl. GST)', money(booking.amount)],
     ['Paid', money(booking.amount_paid)],
     ['Balance', money(booking.balance_amount)],
@@ -535,13 +605,19 @@ export function BookingDetailModal({ bookingId, onClose, onChanged }) {
                 return `+ GST ${g}% = Total ${money(total)} · Already paid: ${money(booking.amount_paid)}`;
               },
             },
+            soldByField(lookups, booking),
             { name: 'notes', label: 'Notes', type: 'textarea', full: true },
           ]}
           onClose={() => setEditing(false)}
           onSubmit={async (values) => {
             await api(`/bookings/${booking.id}`, {
               method: 'PATCH',
-              body: { pickup_point_id: values.pickup_point_id, trip_amount: values.trip_amount, notes: values.notes },
+              body: {
+                pickup_point_id: values.pickup_point_id,
+                trip_amount: values.trip_amount,
+                notes: values.notes,
+                sold_by: values.sold_by ?? '',
+              },
             });
             toast('Booking updated');
             setEditing(false);

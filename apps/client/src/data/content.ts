@@ -1,6 +1,6 @@
 export const stats = [
   ['10,000+', 'Travellers'],
-  ['300+', 'Trips organised'],
+  ['300+', 'Journeys organised'],
   ['4.9 ★', 'Average rating'],
-  ['24×7', 'Trip support'],
+  ['24×7', 'Traveller support'],
 ];

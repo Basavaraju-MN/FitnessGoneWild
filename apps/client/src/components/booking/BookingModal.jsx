@@ -2,10 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import '../../styles/bookingmodal.css';
 import '../../styles/payment.css';
 import { PaymentMethodChooser } from '../../pages/PaymentOptions';
-import { getPickupPoints, getTripTerms } from '../../api/treks';
+import { checkCoupon, getCoupons, getPickupPoints, getTrekDates, getTripTerms } from '../../api/treks';
+import { couponConditions, couponDiscount } from '../../utils/coupon';
 import RichText from '../common/RichText';
 import { usePlaces } from '../../context/PlacesContext';
-import { isWithTransportOnly } from '../../utils/tripPricing';
+import { isWithTransportOnly, tripWord } from '../../utils/tripPricing';
 import useTrekImages from '../../hooks/useTrekImages';
 
 const GST_RATE = 0.05;
@@ -25,7 +26,7 @@ function toLocalId(date) {
 // Customised trips can be 1, 2 or 3 days long
 const CUSTOM_DAY_OPTIONS = [1, 2, 3];
 
-// A trip date range. Weekend departures are Fri-Sun (3 days);
+// A trip date range. Public dates come from the admin's Trip Coordination;
 // customised trips start on any date for 1-3 days.
 function buildDateRange(start, days, isCustom = false) {
   const end = new Date(start);
@@ -43,45 +44,34 @@ function buildDateRange(start, days, isCustom = false) {
   };
 }
 
-function buildWeekend(friday) {
-  return buildDateRange(friday, 3);
+// "YYYY-MM-DD" -> local midnight Date
+const fromId = (id) => {
+  const [year, month, day] = String(id).split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
+// One Trip Coordination date from /trek-dates, with sold out / seats left
+function buildDeparture(date) {
+  const start = fromId(date.start_date);
+  const end = fromId(date.end_date || date.start_date);
+  const days = Math.max(1, Math.round((end - start) / 86400000) + 1);
+  return {
+    ...buildDateRange(start, days),
+    soldOut: Boolean(date.sold_out),
+    seatsLeft: date.seats_left ?? null,
+  };
 }
+
+// The first date that can still be booked
+const firstOpen = (dates) => dates.find((d) => !d.soldOut) || null;
+
+// "Only 3 left" when a date is nearly full
+const FEW_SEATS = 5;
 
 function formatRange(range) {
   return range.days > 1
     ? `${formatDateWithDay(range.start)} - ${formatDate(range.end)}`
     : formatDateWithDay(range.start);
-}
-
-function getUpcomingWeekends(count = 8) {
-  const weekends = [];
-  const today = new Date();
-
-  today.setHours(0, 0, 0, 0);
-
-  const day = today.getDay();
-
-  let daysUntilFriday = (5 - day + 7) % 7;
-
-  if (daysUntilFriday === 0 && today.getHours() >= 12) {
-    daysUntilFriday = 7;
-  }
-
-  const firstFriday = new Date(today);
-  firstFriday.setDate(
-    today.getDate() + daysUntilFriday
-  );
-
-  for (let i = 0; i < count; i++) {
-    const friday = new Date(firstFriday);
-    friday.setDate(
-      firstFriday.getDate() + i * 7
-    );
-
-    weekends.push(buildWeekend(friday));
-  }
-
-  return weekends;
 }
 
 function formatDate(date) {
@@ -103,10 +93,9 @@ export default function BookingModal({
   trek,
   onClose,
 }) {
-  const weekends = useMemo(
-    () => getUpcomingWeekends(),
-    []
-  );
+  // This trek's dates from the admin's Trip Coordination (open / sold out)
+  const [weekends, setWeekends] = useState([]);
+  const [datesLoading, setDatesLoading] = useState(true);
 
   // First trek photo in whichever format exists (jpg/png/webp)
   const [trekImage] = useTrekImages(trek?.slug);
@@ -114,7 +103,32 @@ export default function BookingModal({
   const [step, setStep] = useState(1);
 
   const [selectedWeekend, setSelectedWeekend] =
-    useState(weekends[0] || null);
+    useState(null);
+
+  useEffect(() => {
+    if (!trek?.id) return undefined;
+    const controller = new AbortController();
+
+    setDatesLoading(true);
+    getTrekDates(trek.id, { signal: controller.signal })
+      .then((rows) => {
+        const dates = rows.map(buildDeparture);
+        setWeekends(dates);
+        // Start on the first date that is not sold out (a customised date stays)
+        setSelectedWeekend((current) => (current?.isCustom ? current : firstOpen(dates)));
+      })
+      .catch((err) => {
+        if (!controller.signal.aborted) {
+          console.error('Failed to load trek dates:', err);
+          setWeekends([]);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setDatesLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [trek?.id]);
 
   // Customised trip: any start date from the calendar, 1-3 days
   const [customStart, setCustomStart] = useState(null);
@@ -154,7 +168,7 @@ export default function BookingModal({
     setCustomDays(1);
 
     if (selectedWeekend?.isCustom) {
-      setSelectedWeekend(weekends[0] || null);
+      setSelectedWeekend(firstOpen(weekends));
     }
 
     setError('');
@@ -229,6 +243,22 @@ export default function BookingModal({
 
   // 'full' = pay the whole amount, 'advance' = reserve the slot
   const [paymentType, setPaymentType] = useState('full');
+
+  // Coupons: offers listed for this trek, the one applied, and a typed code
+  const [offers, setOffers] = useState([]);
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponInput, setCouponInput] = useState('');
+  const [couponError, setCouponError] = useState('');
+  const [couponBusy, setCouponBusy] = useState(false);
+
+  useEffect(() => {
+    if (!trek?.id) return undefined;
+    const controller = new AbortController();
+    getCoupons(trek.id, { signal: controller.signal }).then((list) => {
+      if (!controller.signal.aborted) setOffers(list);
+    });
+    return () => controller.abort();
+  }, [trek?.id]);
 
   // Price breakdown is hidden until "View Details" is clicked
   const [showPriceDetails, setShowPriceDetails] = useState(false);
@@ -313,19 +343,26 @@ export default function BookingModal({
     withoutTransportationAmount +
     transportationAmount;
 
-  const gst = subtotal * GST_RATE;
-
-  const total = subtotal + gst;
-
   const totalTickets =
     transportTickets + (transportOnly ? 0 : withoutTransportTickets);
+
+  // Coupon: comes off the trip price before GST. If the tickets no longer
+  // meet its conditions (e.g. fewer people), it gives no discount and is not sent.
+  const couponResult = couponDiscount(appliedCoupon, { people: totalTickets, subtotal });
+  const discount = couponResult.discount || 0;
+  const couponWorks = Boolean(appliedCoupon) && discount > 0;
+  const afterDiscount = subtotal - discount;
+
+  const gst = afterDiscount * GST_RATE;
+
+  const total = afterDiscount + gst;
 
   const advanceSubtotal =
     ADVANCE_PER_TICKET * totalTickets;
 
   // Advance only makes sense when it is less than the full price
   const canPayAdvance =
-    totalTickets > 0 && advanceSubtotal < subtotal;
+    totalTickets > 0 && advanceSubtotal < afterDiscount;
 
   const isAdvance =
     paymentType === 'advance' && canPayAdvance;
@@ -340,6 +377,40 @@ export default function BookingModal({
   // Rounded to paise to avoid values like 523.9499999
   const balanceDue = Math.round((total - payableNow) * 100) / 100;
 
+  // "Apply": the server checks the code for this trek and these tickets
+  const applyCoupon = async (code) => {
+    const clean = String(code || '').trim().toUpperCase();
+    if (!clean) {
+      setCouponError('Enter a coupon code');
+      return;
+    }
+    if (totalTickets < 1) {
+      setCouponError('Select your tickets first');
+      return;
+    }
+    setCouponBusy(true);
+    setCouponError('');
+    try {
+      const { coupon } = await checkCoupon({
+        code: clean,
+        tripId: trek.id,
+        withTransport: transportTickets,
+        withoutTransport: transportOnly ? 0 : withoutTransportTickets,
+      });
+      setAppliedCoupon(coupon);
+      setCouponInput('');
+    } catch (err) {
+      setCouponError(err.message);
+    } finally {
+      setCouponBusy(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponError('');
+  };
+
   const handleDateChange = (weekend) => {
     setSelectedWeekend(weekend);
     setError('');
@@ -349,7 +420,7 @@ export default function BookingModal({
     setError('');
 
     if (!selectedWeekend) {
-      setError('Please select a trek date.');
+      setError(`Please select a ${tripWord(trek)} date.`);
       return;
     }
 
@@ -386,7 +457,7 @@ export default function BookingModal({
   const handlePayNow = () => {
     if (!termsAccepted) {
       setError(
-        'Please read and agree to the Terms & Conditions of this trek.'
+        `Please read and agree to the Terms & Conditions of this ${tripWord(trek)}.`
       );
       return;
     }
@@ -416,6 +487,9 @@ export default function BookingModal({
       withTransportPrice: transportationPrice || price,
       withoutTransportPrice: price,
       subtotal,
+      // Coupon (checked again by the server before the payment)
+      couponCode: couponWorks ? appliedCoupon.code : null,
+      discount: couponWorks ? discount : 0,
       gst,
       // Amount charged now (full total or advance)
       total: payableNow,
@@ -572,16 +646,27 @@ export default function BookingModal({
 
                 <div className="date-list">
 
+                  {datesLoading && weekends.length === 0 && (
+                    <p className="date-note">Loading dates…</p>
+                  )}
+
+                  {!datesLoading && weekends.length === 0 && (
+                    <p className="date-note">
+                      No dates are scheduled for this {tripWord(trek)} yet. Pick your own with
+                      “Customise dates”, or WhatsApp us for the next departure.
+                    </p>
+                  )}
+
                   {weekends.map((weekend) => (
                     <button
                       type="button"
                       key={weekend.id}
-                      className={
-                        selectedWeekend?.id ===
-                          weekend.id
-                          ? 'date-option selected'
-                          : 'date-option'
-                      }
+                      disabled={weekend.soldOut}
+                      className={[
+                        'date-option',
+                        selectedWeekend?.id === weekend.id ? 'selected' : '',
+                        weekend.soldOut ? 'sold-out' : '',
+                      ].filter(Boolean).join(' ')}
                       onClick={() =>
                         handleDateChange(
                           weekend
@@ -589,6 +674,11 @@ export default function BookingModal({
                       }
                     >
                       {formatRange(weekend)}
+                      {weekend.soldOut ? (
+                        <small className="date-tag sold">Sold out</small>
+                      ) : weekend.seatsLeft !== null && weekend.seatsLeft <= FEW_SEATS ? (
+                        <small className="date-tag few">Only {weekend.seatsLeft} left</small>
+                      ) : null}
                     </button>
                   ))}
 
@@ -645,7 +735,7 @@ export default function BookingModal({
                 <p className="date-help">
                   {selectedWeekend?.isCustom
                     ? `Customised trip for ${selectedWeekend.days} day${selectedWeekend.days > 1 ? 's' : ''}.`
-                    : 'Departure Friday night and return Sunday night. Need other dates? Use Customise dates.'}
+                    : 'Need other dates? Use Customise dates.'}
                 </p>
 
               </div>
@@ -723,7 +813,7 @@ export default function BookingModal({
                     {pickupLoading
                       ? 'Loading pickup points...'
                       : visiblePickups.length === 0
-                        ? 'No pickup points for this trek'
+                        ? `No pickup points for this ${tripWord(trek)}`
                         : 'Select pickup location'}
                   </option>
 
@@ -934,6 +1024,70 @@ export default function BookingModal({
                 </label>
               )}
 
+              {/* OFFERS & COUPONS */}
+              <div className="coupon-box">
+                <div className="coupon-box-title">🏷️ Offers & coupons</div>
+
+                {appliedCoupon ? (
+                  <div className={`coupon-applied ${couponWorks ? '' : 'not-met'}`}>
+                    <div>
+                      <strong>{appliedCoupon.code}</strong>
+                      <span>{appliedCoupon.title}</span>
+                      {couponWorks
+                        ? <em>You save ₹{discount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</em>
+                        : <em>{couponResult.problem} Not applied.</em>}
+                    </div>
+                    <button type="button" className="coupon-remove" onClick={removeCoupon}>Remove</button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="coupon-entry">
+                      <input
+                        type="text"
+                        value={couponInput}
+                        placeholder="Enter coupon code"
+                        aria-label="Coupon code"
+                        onChange={(event) => {
+                          setCouponInput(event.target.value.toUpperCase());
+                          setCouponError('');
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            event.preventDefault();
+                            applyCoupon(couponInput);
+                          }
+                        }}
+                      />
+                      <button type="button" disabled={couponBusy} onClick={() => applyCoupon(couponInput)}>
+                        {couponBusy ? 'Checking…' : 'Apply'}
+                      </button>
+                    </div>
+
+                    {offers.length > 0 && (
+                      <ul className="coupon-offers">
+                        {offers.map((offer) => (
+                          <li key={offer.code}>
+                            <div>
+                              <strong>{offer.label}</strong>
+                              <span>{offer.title}</span>
+                              <small>
+                                Code <b>{offer.code}</b>
+                                {couponConditions(offer) ? ` · ${couponConditions(offer)}` : ''}
+                              </small>
+                            </div>
+                            <button type="button" className="outline" disabled={couponBusy} onClick={() => applyCoupon(offer.code)}>
+                              Apply
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </>
+                )}
+
+                {couponError && <p className="coupon-error">{couponError}</p>}
+              </div>
+
               {/* TERMS */}
               <div className="booking-terms">
 
@@ -1034,6 +1188,13 @@ export default function BookingModal({
                         </strong>
                       </div>
 
+                      {couponWorks && (
+                        <div className="discount-row">
+                          <span>Coupon {appliedCoupon.code}</span>
+                          <strong>−₹{discount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</strong>
+                        </div>
+                      )}
+
                       <div>
                         <span>GST (5%)</span>
                         <strong>
@@ -1055,7 +1216,7 @@ export default function BookingModal({
                           </div>
 
                           <div>
-                            <span>Balance (pay before the trek)</span>
+                            <span>Balance (pay before the {tripWord(trek)})</span>
                             <strong>₹{balanceDue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</strong>
                           </div>
                         </>

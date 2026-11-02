@@ -290,11 +290,50 @@ const sqlqueries = {
            b.payment_type, b.status, b.payment_status, b.notes,
            b.merchant_order_id, b.payment_transaction_id, b.payment_method, b.paid_at, b.booked_at,
            c.id AS customer_id, c.name AS customer_name, c.phone AS customer_phone, c.email AS customer_email,
-           b.pickup_point_id, p.name AS pickup_name
+           b.pickup_point_id, p.name AS pickup_name,
+           b.sold_by, s.full_name AS sold_by_name,
+           b.coupon_id, b.coupon_code, b.discount_amount
     FROM bookings b
     JOIN customers c ON c.id = b.customer_id
     LEFT JOIN trips t ON t.id = b.trip_id
-    LEFT JOIN pickup_points p ON p.id = b.pickup_point_id`,
+    LEFT JOIN pickup_points p ON p.id = b.pickup_point_id
+    LEFT JOIN admin_users s ON s.id = b.sold_by`,
+  /* ================= COUPONS (coupons.sql) ================= */
+  // Each coupon with its treks (comma list) and how many bookings used it
+  couponsBase: `
+    SELECT c.*,
+           DATE_FORMAT(c.valid_from, '%Y-%m-%d') AS valid_from, DATE_FORMAT(c.valid_to, '%Y-%m-%d') AS valid_to,
+           GROUP_CONCAT(DISTINCT ct.trip_id ORDER BY ct.trip_id) AS trip_ids,
+           (SELECT COUNT(*) FROM bookings b WHERE b.coupon_id = c.id AND b.status <> 'cancelled') AS bookings,
+           (SELECT COALESCE(SUM(b.discount_amount), 0) FROM bookings b WHERE b.coupon_id = c.id AND b.status <> 'cancelled') AS discount_given
+    FROM coupons c
+    LEFT JOIN coupon_trips ct ON ct.coupon_id = c.id`,
+  couponCodeTaken: 'SELECT id FROM coupons WHERE code = ? AND id <> ?',
+  createCoupon: 'INSERT INTO coupons SET ?',
+  updateCoupon: 'UPDATE coupons SET ? WHERE id = ?',
+  deleteCoupon: 'DELETE FROM coupons WHERE id = ?',
+  clearCouponTrips: 'DELETE FROM coupon_trips WHERE coupon_id = ?',
+  addCouponTrips: 'INSERT INTO coupon_trips (coupon_id, trip_id) VALUES ?',
+  // Is this an active admin user (a sales representative can be any of them)?
+  isActiveAdminUser: 'SELECT id FROM admin_users WHERE id = ? AND is_active = 1',
+  // Sales performance: one rep's bookings (same rules as salesByRep)
+  salesBookingsWhere: `b.status <> 'cancelled'
+      AND (? IS NULL OR b.booked_at >= ?)
+      AND (? IS NULL OR b.booked_at < DATE_ADD(?, INTERVAL 1 DAY))`,
+  // Sales performance: bookings per sales representative (cancelled bookings left out).
+  // ? = from date, ? = to date (booked_at), either may be NULL
+  salesByRep: `
+    SELECT b.sold_by, s.full_name AS sold_by_name, s.role,
+           COUNT(*) AS bookings, COALESCE(SUM(b.people), 0) AS people,
+           COALESCE(SUM(b.amount), 0) AS booking_value, COALESCE(SUM(b.amount_paid), 0) AS collected,
+           SUM(b.merchant_order_id IS NOT NULL) AS online_bookings
+    FROM bookings b
+    LEFT JOIN admin_users s ON s.id = b.sold_by
+    WHERE b.status <> 'cancelled'
+      AND (? IS NULL OR b.booked_at >= ?)
+      AND (? IS NULL OR b.booked_at < DATE_ADD(?, INTERVAL 1 DAY))
+    GROUP BY b.sold_by, s.full_name, s.role
+    ORDER BY bookings DESC, booking_value DESC`,
   bookingsWhereDeparture: 'b.departure_id = ?',
   bookingsWhereCustomer: 'b.customer_id = ?',
   bookingsWhereId: 'b.id = ?',

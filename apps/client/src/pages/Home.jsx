@@ -14,6 +14,7 @@ import ContactCTA from '../components/home/ContactCTA';
 
 import TrekDetails from '../components/treks/TrekDetails';
 import { getTrekBySlug } from '../api/treks';
+import { tripPath } from '../utils/tripPricing';
 
 const SITE_TITLE = 'The Fitness Gone Wild';
 
@@ -25,7 +26,7 @@ export default function Home() {
   const [pendingSection, setPendingSection] = useState(null);
   const location = useLocation();
   const navigate = useNavigate();
-  // /treks/<slug>: that trek's page (a link anyone can open)
+  // /treks/<slug> or /trips/<slug>: that trip's page (a link anyone can open)
   const { slug } = useParams();
 
   // Header link: leave the trek page (if open) and go to the section
@@ -35,7 +36,7 @@ export default function Home() {
     if (slug) navigate('/');
   };
 
-  // The address decides what is shown: /treks/<slug> = that trek, / = home
+  // The address decides what is shown: /treks/<slug> or /trips/<slug> = that trip, / = home
   useEffect(() => {
     if (!slug) {
       setTrekMissing(false);
@@ -56,6 +57,11 @@ export default function Home() {
     getTrekBySlug(slug, { signal: controller.signal })
       .then((trek) => {
         if (trek) {
+          // Treks under /treks/, other trips under /trips/: fix the address
+          // when a link used the other one (e.g. an old /treks/goa link)
+          if (location.pathname !== tripPath(trek)) {
+            navigate(`${tripPath(trek)}${location.search}${location.hash}`, { replace: true });
+          }
           setSelectedTrek(trek);
           window.scrollTo({ top: 0, behavior: 'auto' });
         } else {
@@ -98,11 +104,11 @@ export default function Home() {
   }, [pendingSection, selectedTrek]);
 
 
-  // Opening a trek gives it its own address (/treks/<slug>) to copy and share
+  // Opening a trip gives it its own address (/treks/<slug> or /trips/<slug>) to copy and share
   const handleTrekSelect = (trek) => {
     scrollBeforeDetails.current = window.scrollY;
     setSelectedTrek(trek);
-    navigate(`/treks/${trek.slug}`, { state: { fromList: true } });
+    navigate(tripPath(trek), { state: { fromList: true } });
 
     window.scrollTo({
       top: 0,
@@ -138,12 +144,12 @@ export default function Home() {
           <section className="section trek-link-state">
             {trekMissing ? (
               <>
-                <h2>Trek not found</h2>
-                <p>This trek is not available any more. Have a look at our other treks.</p>
-                <button type="button" onClick={() => navigate('/#trips')}>See all treks</button>
+                <h2>Trip not found</h2>
+                <p>This trip is not available any more. Have a look at our other trips.</p>
+                <button type="button" onClick={() => navigate('/#trips')}>See all trips</button>
               </>
             ) : (
-              <p>Loading trek…</p>
+              <p>Loading trip…</p>
             )}
           </section>
 

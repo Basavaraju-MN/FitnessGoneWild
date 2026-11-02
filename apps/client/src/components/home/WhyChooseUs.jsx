@@ -4,7 +4,7 @@ import { stats } from '../../data/content';
 import SectionHeader from '../common/SectionHeader';
 
 // One per card, in the order of the why_us rows
-const DEFAULT_ICONS = ['🥾', '👥', '🚌', '🧰', '💬', '🌿'];
+const DEFAULT_ICONS = ['🧭', '🌍', '🤝', '🚌', '🛟', '🌿'];
 
 export default function WhyChooseUs() {
   const [whyUs, setWhyUs] = useState([]);
@@ -32,7 +32,7 @@ export default function WhyChooseUs() {
 
   return (
     <section className="section" id="why">
-      <SectionHeader eyebrow="Why choose us" title="Adventure with confidence" description="Thoughtful planning, great people and memories that last." />
+      <SectionHeader eyebrow="Why travel with us" title="Explore more. Experience more." description="From mountain trails to beautiful destinations, we make every journey memorable." />
       <div className="why-grid">
         {whyUs.length === 0 ? (
           <p>Loading reasons to travel with us...</p>

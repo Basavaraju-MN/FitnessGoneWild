@@ -295,6 +295,53 @@ class Cmds {
     return first(await executeQuery(sql, [id]));
   }
 
+  /* ================= COUPONS ================= */
+  // All coupons, or one (id)
+  async getCoupons(id) {
+    const sql = `${withWhere(sqlQueries.couponsBase, id ? ['c.id = ?'] : [])} GROUP BY c.id ORDER BY c.is_active DESC, c.id DESC`;
+    return executeQuery(sql, id ? [id] : []);
+  }
+
+  async couponCodeTaken(code, exceptId = 0) {
+    return (await executeQuery(sqlQueries.couponCodeTaken, [code, exceptId])).length > 0;
+  }
+
+  async createCoupon(row) {
+    return (await executeQuery(sqlQueries.createCoupon, [row])).insertId;
+  }
+
+  async updateCoupon(id, row) {
+    await executeQuery(sqlQueries.updateCoupon, [row, id]);
+  }
+
+  async deleteCoupon(id) {
+    await executeQuery(sqlQueries.deleteCoupon, [id]);
+  }
+
+  // The treks a coupon is for (replaces the old list)
+  async setCouponTrips(couponId, tripIds) {
+    await executeQuery(sqlQueries.clearCouponTrips, [couponId]);
+    if (tripIds.length) await executeQuery(sqlQueries.addCouponTrips, [tripIds.map((tripId) => [couponId, tripId])]);
+  }
+
+  async isActiveAdminUser(id) {
+    return (await executeQuery(sqlQueries.isActiveAdminUser, [id])).length > 0;
+  }
+
+  // Bookings per sales representative; from / to are YYYY-MM-DD or null
+  async getSalesByRep(from = null, to = null) {
+    return executeQuery(sqlQueries.salesByRep, [from, from, to, to]);
+  }
+
+  // One rep's bookings (soldBy null = not assigned) between from / to (booking date)
+  async getSalesBookings(soldBy, from = null, to = null) {
+    const sql = `${withWhere(sqlQueries.bookingsBase, [
+      soldBy == null ? 'b.sold_by IS NULL' : 'b.sold_by = ?',
+      sqlQueries.salesBookingsWhere,
+    ])} ORDER BY b.booked_at DESC`;
+    return executeQuery(sql, [...(soldBy == null ? [] : [soldBy]), from, from, to, to]);
+  }
+
   // Raw bookings row (for updates)
   async getBookingRow(id) {
     return first(await executeQuery(sqlQueries.getBookingRow, [id]));

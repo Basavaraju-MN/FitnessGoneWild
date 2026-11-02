@@ -19,6 +19,7 @@ const reviewManager = require('../components/review/reviewManager');
 const activityManager = require('../components/activity/activityManager');
 const refundManager = require('../components/refund/refundManager');
 const heroManager = require('../components/hero/heroManager');
+const couponManager = require('../components/coupon/couponManager');
 
 // Session cookie: the admin is on the same site as its API
 // (thefitnessgonewild.in/admin and /api/admin; localhost ports locally)
@@ -222,6 +223,64 @@ exports.updateDeparture = async (req, res, next) => {
 /* =====================================================================
    BOOKINGS
    ===================================================================== */
+
+exports.getSalesByRep = async (req, res, next) => {
+  try {
+    const data = await bookingManager.getSalesByRep({ from: req.query.from, to: req.query.to });
+    return res.status(200).json({ success: true, message: 'Sales by representative fetched successfully', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/* =====================================================================
+   COUPONS
+   ===================================================================== */
+
+exports.getCoupons = async (req, res, next) => {
+  try {
+    const data = await couponManager.getCoupons();
+    return res.status(200).json({ success: true, message: 'Coupons fetched successfully', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.createCoupon = async (req, res, next) => {
+  try {
+    const data = await couponManager.createCoupon(req.admin, req.body || {});
+    return res.status(200).json({ success: true, message: 'Coupon created successfully', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.updateCoupon = async (req, res, next) => {
+  try {
+    const data = await couponManager.updateCoupon(req.admin, idParam(req), req.body || {});
+    return res.status(200).json({ success: true, message: 'Coupon updated successfully', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.deleteCoupon = async (req, res, next) => {
+  try {
+    await couponManager.deleteCoupon(req.admin, idParam(req));
+    return res.status(200).json({ success: true, message: 'Coupon deleted successfully' });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.getSalesBookings = async (req, res, next) => {
+  try {
+    const data = await bookingManager.getSalesBookings({ soldBy: req.query.sold_by, from: req.query.from, to: req.query.to });
+    return res.status(200).json({ success: true, message: 'Bookings fetched successfully', data });
+  } catch (error) {
+    return next(error);
+  }
+};
 
 exports.getBookings = async (req, res, next) => {
   try {

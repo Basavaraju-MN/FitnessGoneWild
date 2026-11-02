@@ -14,7 +14,7 @@ export const scrollToSection = (id) => {
 
 const LINKS = [
   ['top', 'Home'],
-  ['trips', 'Treks'],
+  ['trips', 'Trips'],
   ['featured', 'Featured'],
   ['why', 'Why us'],
   ['reviews', 'Reviews'],

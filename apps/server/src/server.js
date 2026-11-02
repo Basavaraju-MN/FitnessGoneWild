@@ -313,8 +313,10 @@ app.get('/invoice/:token/pdf', invoicePdfPage);
 // Public website data is cached for 2 minutes (fewer database connections)
 app.use('/api', cachePublicApi, trekRoutes);
 
-// Shareable trek link: the page with that trek's title and photo for previews
-app.get('/treks/:slug', trekPage(CLIENT_DIST_PATH));
+// Shareable trip link: the page with that trip's title and photo for previews.
+// Treks live at /treks/<slug>, other trips at /trips/<slug>; the wrong one
+// of the two moves to the right address.
+app.get(['/treks/:slug', '/trips/:slug'], trekPage(CLIENT_DIST_PATH));
 
 app.use(express.static(CLIENT_DIST_PATH, { setHeaders: keepFiles(CLIENT_DIST_PATH) }));
 

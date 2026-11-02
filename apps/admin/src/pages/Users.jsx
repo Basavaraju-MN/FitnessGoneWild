@@ -6,6 +6,7 @@ import { dateTime } from '../format';
 import DataTable from '../components/DataTable';
 import { FormModal, PageHead, Pill, useToast } from '../components/ui';
 import RolePermissions from '../components/RolePermissions';
+import SalesPerformance from '../components/SalesPerformance';
 
 // What each role can see is set below, in Role permissions
 const ROLES = [
@@ -20,6 +21,7 @@ export default function Users() {
   const { user: me, reloadLookups } = useAdmin();
   const { data, loading, error, reload } = useApi('/users');
   const [form, setForm] = useState(null); // 'new' | user (edit) | { reset: user }
+  const [tab, setTab] = useState('users'); // 'users' | 'roles' | 'sales'
 
   const done = (message) => {
     toast(message);
@@ -30,10 +32,23 @@ export default function Users() {
 
   return (
     <>
-      <PageHead title="Users & Roles" subtitle="Who can sign in to the admin, and what each person can see.">
-        <button className="btn" onClick={() => setForm('new')}>＋ Add User</button>
+      <PageHead title="Users & Roles" subtitle="Who can sign in to the admin, what each person can see, and how many bookings each one sold.">
+        {tab === 'users' && <button className="btn" onClick={() => setForm('new')}>＋ Add User</button>}
       </PageHead>
 
+      <div className="tabs" role="tablist">
+        {[['users', 'Users'], ['roles', 'Role permissions'], ['sales', 'Sales performance']].map(([key, text]) => (
+          <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? 'active' : ''} onClick={() => setTab(key)}>
+            {text}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'sales' && <SalesPerformance />}
+
+      {tab === 'roles' && <RolePermissions />}
+
+      {tab === 'users' && (
       <DataTable
         title="Admin users"
         rows={data}
@@ -60,7 +75,7 @@ export default function Users() {
         ]}
       />
 
-      <RolePermissions />
+      )}
 
       {form === 'new' && (
         <FormModal

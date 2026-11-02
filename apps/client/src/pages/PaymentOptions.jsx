@@ -255,6 +255,8 @@ export function PaymentMethodChooser({ booking, onBack }) {
 
           subtotal: Number(booking?.subtotal || 0),
           gst: Number(booking?.gst || 0),
+          // Coupon applied on the booking pop-up (the server checks it again)
+          couponCode: booking?.couponCode || null,
 
           // Trek and trip dates (YYYY-MM-DD)
           trekId: booking?.trekId || null,

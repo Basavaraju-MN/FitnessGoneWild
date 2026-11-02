@@ -2,7 +2,7 @@ import { MapPin, Mountain } from 'lucide-react';
 import FilterPicker from './FilterPicker';
 import { usePlaces } from '../../context/PlacesContext';
 
-const treksNote = (n) => `${n} trek${n === 1 ? '' : 's'}`;
+const treksNote = (n) => `${n} trip${n === 1 ? '' : 's'}`;
 
 // "Departing from" dropdown: cities without treks show as coming soon
 export default function CityPicker() {

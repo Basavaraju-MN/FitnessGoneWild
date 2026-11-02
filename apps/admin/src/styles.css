@@ -872,3 +872,29 @@ button.avatar:hover { background: var(--cp-brand-blue-90); }
 .pp-city { font-size: 11.5px; font-weight: 600; color: var(--forest); background: var(--amber-soft); padding: 3px 9px; border-radius: 999px; }
 .pp-names { display: inline-block; max-width: 420px; font-size: 12.5px; color: var(--muted); white-space: normal; line-height: 1.4; }
 .pickup-modal { max-width: 860px; }
+
+/* Trip Coordination: trek picker + Upcoming / Completed tabs */
+.coord-filter { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+.coord-trek { display: flex; flex-direction: column; gap: 4px; min-width: 260px; }
+.coord-trek span { font-size: 12px; font-weight: bold; color: var(--muted); }
+.coord-trek select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--cp-card); color: var(--ink); }
+.coord-tabs { margin-bottom: 0; }
+.tab-count { display: inline-block; min-width: 20px; padding: 1px 7px; margin-left: 4px; border-radius: 999px; background: var(--tint-grey-bg); color: var(--muted); font-size: 11px; font-weight: 600; }
+.tabs button.active .tab-count { background: var(--cp-brand-blue); color: #fff; }
+
+/* Bookings list: "Sold by" chosen in the table */
+.sold-by-select { min-width: 150px; max-width: 200px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--cp-card); color: var(--ink); font-size: 12px; }
+.sold-by-select:disabled { opacity: .6; }
+
+/* Bookings / Reports: Sold by + booking date filters */
+.booking-filters { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.booking-filters label { display: flex; flex-direction: column; gap: 4px; }
+.booking-filters label span { font-size: 12px; font-weight: bold; color: var(--muted); }
+.booking-filters select, .booking-filters input { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--cp-card); color: var(--ink); min-width: 150px; }
+.booking-filters.inline { margin: 0; align-items: center; gap: 8px; }
+.booking-filters.inline input { min-width: 0; }
+
+/* Coupons */
+.coupon-code { font-family: ui-monospace, Consolas, monospace; letter-spacing: .03em; }
+.coupon-tag { display: inline-flex; flex-direction: column; padding: 2px 8px; border-radius: 8px; background: var(--tint-green-bg); color: var(--tint-green); font-weight: 700; font-size: 12px; line-height: 1.3; }
+.coupon-tag small { font-weight: 600; font-size: 11px; }

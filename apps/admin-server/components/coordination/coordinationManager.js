@@ -17,6 +17,9 @@ const DEPARTURE_FIELDS = [
   'price_override', 'notes', 'trip_code',
 ];
 
+// open = the website takes bookings for this date; full = shown as sold out
+const DEPARTURE_STATUSES = ['open', 'full', 'cancelled', 'completed'];
+
 function cleanDeparture(body) {
   const data = pick(body, DEPARTURE_FIELDS);
 
@@ -28,6 +31,20 @@ function cleanDeparture(body) {
 
   if (data.start_date && data.end_date && data.end_date < data.start_date) {
     throw badRequest('Return date cannot be before the travel date');
+  }
+
+  // Seats: empty = keep as it is (a new trip gets the table default)
+  if (data.seats_total === '' || data.seats_total === null) delete data.seats_total;
+  if (data.seats_total !== undefined) {
+    const seats = Number(data.seats_total);
+    if (!Number.isInteger(seats) || seats < 1 || seats > 999) throw badRequest('Seats must be a whole number from 1 to 999');
+    data.seats_total = seats;
+  }
+
+  // Booking on the website: open, or sold out (full)
+  if (data.status === '' || data.status === null) delete data.status;
+  if (data.status !== undefined && !DEPARTURE_STATUSES.includes(data.status)) {
+    throw badRequest('Unknown booking status');
   }
 
   // Trip code: your own numbering (letters, numbers, - _ /); empty = none yet

@@ -1,7 +1,7 @@
 const sqlqueries = {
   // Only active categories, in the order set by sort_order
   getTrekCategories: `SELECT * FROM categories WHERE is_active = 1 ORDER BY sort_order ASC, id ASC`,
-  // One trek by its web address (/treks/<slug>), featured or not
+  // One trip by its web address (/trips/<slug>), featured or not
   getTrekBySlug: `
     SELECT
       t.id,
@@ -33,6 +33,7 @@ const sqlqueries = {
     FROM trips t
     LEFT JOIN inclusion_exclusion ie ON ie.trip_id = t.id
     WHERE t.slug = ?
+      AND t.status = 'published' -- drafts and archived treks are not on the website
     GROUP BY t.id
     LIMIT 1
   `,
@@ -68,6 +69,7 @@ const sqlqueries = {
     LEFT JOIN inclusion_exclusion ie ON ie.trip_id = t.id
     WHERE t.category_id = ?
       AND COALESCE(t.is_featured, 0) = 0
+      AND t.status = 'published'
     GROUP BY t.id
     ORDER BY t.id ASC
   `,
@@ -105,6 +107,7 @@ const sqlqueries = {
     LEFT JOIN inclusion_exclusion ie ON ie.trip_id = t.id
     LEFT JOIN trip_interests ti ON ti.trip_id = t.id
     WHERE t.is_featured = 1
+      AND t.status = 'published'
     GROUP BY t.id
     ORDER BY t.featured_order ASC, t.id ASC
   `,
@@ -112,6 +115,21 @@ const sqlqueries = {
   // Home page hero (edited in the admin)
   getHeroSettings: `SELECT slide_seconds FROM site_hero WHERE id = 1`,
   getHeroPhoto: 'SELECT mime, data FROM hero_photos WHERE hero_id = ?',
+  /* ---------- Coupons (coupons.sql) ---------- */
+  getCouponByCode: 'SELECT * FROM coupons WHERE code = ?',
+  getCouponTripIds: 'SELECT trip_id FROM coupon_trips WHERE coupon_id = ?',
+  // Offers shown on a trek's booking pop-up: public, active, in date, not used up
+  getPublicCouponsForTrip: `
+    SELECT c.* FROM coupons c
+    WHERE c.is_active = 1 AND c.is_public = 1
+      AND (c.applies_to = 'all' OR EXISTS (SELECT 1 FROM coupon_trips ct WHERE ct.coupon_id = c.id AND ct.trip_id = ?))
+      AND (c.valid_from IS NULL OR c.valid_from <= CURDATE())
+      AND (c.valid_to IS NULL OR c.valid_to >= CURDATE())
+      AND (c.usage_limit IS NULL OR c.used_count < c.usage_limit)
+    ORDER BY c.id DESC`,
+  // A trek's own prices: the server works out what a booking costs
+  // Only published treks can be booked
+  getTripForPricing: "SELECT id, category_id, price, without_transport_price, with_transport_price FROM trips WHERE id = ? AND status = 'published'",
   // Start-up: heroes whose photo is still a file of the website, moved into hero_photos
   getHeroesWithFilePhotos: "SELECT id, image_path FROM hero_slides WHERE image_path LIKE '/images/%'",
   saveHeroPhoto: `
@@ -146,8 +164,18 @@ const sqlqueries = {
       ) AS cities
     FROM trips t
     LEFT JOIN regions r ON r.id = t.region_id AND r.is_active = 1
+    WHERE t.status = 'published'
   `,
   getPickupCities: `SELECT pp.id, dc.id AS city_id, dc.name AS city_name FROM pickup_points pp LEFT JOIN departure_cities dc ON dc.id = pp.city_id WHERE pp.trip_id = ?`,
+  // Dates a trek can be booked for: its public (scheduled) Trip Coordination
+  // departures from tomorrow on, open or sold out ("full")
+  getTrekDates: `
+    SELECT id, DATE_FORMAT(start_date, '%Y-%m-%d') AS start_date, DATE_FORMAT(end_date, '%Y-%m-%d') AS end_date,
+           seats_total, seats_booked, status
+    FROM departures
+    WHERE trip_id = ? AND departure_type = 'scheduled' AND status IN ('open', 'full') AND start_date > CURDATE()
+    ORDER BY start_date ASC
+    LIMIT 24`,
   getPickupPoints: `SELECT id, trip_id, name, address, map_url, sort_order FROM pickup_points WHERE is_active = 1 AND trip_id = ? ORDER BY sort_order ASC, id ASC`,
   createTripInterest: `INSERT INTO trip_interests (trip_id, type, source, created_at) VALUES (?, ?, ?, NOW())`,
   createCustomer: `INSERT INTO customers (name, phone, email, city, trip_id, created_at) VALUES (?, ?, ?, ?, ?, NOW())`,

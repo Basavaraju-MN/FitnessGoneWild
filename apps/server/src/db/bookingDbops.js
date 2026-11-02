@@ -5,6 +5,8 @@ const queries = {
   // Scheduled departures match on trip + start date; custom trips also on end date
   findDeparture: `SELECT id FROM departures WHERE trip_id = ? AND start_date = ? AND departure_type = ? AND (departure_type = 'scheduled' OR end_date = ?) ORDER BY id LIMIT 1`,
   createDeparture: `INSERT INTO departures (trip_id, start_date, end_date, departure_type, seats_booked, status) VALUES (?, ?, ?, ?, 0, 'open')`,
+  setBookingCoupon: 'UPDATE bookings SET coupon_id = ?, coupon_code = ?, discount_amount = ? WHERE id = ?',
+  addCouponUse: 'UPDATE coupons SET used_count = used_count + 1 WHERE id = ?',
   addSeatsBooked: `UPDATE departures SET seats_booked = seats_booked + ?, status = IF(status = 'open' AND seats_booked >= seats_total, 'full', status) WHERE id = ?`,
 
   findCustomerByPhone: `SELECT id FROM customers WHERE phone = ? ORDER BY id DESC LIMIT 1`,
@@ -171,7 +173,16 @@ async function recordBooking(transaction) {
   }
 
   await executeQuery(queries.setBookingRef, [result.insertId]);
+
+  // Coupon used: saved on the booking, and counted once on the coupon
+  if (details.couponId) {
+    await executeQuery(queries.setBookingCoupon, [details.couponId, details.couponCode || null, toMoney(details.discount), result.insertId]);
+    await executeQuery(queries.addCouponUse, [details.couponId]);
+  }
+
   await executeQuery(queries.addSeatsBooked, [people, departureId]);
+  // Seats changed: the website's dates (seats left / sold out) are read again
+  require('../utils/apiCache').clearApiCache();
 
   // First booking on this trip: it gets its trip code (Settings pattern)
   await require('../components/trip/tripCode').ensureTripCode(departureId)

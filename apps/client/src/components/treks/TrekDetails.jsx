@@ -13,6 +13,8 @@ import {
   isWithTransportOnly,
   showsDifficulty,
   showsDistance,
+  tripWord,
+  tripPath,
 } from '../../utils/tripPricing';
 import { API_BASE_URL, getDownloadFileName, getTripTerms } from '../../api/treks';
 
@@ -21,9 +23,9 @@ export default function TrekDetails({ trek, onBack }) {
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [activeTab, setActiveTab] = useState('itinerary');
 
-  // Share this trek's own link (/treks/<slug>)
+  // Share this trip's own link (/treks/<slug> or /trips/<slug>)
   const [shareNote, setShareNote] = useState('');
-  const shareUrl = `${window.location.origin}/treks/${trek.slug}`;
+  const shareUrl = `${window.location.origin}${tripPath(trek)}`;
   const shareTrek = async () => {
     const text = `${trek.name} with The Fitness Gone Wild`;
     if (navigator.share) {
@@ -229,7 +231,7 @@ export default function TrekDetails({ trek, onBack }) {
 
     if (!trek?.id) {
       setBrochureError(
-        'Unable to identify this trek. Please try again.'
+        `Unable to identify this ${tripWord(trek)}. Please try again.`
       );
       return;
     }
@@ -335,7 +337,7 @@ export default function TrekDetails({ trek, onBack }) {
             className="trek-back-button"
             onClick={onBack}
           >
-            ← Back to treks
+            ← Back to trips
           </button>
 
           <div className="trek-share">

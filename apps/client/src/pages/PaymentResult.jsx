@@ -424,7 +424,7 @@ export default function PaymentResult() {
   const description = isSuccess
     ? 'Your payment has been received.'
     : isFailed
-      ? 'No payment was collected. You can return to the trek page and try again.'
+      ? 'No payment was collected. You can return to the trip page and try again.'
       : state.error ||
       'Please wait while we confirm your payment with PhonePe.';
 

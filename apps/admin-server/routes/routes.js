@@ -83,7 +83,17 @@ router.put('/masters/:type/:id', canMaster, controller.updateMaster);
 router.get('/role-permissions', can('users'), controller.getRolePermissions);
 router.put('/role-permissions', can('users'), controller.saveRolePermissions);
 
+// Coupons screen (customers apply them when booking on the website)
+router.get('/coupons', can('coupons'), controller.getCoupons);
+router.post('/coupons', can('coupons'), controller.createCoupon);
+router.put('/coupons/:id', can('coupons'), controller.updateCoupon);
+router.delete('/coupons/:id', can('coupons'), controller.deleteCoupon);
+
 router.get('/users', can('users'), controller.getUsers);
+// Sales performance (Users & Roles): bookings per sales representative,
+// and one representative's bookings
+router.get('/users/sales', can('users'), controller.getSalesByRep);
+router.get('/users/sales/bookings', can('users'), controller.getSalesBookings);
 router.post('/users', can('users'), controller.createUser);
 router.put('/users/:id', can('users'), controller.updateUser);
 router.post('/users/:id/reset-password', can('users'), controller.resetUserPassword);

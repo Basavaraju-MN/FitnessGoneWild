@@ -6,6 +6,7 @@ const paymentDbOps = require('../db/paymentDbops');
 const phonepeComponent = require('../components/payment/phonepeComponent');
 const component = require('../components/trekDetails');
 const brochureComponent = require('../components/broucher/broucher')
+const couponComponent = require('../components/coupon/coupon');
 
 // Site the customer is paying from. Falls back to the Referer
 // when a browser or proxy does not send the Origin header.
@@ -170,6 +171,58 @@ exports.getTripTerms = async (req, res) => {
   return res.status(200).json({ success: true, data: result.data });
 };
 
+// Offers (public coupons) for a trek's booking pop-up
+exports.getCoupons = async (req, res) => {
+  const tripId = Number(req.query.trip_id);
+  if (!tripId) return res.status(400).json({ success: false, message: 'trip_id is required' });
+  try {
+    const data = await couponComponent.couponsForTrip(tripId);
+    return res.status(200).json({ success: true, message: 'Coupons fetched successfully', data });
+  } catch (error) {
+    console.error('Coupons error:', error?.message || error);
+    return res.status(500).json({ success: false, message: 'Error fetching coupons' });
+  }
+};
+
+// "Apply" on the booking pop-up: { code, trip_id, with_transport, without_transport }
+exports.checkCoupon = async (req, res) => {
+  const { code, trip_id: tripId, with_transport: withTransport, without_transport: withoutTransport } = req.body || {};
+  if (!String(code || '').trim()) return res.status(400).json({ success: false, message: 'Enter a coupon code' });
+  try {
+    const data = await couponComponent.checkCoupon({ code, tripId: Number(tripId), withTransport, withoutTransport });
+    return res.status(200).json({ success: true, message: 'Coupon applied', data });
+  } catch (error) {
+    if (error.status === 400) return res.status(400).json({ success: false, message: error.message });
+    console.error('Coupon check error:', error?.message || error);
+    return res.status(500).json({ success: false, message: 'The coupon could not be checked. Please try again.' });
+  }
+};
+
+// Booking dates of a trek (Trip Coordination), each open or sold out
+exports.getTrekDates = async (req, res) => {
+  const tripId = Number(req.query.trip_id);
+
+  if (!tripId) {
+    return res.status(400).json({
+      success: false,
+      message: 'trip_id is required',
+    });
+  }
+
+  const result = await component.getTrekDates(tripId);
+  if (!result.success) {
+    return res.status(500).json({
+      success: false,
+      message: result.message,
+    });
+  }
+  return res.status(200).json({
+    success: true,
+    message: result.message,
+    data: result.data,
+  });
+};
+
 exports.getPickupPoints = async (req, res) => {
   const tripId = Number(req.query.trip_id);
 
@@ -297,12 +350,8 @@ exports.createPhonePePayment = async (req, res) => {
       withTransportTickets,
       withTransportPrice,
       withTransportAmount,
-      subtotal,
-      gst,
-      totalAmount,
+      // subtotal / gst / totals from the browser are not used: worked out below
       paymentType,
-      tripTotal,
-      balanceDue,
       trekId,
       tripStartDate,
       tripEndDate,
@@ -310,6 +359,7 @@ exports.createPhonePePayment = async (req, res) => {
       isCustomTrip,
       user_id,
       preferred_payment_method,
+      couponCode,
     } = req.body;
 
     // Validate payment amount
@@ -320,9 +370,44 @@ exports.createPhonePePayment = async (req, res) => {
       });
     }
 
-    // Create PhonePe payment
+    // The price, worked out here from the trek's prices and the coupon.
+    // The amount from the browser must match it (within ₹1 for rounding).
+    let quote;
+    try {
+      quote = await couponComponent.quoteBooking({
+        tripId: Number(trekId),
+        withTransport: withTransportTickets,
+        withoutTransport: withoutTransportTickets,
+        couponCode,
+        paymentType,
+      });
+    } catch (error) {
+      if (error.status === 400) return res.status(409).json({ success: false, message: error.message });
+      throw error;
+    }
+    if (Math.abs(quote.payableNow - Number(amount)) > 1) {
+      return res.status(409).json({
+        success: false,
+        message: 'The price of this booking has changed. Please close the booking window and book again.',
+      });
+    }
+
+    // A public date must still be open with enough seats (the page may be old).
+    // Customised trips choose their own dates, so they are not checked.
+    if (!isCustomTrip) {
+      const people = (Number(withTransportTickets) || 0) + (Number(withoutTransportTickets) || 0);
+      const problem = await component.trekDateProblem(Number(trekId), String(tripStartDate || ''), Math.max(1, people));
+      if (problem) {
+        return res.status(409).json({
+          success: false,
+          message: problem,
+        });
+      }
+    }
+
+    // Create PhonePe payment (the amount worked out here)
     const result = await phonepeComponent.createPayment({
-      amount: Number(amount),
+      amount: quote.payableNow,
 
       // Lets PhonePe return the customer to localhost or the live site
       frontendOrigin: getRequestOrigin(req),
@@ -349,13 +434,19 @@ exports.createPhonePePayment = async (req, res) => {
         withTransportPrice,
         withTransportAmount,
 
-        subtotal,
-        gst,
-        totalAmount,
+        // Amounts as worked out here (coupon included)
+        subtotal: quote.subtotal,
+        gst: quote.gst,
+        totalAmount: quote.payableNow,
 
-        paymentType: paymentType === 'advance' ? 'advance' : 'full',
-        tripTotal,
-        balanceDue,
+        paymentType: quote.isAdvance ? 'advance' : 'full',
+        tripTotal: quote.total,
+        balanceDue: quote.balanceDue,
+
+        // Coupon: saved on the booking when the payment succeeds
+        couponId: quote.coupon?.id || null,
+        couponCode: quote.coupon?.code || null,
+        discount: quote.discount,
 
         trekId,
         tripStartDate,

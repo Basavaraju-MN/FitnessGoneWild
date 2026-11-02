@@ -67,7 +67,9 @@ async function createRefund(admin, bookingId, body = {}) {
   if (amount <= 0) throw badRequest('Refund must be more than 0');
   if (amount > info.refundable + 0.009) throw badRequest(`Only ₹${info.refundable} can still be refunded`);
 
+  // Kept within the column sizes (booking_refunds.reason 500, reference 120)
   const reason = body.reason ? String(body.reason).slice(0, 500) : null;
+  const reference = body.reference ? String(body.reference).trim().slice(0, 120) : null;
 
   if (mode === 'manual') {
     const method = body.method || 'upi';
@@ -75,7 +77,7 @@ async function createRefund(admin, bookingId, body = {}) {
 
     const id = await dbops.createRefund({
       bookingId: booking.id, amount, mode, method, state: 'completed',
-      reference: body.reference, reason, initiatedBy: admin.id,
+      reference, reason, initiatedBy: admin.id,
       completedAt: body.refunded_at || new Date(),
     });
     await dbops.updateBookingRefundTotals(booking.id);

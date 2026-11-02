@@ -52,6 +52,10 @@ class Cmds {
     return (await executeQuery(sqlQueries.getPickupCities, [tripId])) || [];
   }
 
+  async getTrekDates(tripId) {
+    return (await executeQuery(sqlQueries.getTrekDates, [tripId])) || [];
+  }
+
   async getPickupPoints(tripId) {
     const rows = await executeQuery(sqlQueries.getPickupPoints, [tripId]);
     return rows || [];
@@ -93,6 +97,23 @@ class Cmds {
       executeQuery(sqlQueries.getHeroSlides),
     ]);
     return { settings: settings?.[0] || null, slides: slides || [] };
+  }
+
+  /* ---------- Coupons ---------- */
+  // Coupon by code, with the treks it is for (trip_ids), or null
+  async getCouponByCode(code) {
+    const coupon = (await executeQuery(sqlQueries.getCouponByCode, [code]))?.[0];
+    if (!coupon) return null;
+    const trips = await executeQuery(sqlQueries.getCouponTripIds, [coupon.id]);
+    return { ...coupon, trip_ids: trips.map((t) => t.trip_id) };
+  }
+
+  async getPublicCouponsForTrip(tripId) {
+    return (await executeQuery(sqlQueries.getPublicCouponsForTrip, [tripId])) || [];
+  }
+
+  async getTripForPricing(tripId) {
+    return (await executeQuery(sqlQueries.getTripForPricing, [tripId]))?.[0] || null;
   }
 
   // One hero's photo { mime, data } from the database, or null

@@ -16,6 +16,7 @@ const SCREENS = [
   { module: 'dashboard', label: 'Dashboard', group: 'Main' },
   { module: 'packages', label: 'Treks & Trips', group: 'Main' },
   { module: 'brochures', label: 'Brochures', group: 'Main' },
+  { module: 'coupons', label: 'Coupons', group: 'Main' },
   { module: 'bookings', label: 'Bookings', group: 'Main' },
   { module: 'coordination', label: 'Trip Coordination', group: 'Main' },
   { module: 'customers', label: 'Customers', group: 'Main' },

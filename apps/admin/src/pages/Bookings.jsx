@@ -4,10 +4,11 @@ import { useApi } from '../api';
 import { date, label, money } from '../format';
 import DataTable from '../components/DataTable';
 import { PageHead, Pill, Stats } from '../components/ui';
-import { BookingDetailModal, NewBookingModal, PaymentModal } from '../components/booking';
+import { BookingDetailModal, NewBookingModal, PaymentModal, SoldBySelect } from '../components/booking';
 import { RowMenu, useInvoiceActions } from '../components/invoiceActions';
 
-export const bookingColumns = (open, collect, invoice) => [
+// onSoldBy: reload after "Sold by" is changed in the list
+export const bookingColumns = (open, collect, invoice, onSoldBy) => [
   { key: 'booking_ref', label: 'Booking ID', render: (r) => <button className="link" onClick={() => open(r.id)}>{r.booking_ref}</button>, csv: (r) => r.booking_ref },
   { key: 'customer_name', label: 'Customer', render: (r) => <><b>{r.customer_name}</b><br /><span className="muted">{r.customer_phone}</span></>, csv: (r) => `${r.customer_name} (${r.customer_phone})` },
   { key: 'trip_name', label: 'Trip' },
@@ -16,11 +17,23 @@ export const bookingColumns = (open, collect, invoice) => [
   { key: 'travel_mode', label: 'Transport', render: (r) => label(r.travel_mode) || '—', csv: (r) => label(r.travel_mode) },
   { key: 'pickup_name', label: 'Pickup' },
   { key: 'amount', label: 'Total', render: (r) => money(r.amount) },
+  // Coupon the customer applied (website booking pop-up)
+  {
+    key: 'coupon_code', label: 'Coupon',
+    render: (r) => (r.coupon_code ? <span className="coupon-tag" title={`−${money(r.discount_amount)} before GST`}>{r.coupon_code}<small>−{money(r.discount_amount)}</small></span> : <span className="muted">—</span>),
+    csv: (r) => (r.coupon_code ? `${r.coupon_code} (−${r.discount_amount})` : ''),
+  },
   { key: 'amount_paid', label: 'Paid', render: (r) => money(r.amount_paid) },
   { key: 'balance_amount', label: 'Balance', render: (r) => (Number(r.balance_amount) > 0 ? <b>{money(r.balance_amount)}</b> : money(0)) },
   { key: 'payment_status', label: 'Payment', render: (r) => <Pill value={r.payment_status} /> },
   { key: 'status', label: 'Status', render: (r) => <Pill value={r.status} /> },
   { key: 'booked_at', label: 'Booked on', render: (r) => date(r.booked_at) },
+  // Sales representative (admin only): chosen right here in the list
+  {
+    key: 'sold_by_name', label: 'Sold by',
+    render: (r) => <SoldBySelect booking={r} onSaved={onSoldBy} />,
+    csv: (r) => r.sold_by_name || '',
+  },
   {
     key: 'actions', label: '', sortable: false, export: false,
     render: (r) => (
@@ -95,7 +108,7 @@ export default function Bookings() {
             <option value="all">All</option>
           </select>
         }
-        columns={bookingColumns(setOpenId, setCollecting, invoice)}
+        columns={bookingColumns(setOpenId, setCollecting, invoice, reload)}
       />
 
       {collecting && (

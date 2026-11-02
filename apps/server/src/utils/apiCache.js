@@ -19,6 +19,8 @@ const CACHED_PATHS = new Set([
   '/why-us',
   '/faq',
   '/pickup-points',
+  '/trek-dates', // also cleared when a booking takes seats (bookingDbops)
+  '/coupons', // also cleared when a booking uses a coupon
   '/trip-terms',
   '/site-filters',
 ]);

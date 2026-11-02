@@ -90,7 +90,7 @@ export async function getTreksByCategory(categoryId, options) {
   return Array.isArray(data) ? data : [];
 }
 
-// One trek for its own page (/treks/<slug>); null when there is no such trek
+// One trip for its own page (/trips/<slug>); null when there is no such trip
 export async function getTrekBySlug(slug, options) {
   const response = await fetch(`${API_BASE_URL}/trek?slug=${encodeURIComponent(slug)}`, {
     credentials: 'include',
@@ -103,6 +103,38 @@ export async function getTrekBySlug(slug, options) {
 
 export async function getFeaturedTrips(options) {
   const data = await getWithRetry('/featured-trips', options);
+  return Array.isArray(data) ? data : [];
+}
+
+// Offers (coupons) shown on a trek's booking pop-up
+export async function getCoupons(tripId, options) {
+  try {
+    const data = await getWithRetry(`/coupons?trip_id=${encodeURIComponent(tripId)}`, { retries: 1, ...options });
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return []; // no offers shown; a code can still be typed in
+  }
+}
+
+// "Apply": { coupon, discount, subtotal }, or throws with the reason
+export async function checkCoupon({ code, tripId, withTransport, withoutTransport }) {
+  const response = await fetch(`${API_BASE_URL}/coupons/check`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code, trip_id: tripId, with_transport: withTransport, without_transport: withoutTransport }),
+  });
+  const result = await response.json().catch(() => null);
+  if (!response.ok || !result?.success) throw new Error(result?.message || 'The coupon could not be checked. Please try again.');
+  return result.data;
+}
+
+// Booking dates of a trek, set up in the admin's Trip Coordination:
+// [{ id, start_date, end_date, sold_out, seats_left }]
+export async function getTrekDates(tripId, options) {
+  const data = await getWithRetry(
+    `/trek-dates?trip_id=${encodeURIComponent(tripId)}`,
+    options
+  );
   return Array.isArray(data) ? data : [];
 }
 

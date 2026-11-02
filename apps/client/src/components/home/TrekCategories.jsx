@@ -133,7 +133,7 @@ export default function TrekCategories({ onTrekSelect }) {
         );
 
         setError(
-          'Unable to load trek categories. Please try again.'
+          'Unable to load trip categories. Please try again.'
         );
       } finally {
         if (!controller.signal.aborted) {
@@ -193,7 +193,7 @@ export default function TrekCategories({ onTrekSelect }) {
 
         setTreks([]);
         setError(
-          'Unable to load treks. Please try again.'
+          'Unable to load trips. Please try again.'
         );
       } finally {
         if (!controller.signal.aborted) {
@@ -281,7 +281,7 @@ export default function TrekCategories({ onTrekSelect }) {
   const nothingAnywhere = filtering && tabs.every((category) => tabCount(category.id) === 0);
 
   const notifyMe = () => {
-    const what = region ? `${region.name} treks` : 'treks';
+    const what = region ? `${region.name} trips` : 'treks';
     const from = city ? ` from ${city.name}` : '';
     const message = `Hi, please let me know when ${what}${from} open for booking.`;
     window.open(`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
@@ -296,7 +296,7 @@ export default function TrekCategories({ onTrekSelect }) {
           description={describe(city)}
         />
 
-        <p>Loading trek categories...</p>
+        <p>Loading trip categories...</p>
       </section>
     );
   }
@@ -318,8 +318,8 @@ export default function TrekCategories({ onTrekSelect }) {
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search treks, places or duration…"
-            aria-label="Search treks"
+            placeholder="Search trips, places or duration…"
+            aria-label="Search trips"
           />
           {query && (
             <button type="button" className="trek-search-clear" aria-label="Clear search" onClick={() => setQuery('')}>
@@ -339,7 +339,7 @@ export default function TrekCategories({ onTrekSelect }) {
         <p className="trek-search-summary">
           {searchLoading
             ? 'Searching…'
-            : `${shownTreks.length} trek${shownTreks.length === 1 ? '' : 's'} found for “${query.trim()}”${city ? ` from ${city.name}` : ''}${region ? ` in ${region.name}` : ''}`}
+            : `${shownTreks.length} trip${shownTreks.length === 1 ? '' : 's'} found for “${query.trim()}”${city ? ` from ${city.name}` : ''}${region ? ` in ${region.name}` : ''}`}
           <button type="button" className="outline btn-sm" onClick={() => setQuery('')}>Clear search</button>
         </p>
       )}
@@ -371,7 +371,7 @@ export default function TrekCategories({ onTrekSelect }) {
 
       {/* Treks */}
       {(searching ? searchLoading && allTreks.length === 0 : trekLoading) && (
-        <p>Loading treks...</p>
+        <p>Loading trips...</p>
       )}
 
       {!(searching ? searchLoading && allTreks.length === 0 : trekLoading) && !error && (
@@ -400,7 +400,7 @@ export default function TrekCategories({ onTrekSelect }) {
           ) : !searching && (nothingAnywhere || (filtering && shownTreks.length === 0)) ? (
             <div className="trek-empty">
               <h3>
-                {region ? `${region.name} is coming soon` : 'No treks here yet'}
+                {region ? `${region.name} is coming soon` : 'No trips here yet'}
               </h3>
               <p>
                 {region && city
