@@ -112,6 +112,20 @@ const sqlqueries = {
   // Home page hero (edited in the admin)
   getHeroSettings: `SELECT slide_seconds FROM site_hero WHERE id = 1`,
   getHeroPhoto: 'SELECT mime, data FROM hero_photos WHERE hero_id = ?',
+  /* ---------- Coupons (coupons.sql) ---------- */
+  getCouponByCode: 'SELECT * FROM coupons WHERE code = ?',
+  getCouponTripIds: 'SELECT trip_id FROM coupon_trips WHERE coupon_id = ?',
+  // Offers shown on a trek's booking pop-up: public, active, in date, not used up
+  getPublicCouponsForTrip: `
+    SELECT c.* FROM coupons c
+    WHERE c.is_active = 1 AND c.is_public = 1
+      AND (c.applies_to = 'all' OR EXISTS (SELECT 1 FROM coupon_trips ct WHERE ct.coupon_id = c.id AND ct.trip_id = ?))
+      AND (c.valid_from IS NULL OR c.valid_from <= CURDATE())
+      AND (c.valid_to IS NULL OR c.valid_to >= CURDATE())
+      AND (c.usage_limit IS NULL OR c.used_count < c.usage_limit)
+    ORDER BY c.id DESC`,
+  // A trek's own prices: the server works out what a booking costs
+  getTripForPricing: 'SELECT id, category_id, price, without_transport_price, with_transport_price FROM trips WHERE id = ?',
   // Start-up: heroes whose photo is still a file of the website, moved into hero_photos
   getHeroesWithFilePhotos: "SELECT id, image_path FROM hero_slides WHERE image_path LIKE '/images/%'",
   saveHeroPhoto: `

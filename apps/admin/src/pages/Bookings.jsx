@@ -17,6 +17,12 @@ export const bookingColumns = (open, collect, invoice, onSoldBy) => [
   { key: 'travel_mode', label: 'Transport', render: (r) => label(r.travel_mode) || '—', csv: (r) => label(r.travel_mode) },
   { key: 'pickup_name', label: 'Pickup' },
   { key: 'amount', label: 'Total', render: (r) => money(r.amount) },
+  // Coupon the customer applied (website booking pop-up)
+  {
+    key: 'coupon_code', label: 'Coupon',
+    render: (r) => (r.coupon_code ? <span className="coupon-tag" title={`−${money(r.discount_amount)} before GST`}>{r.coupon_code}<small>−{money(r.discount_amount)}</small></span> : <span className="muted">—</span>),
+    csv: (r) => (r.coupon_code ? `${r.coupon_code} (−${r.discount_amount})` : ''),
+  },
   { key: 'amount_paid', label: 'Paid', render: (r) => money(r.amount_paid) },
   { key: 'balance_amount', label: 'Balance', render: (r) => (Number(r.balance_amount) > 0 ? <b>{money(r.balance_amount)}</b> : money(0)) },
   { key: 'payment_status', label: 'Payment', render: (r) => <Pill value={r.payment_status} /> },

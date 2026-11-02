@@ -291,12 +291,29 @@ const sqlqueries = {
            b.merchant_order_id, b.payment_transaction_id, b.payment_method, b.paid_at, b.booked_at,
            c.id AS customer_id, c.name AS customer_name, c.phone AS customer_phone, c.email AS customer_email,
            b.pickup_point_id, p.name AS pickup_name,
-           b.sold_by, s.full_name AS sold_by_name
+           b.sold_by, s.full_name AS sold_by_name,
+           b.coupon_id, b.coupon_code, b.discount_amount
     FROM bookings b
     JOIN customers c ON c.id = b.customer_id
     LEFT JOIN trips t ON t.id = b.trip_id
     LEFT JOIN pickup_points p ON p.id = b.pickup_point_id
     LEFT JOIN admin_users s ON s.id = b.sold_by`,
+  /* ================= COUPONS (coupons.sql) ================= */
+  // Each coupon with its treks (comma list) and how many bookings used it
+  couponsBase: `
+    SELECT c.*,
+           DATE_FORMAT(c.valid_from, '%Y-%m-%d') AS valid_from, DATE_FORMAT(c.valid_to, '%Y-%m-%d') AS valid_to,
+           GROUP_CONCAT(DISTINCT ct.trip_id ORDER BY ct.trip_id) AS trip_ids,
+           (SELECT COUNT(*) FROM bookings b WHERE b.coupon_id = c.id AND b.status <> 'cancelled') AS bookings,
+           (SELECT COALESCE(SUM(b.discount_amount), 0) FROM bookings b WHERE b.coupon_id = c.id AND b.status <> 'cancelled') AS discount_given
+    FROM coupons c
+    LEFT JOIN coupon_trips ct ON ct.coupon_id = c.id`,
+  couponCodeTaken: 'SELECT id FROM coupons WHERE code = ? AND id <> ?',
+  createCoupon: 'INSERT INTO coupons SET ?',
+  updateCoupon: 'UPDATE coupons SET ? WHERE id = ?',
+  deleteCoupon: 'DELETE FROM coupons WHERE id = ?',
+  clearCouponTrips: 'DELETE FROM coupon_trips WHERE coupon_id = ?',
+  addCouponTrips: 'INSERT INTO coupon_trips (coupon_id, trip_id) VALUES ?',
   // Is this an active admin user (a sales representative can be any of them)?
   isActiveAdminUser: 'SELECT id FROM admin_users WHERE id = ? AND is_active = 1',
   // Sales performance: one rep's bookings (same rules as salesByRep)

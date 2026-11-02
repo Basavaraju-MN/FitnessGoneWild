@@ -862,3 +862,31 @@
 .bill-summary-popover .booking-price-summary .total-row strong {
   font-size: 16px;
 }
+
+/* =========================================
+   OFFERS & COUPONS
+   ========================================= */
+.coupon-box { margin: 16px 0; padding: 14px; border: 1px dashed #f2b36b; border-radius: 12px; background: #fff9f2; }
+.coupon-box-title { font-weight: 700; color: #123f35; margin-bottom: 10px; }
+.coupon-entry { display: flex; gap: 8px; }
+.coupon-entry input { flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid #e2e8e2; border-radius: 10px; font: inherit; text-transform: uppercase; letter-spacing: .04em; background: #fff; }
+.coupon-entry button { padding: 10px 18px; border-radius: 10px; }
+.coupon-offers { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+.coupon-offers li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 10px; background: #fff; border: 1px solid #f3dfc6; }
+.coupon-offers li div { display: flex; flex-direction: column; min-width: 0; }
+.coupon-offers strong { color: #db7718; font-size: 15px; }
+.coupon-offers span { font-size: 13px; color: #24342f; }
+.coupon-offers small { font-size: 12px; color: #64746d; }
+.coupon-offers button { flex: 0 0 auto; padding: 7px 14px; font-size: 13px; border-radius: 999px; }
+.coupon-applied { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 10px; background: #e9f5ec; border: 1px solid #b9dcc3; }
+.coupon-applied div { display: flex; flex-direction: column; }
+.coupon-applied strong { letter-spacing: .04em; color: #123f35; }
+.coupon-applied span { font-size: 13px; color: #24342f; }
+.coupon-applied em { font-style: normal; font-size: 13px; font-weight: 700; color: #1f7a50; }
+.coupon-applied.not-met { background: #fdf3e7; border-color: #f2c999; }
+.coupon-applied.not-met em { color: #b5600e; }
+.coupon-remove { background: transparent; color: #c0392b; border: 0; padding: 6px 8px; font-weight: 700; }
+.coupon-remove:hover { background: transparent; color: #962d22; transform: none; box-shadow: none; }
+.coupon-error { margin: 8px 0 0; font-size: 13px; color: #c0392b; }
+.booking-price-summary .discount-row span, .booking-price-summary .discount-row strong { color: #1f7a50; }
+.coupon-entry input::placeholder { text-transform: none; letter-spacing: 0; }

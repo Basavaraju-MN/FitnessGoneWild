@@ -34,6 +34,10 @@ router.get('/pickup-points', controller.getPickupPoints);
 // Booking dates of a trek (Trip Coordination), open or sold out
 router.get('/trek-dates', controller.getTrekDates);
 
+// Coupons: offers shown for a trek, and "Apply" on the booking pop-up
+router.get('/coupons', controller.getCoupons);
+router.post('/coupons/check', controller.checkCoupon);
+
 router.get('/trip-terms', controller.getTripTerms);
 
 router.post('/trip-interest', controller.createTripInterest);

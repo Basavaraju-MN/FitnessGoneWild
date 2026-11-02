@@ -416,6 +416,7 @@ export function BookingDetailModal({ bookingId, onClose, onChanged }) {
     ['Sold by', booking.sold_by_name || 'Not assigned'],
     ['Trip amount (without GST)', money(Number(booking.amount) / (1 + Number(lookups?.gstPercent ?? 5) / 100))],
     [`GST (${Number(lookups?.gstPercent ?? 5)}%)`, money(Number(booking.amount) - Number(booking.amount) / (1 + Number(lookups?.gstPercent ?? 5) / 100))],
+    ...(booking.coupon_code ? [['Coupon', `${booking.coupon_code} · −${money(booking.discount_amount)} (before GST)`]] : []),
     ['Total (incl. GST)', money(booking.amount)],
     ['Paid', money(booking.amount_paid)],
     ['Balance', money(booking.balance_amount)],

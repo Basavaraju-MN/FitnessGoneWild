@@ -15,6 +15,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Packages from './pages/Packages';
 import Brochures, { clearBrochureList } from './pages/Brochures';
+import Coupons from './pages/Coupons';
 import Bookings from './pages/Bookings';
 import Coordination from './pages/Coordination';
 import Customers from './pages/Customers';
@@ -34,6 +35,7 @@ const PAGES = [
   { id: 'dashboard', label: 'Dashboard', icon: '▦', component: Dashboard },
   { id: 'packages', label: 'Treks & Trips', icon: '▣', component: Packages },
   { id: 'brochures', label: 'Brochures', icon: '❐', component: Brochures },
+  { id: 'coupons', label: 'Coupons', icon: '%', component: Coupons },
   { id: 'bookings', label: 'Bookings', icon: '▤', component: Bookings },
   { id: 'coordination', label: 'Trip Coordination', icon: '⌖', component: Coordination },
   { id: 'customers', label: 'Customers', icon: '♙', component: Customers },
