@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getReviews } from '../../api/treks';
 import SectionHeader from '../common/SectionHeader';
+
+const FIRST_REVIEWS = 6;
 
 const formatReviewDate = (value) => {
   if (!value) return 'Recent';
@@ -19,22 +21,26 @@ const formatReviewDate = (value) => {
 export default function Reviews() {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     const fetchReviews = async () => {
       try {
         const data = await getReviews();
         if (Array.isArray(data) && data.length > 0) {
-          setReviews(data.map((review) => ({
-            id: review.id,
-            name: review.author_name || 'Traveller',
-            initial: (review.author_name || 'T').trim().charAt(0).toUpperCase(),
-            trek: review.trip_month || (review.source === 'google' ? 'Google review' : 'Trek'),
-            source: review.source || 'website',
-            date: formatReviewDate(review.published_at || review.created_at),
-            rating: Number(review.rating || 5),
-            text: review.body || 'Great experience.',
-          })));
+          setReviews(data.map((review) => {
+            const date = formatReviewDate(review.published_at || review.created_at);
+            // Small line under the name: "Google review · June 2026", or the trip month
+            // ("June 2026") when that is not just the same as the date
+            const when = review.trip_month && review.trip_month !== date ? `${review.trip_month} · ${date}` : date;
+            return {
+              id: review.id,
+              name: review.author_name || 'Traveller',
+              detail: review.source === 'google' ? `Google review · ${date}` : when,
+              rating: Number(review.rating || 5),
+              text: review.body || 'Great experience.',
+            };
+          }));
         } else {
           setReviews([]);
         }
@@ -49,59 +55,44 @@ export default function Reviews() {
     fetchReviews();
   }, []);
 
-  const ratingSummary = useMemo(() => {
-    const items = (reviews || []).map((review) => Number(review.rating || 0));
-    const total = items.length;
-    const totalScore = items.reduce((sum, value) => sum + value, 0);
-    const average = total === 0 ? '0.0' : (totalScore / total).toFixed(1);
-
-    const breaks = [5, 4, 3, 2, 1].map((star) => {
-      const count = items.filter((value) => value === star).length;
-      const percent = total === 0 ? 0 : Math.round((count / total) * 100);
-      return { star, count, percent };
-    });
-
-    return {
-      average,
-      totalReviews: items.length,
-      breaks,
-    };
-  }, [reviews]);
+  // 6 cards (two rows of three) at first; "Show more" adds the rest
+  const shown = showAll ? reviews : reviews.slice(0, FIRST_REVIEWS);
 
   return (
     <section className="section section-alt" id="reviews">
-      <SectionHeader eyebrow="Reviews" title="What people said after" />
+      <SectionHeader
+        eyebrow="Traveller stories"
+        title="What adventurers say"
+        description="Real words from people who have trekked with us."
+      />
       <div className="reviews-layout">
-        <aside className="rating-summary">
-          <p className="rating-score">{ratingSummary.average}</p>
-          <p className="rating-stars">★★★★★</p>
-          <p className="rating-count">Based on {ratingSummary.totalReviews} verified reviews</p>
-          <ul className="rating-bars">
-            {ratingSummary.breaks.map(({ star, percent }) => (
-              <li key={star}><span>{star}★</span><div className="bar"><i style={{ width: `${percent}%` }} /></div><em>{percent}%</em></li>
-            ))}
-          </ul>
-          <p className="rating-note">96% of travellers said they'd book with us again.</p>
-        </aside>
-        <div className="review-grid">
-          {loading ? (
-            <p>Loading reviews...</p>
-          ) : reviews.length === 0 ? (
-            <p>No reviews available yet.</p>
-          ) : (
-            reviews.map((review) => (
+        {loading ? (
+          <p>Loading reviews...</p>
+        ) : reviews.length === 0 ? (
+          <p>No reviews available yet.</p>
+        ) : (
+          <div className="review-grid">
+            {shown.map((review) => (
               <figure className="review" key={review.id}>
-                <p className="stars">{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</p>
-                <blockquote>{review.text}</blockquote>
+                <p className="stars" aria-label={`${review.rating} out of 5 stars`}>
+                  {'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}
+                </p>
+                <blockquote>“{review.text}”</blockquote>
                 <figcaption>
-                  <span className="avatar">{review.initial}</span>
-                  <span className="who"><strong>{review.name}</strong><small>{review.trek} · {review.date}</small></span>
-                  <span className="verified">{review.source === 'google' ? 'Google' : 'Verified'}</span>
+                  <strong>{review.name}</strong>
+                  <small>{review.detail}</small>
                 </figcaption>
               </figure>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
+        {!showAll && reviews.length > FIRST_REVIEWS && (
+          <div className="load-more-wrap">
+            <button type="button" className="load-more-btn" onClick={() => setShowAll(true)}>
+              Show more reviews ({reviews.length - FIRST_REVIEWS} more)
+            </button>
+          </div>
+        )}
       </div>
     </section>
   );

@@ -1,10 +1,14 @@
 import { useEffect, useState } from 'react';
 import { getFeaturedTrips, saveTripInterest } from '../../api/treks';
 import SectionHeader from '../common/SectionHeader';
+import RichText from '../common/RichText';
 import useTrekImages, { FALLBACK_IMAGE } from '../../hooks/useTrekImages';
 import '../../styles/trekcard.css';
 import { getDisplayPrice, showsDifficulty } from '../../utils/tripPricing';
 import { fromLabel, usePlaces } from '../../context/PlacesContext';
+
+// How long each featured trip stays before the next slides in
+const SLIDE_MS = 6000;
 
 const formatPrice = (price) => {
   const numericPrice = Number(price || 0);
@@ -75,6 +79,8 @@ export default function FeaturedTrips({ onTrekSelect }) {
   const [error, setError] = useState('');
   const [interestCounts, setInterestCounts] = useState({});
   const [enquiryCounts, setEnquiryCounts] = useState({});
+  const [current, setCurrent] = useState(0);
+  const [paused, setPaused] = useState(false); // mouse over the slide
 
   useEffect(() => {
     const fetchTrips = async () => {
@@ -161,6 +167,18 @@ export default function FeaturedTrips({ onTrekSelect }) {
     };
   });
 
+  // One featured trip at a time; the next slides in every few seconds
+  const count = featuredTrips.length;
+  const shown = featuredTrips[current < count ? current : 0];
+  const go = (step) => setCurrent((index) => (index + step + count) % count);
+
+  // Counts again from the start after every change, also a click on a dot
+  useEffect(() => {
+    if (count <= 1 || paused) return undefined;
+    const timer = setTimeout(() => setCurrent((index) => (index + 1) % count), SLIDE_MS);
+    return () => clearTimeout(timer);
+  }, [current, count, paused]);
+
   return (
     <section className="section section-alt" id="featured">
       <SectionHeader eyebrow="Booking fastest right now" title="Featured trips" />
@@ -171,64 +189,57 @@ export default function FeaturedTrips({ onTrekSelect }) {
         <p>No featured trips available right now.</p>
       )}
 
-      <div className="featured-grid">
-        {featuredTrips.map((trip) => (
-          <article
-            className="trip"
-            key={trip.id}
-            onClick={() => onTrekSelect?.(trip)}
-            style={{ cursor: 'pointer' }}
-          >
-            <FeaturedTripImage slug={trip.slug} name={trip.name} />
+      {shown && (
+        <div
+          className="featured-slider"
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
+        >
+          {/* key: each trip slides in fresh */}
+          <article className="featured-slide" key={shown.id} onClick={() => onTrekSelect?.(shown)}>
+            <FeaturedTripImage slug={shown.slug} name={shown.name} />
 
-            <span className="trip-rank">{trip.rank}</span>
-            {trip.region && <span className="card-region">{trip.region.name}</span>}
-            <h3>{trip.name}</h3>
-            <p className="trip-meta">{trip.meta}</p>
-            <p className="trip-price">{trip.displayPrice} <small>/ person</small></p>
+            <div className="featured-text">
+              <span className="trip-rank">{shown.rank}</span>
+              {shown.region && <span className="card-region">{shown.region.name}</span>}
+              <h3 className="featured-title">{shown.name}</h3>
+              <p className="trip-meta">{shown.meta}</p>
+              <RichText className="featured-blurb" html={shown.blurb} />
+              <p className="trip-price">{shown.displayPrice} <small>/ person</small></p>
 
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between', marginTop: '14px', fontSize: '0.8rem', color: '#56655F' }}>
-              <span>{trip.interestedCount} interested</span>
-              <span>{trip.enquiryCount} enquiries</span>
-            </div>
+              <div className="featured-counts">
+                <span>{shown.interestedCount} interested</span>
+                <span>{shown.enquiryCount} enquiries</span>
+              </div>
 
-            <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
-              <button
-                type="button"
-                onClick={(event) => handleInterested(event, trip)}
-                style={{
-                  flex: 1,
-                  border: '1px solid #DDE4DE',
-                  background: '#fff',
-                  color: '#0F3D36',
-                  borderRadius: '10px',
-                  padding: '10px 12px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Interested
-              </button>
-              <button
-                type="button"
-                onClick={(event) => handleEnquire(event, trip)}
-                style={{
-                  flex: 1,
-                  border: 'none',
-                  background: '#E4881F',
-                  color: '#fff',
-                  borderRadius: '10px',
-                  padding: '10px 12px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                }}
-              >
-                Enquire
-              </button>
+              <div className="featured-actions">
+                <button type="button" className="outline" onClick={(event) => handleInterested(event, shown)}>
+                  Interested
+                </button>
+                <button type="button" onClick={(event) => handleEnquire(event, shown)}>
+                  Enquire about this trip ↗
+                </button>
+              </div>
             </div>
           </article>
-        ))}
-      </div>
+
+          {count > 1 && (
+            <div className="featured-nav">
+              <button type="button" className="featured-arrow" aria-label="Previous featured trip" onClick={() => go(-1)}>‹</button>
+              {featuredTrips.map((trip, index) => (
+                <button
+                  key={trip.id}
+                  type="button"
+                  className={`featured-dot ${index === current ? 'active' : ''}`}
+                  aria-label={`Show ${trip.name}`}
+                  onClick={() => setCurrent(index)}
+                />
+              ))}
+              <button type="button" className="featured-arrow" aria-label="Next featured trip" onClick={() => go(1)}>›</button>
+            </div>
+          )}
+        </div>
+      )}
     </section>
   );
 }

@@ -438,39 +438,41 @@ export default function TrekCard({ trek, onClick }) {
             {showsDistance(trek) && <span>{trek.distance_label}</span>}
           </div>
 
-          <div className="price">
-            <strong>
-              ₹
-              {formatDisplayPrice(
-                getDisplayPrice(trek)
-              )}
-            </strong>
+          {/* Price with Enquire beside it, brochure underneath */}
+          <div className="price-row">
+            <div className="price">
+              <strong>
+                ₹
+                {formatDisplayPrice(
+                  getDisplayPrice(trek)
+                )}
+              </strong>
 
-            <small>{getPriceNote(trek)}</small>
-          </div>
-
-          <div className="buttons">
-            <button
-              className="outline"
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                handleBrochure();
-              }}
-            >
-              Download brochure
-            </button>
+              <small>{getPriceNote(trek)}</small>
+            </div>
 
             <button
               type="button"
+              className="btn-sm"
               onClick={(event) => {
                 event.stopPropagation();
                 handleWhatsApp();
               }}
             >
-              WhatsApp us
+              Enquire ↗
             </button>
           </div>
+
+          <button
+            className="outline brochure-btn"
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              handleBrochure();
+            }}
+          >
+            ↓ Download brochure
+          </button>
         </div>
       </article>
 

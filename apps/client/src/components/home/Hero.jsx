@@ -95,18 +95,18 @@ export default function Hero() {
       className="hero"
       id="top"
       style={{
+        // Dark on the left behind the text, the photo shows on the right
         backgroundImage: `
           linear-gradient(
-            180deg,
-            rgba(10,43,38,.78),
-            rgba(10,43,38,.55) 45%,
-            rgba(10,43,38,.92)
+            90deg,
+            rgba(4,30,23,.91) 0%,
+            rgba(4,30,23,.67) 49%,
+            rgba(4,30,23,.2) 100%
           ),
           url('${slide.image}')
         `,
-        backgroundPosition: 'center',
+        backgroundPosition: 'center 55%',
         backgroundSize: 'cover',
-        backgroundAttachment: 'fixed',
         transition: 'background-image 0.8s ease-in-out',
         position: 'relative',
       }}
@@ -179,7 +179,7 @@ export default function Hero() {
           {text.headline_line2 && (
             <>
               <br />
-              {text.headline_line2}
+              <span className="accent">{text.headline_line2}</span>
             </>
           )}
         </h1>
