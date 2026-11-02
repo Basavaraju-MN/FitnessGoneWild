@@ -58,8 +58,10 @@ export default function App() {
         {/* Client website */}
         <Route path="/" element={<Home />} />
 
-        {/* Shareable trek page, e.g. /treks/netravati */}
+        {/* Shareable trip page: /treks/netravati for treks, /trips/goa for
+            other trips (the wrong one of the two is corrected on the page) */}
         <Route path="/treks/:slug" element={<Home />} />
+        <Route path="/trips/:slug" element={<Home />} />
 
         <Route
           path="/treks"

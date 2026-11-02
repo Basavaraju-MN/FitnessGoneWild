@@ -10,6 +10,7 @@ import {
   getDisplayPrice,
   showsDifficulty,
   showsDistance,
+  tripWord,
 } from '../../utils/tripPricing';
 
 const formatDisplayPrice = (price) => {
@@ -209,7 +210,7 @@ export default function TrekCard({ trek, onClick }) {
      */
     if (!trek?.id) {
       setBrochureError(
-        'Unable to identify this trek. Please try again.'
+        `Unable to identify this ${tripWord(trek)}. Please try again.`
       );
       return;
     }

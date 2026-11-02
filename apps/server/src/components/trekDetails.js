@@ -118,7 +118,7 @@ const getTrekDetails = async (categoryId) => {
     return result;
 }
 
-// One trek for its own page (/treks/<slug>)
+// One trip for its own page (/trips/<slug>)
 const getTrekBySlug = async (slug) => {
     const result = {};
     try {

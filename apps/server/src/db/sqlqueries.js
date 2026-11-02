@@ -1,7 +1,7 @@
 const sqlqueries = {
   // Only active categories, in the order set by sort_order
   getTrekCategories: `SELECT * FROM categories WHERE is_active = 1 ORDER BY sort_order ASC, id ASC`,
-  // One trek by its web address (/treks/<slug>), featured or not
+  // One trip by its web address (/trips/<slug>), featured or not
   getTrekBySlug: `
     SELECT
       t.id,

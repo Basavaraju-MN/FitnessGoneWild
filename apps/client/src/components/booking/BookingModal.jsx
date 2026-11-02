@@ -6,7 +6,7 @@ import { checkCoupon, getCoupons, getPickupPoints, getTrekDates, getTripTerms } 
 import { couponConditions, couponDiscount } from '../../utils/coupon';
 import RichText from '../common/RichText';
 import { usePlaces } from '../../context/PlacesContext';
-import { isWithTransportOnly } from '../../utils/tripPricing';
+import { isWithTransportOnly, tripWord } from '../../utils/tripPricing';
 import useTrekImages from '../../hooks/useTrekImages';
 
 const GST_RATE = 0.05;
@@ -420,7 +420,7 @@ export default function BookingModal({
     setError('');
 
     if (!selectedWeekend) {
-      setError('Please select a trek date.');
+      setError(`Please select a ${tripWord(trek)} date.`);
       return;
     }
 
@@ -457,7 +457,7 @@ export default function BookingModal({
   const handlePayNow = () => {
     if (!termsAccepted) {
       setError(
-        'Please read and agree to the Terms & Conditions of this trek.'
+        `Please read and agree to the Terms & Conditions of this ${tripWord(trek)}.`
       );
       return;
     }
@@ -652,7 +652,7 @@ export default function BookingModal({
 
                   {!datesLoading && weekends.length === 0 && (
                     <p className="date-note">
-                      No dates are scheduled for this trek yet. Pick your own with
+                      No dates are scheduled for this {tripWord(trek)} yet. Pick your own with
                       “Customise dates”, or WhatsApp us for the next departure.
                     </p>
                   )}
@@ -813,7 +813,7 @@ export default function BookingModal({
                     {pickupLoading
                       ? 'Loading pickup points...'
                       : visiblePickups.length === 0
-                        ? 'No pickup points for this trek'
+                        ? `No pickup points for this ${tripWord(trek)}`
                         : 'Select pickup location'}
                   </option>
 
@@ -1216,7 +1216,7 @@ export default function BookingModal({
                           </div>
 
                           <div>
-                            <span>Balance (pay before the trek)</span>
+                            <span>Balance (pay before the {tripWord(trek)})</span>
                             <strong>₹{balanceDue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</strong>
                           </div>
                         </>

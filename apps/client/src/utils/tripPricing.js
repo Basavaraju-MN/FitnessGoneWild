@@ -37,3 +37,14 @@ export const HIDE_DISTANCE_CATEGORY_IDS = [3];
 export const showsDistance = (trip) =>
   Boolean(trip?.distance_label) &&
   !HIDE_DISTANCE_CATEGORY_IDS.includes(Number(trip?.category_id));
+
+// What one trip is called on the website: "trek" for the trek categories
+// (1 = Weekend treks, 2 = One day treks), "trip" for every other category
+// (Backpacking, Bike rides, Tours…). Lists of everything say "trips".
+export const TREK_CATEGORY_IDS = [1, 2];
+
+export const tripWord = (trip) =>
+  TREK_CATEGORY_IDS.includes(Number(trip?.category_id)) ? 'trek' : 'trip';
+
+// A trip's own page: /treks/<slug> for treks, /trips/<slug> for other trips
+export const tripPath = (trip) => `/${tripWord(trip)}s/${encodeURIComponent(trip?.slug || '')}`;

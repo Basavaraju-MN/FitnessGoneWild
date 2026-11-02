@@ -7,7 +7,7 @@ const DEFAULT_TEXT = {
   eyebrow: 'Leaving Bangalore every Friday, 10:30 PM',
   headline_line1: 'Escape the routine.',
   headline_line2: 'Sleep under the Ghats.',
-  primary_label: "See this month's treks",
+  primary_label: "See this month's trips",
   primary_target: 'trips',
   secondary_label: 'Read 1,200+ reviews',
   secondary_target: 'reviews',
