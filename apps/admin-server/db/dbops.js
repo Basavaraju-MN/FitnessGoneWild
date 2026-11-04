@@ -3,6 +3,12 @@ const sqlQueries = require('./sqlqueries');
 
 const first = (rows) => rows[0] || null;
 
+// A table that is not there yet (its .sql file has not run) reads as empty
+const orNone = (error) => {
+  if (['ER_NO_SUCH_TABLE', 'ER_BAD_FIELD_ERROR'].includes(error?.code)) return [];
+  throw error;
+};
+
 // Adds optional WHERE conditions to a base query
 const withWhere = (base, conditions) =>
   conditions.length ? `${base} WHERE ${conditions.join(' AND ')}` : base;
@@ -106,7 +112,7 @@ class Cmds {
       if (['ER_NO_SUCH_TABLE', 'ER_BAD_FIELD_ERROR'].includes(error?.code)) return [];
       throw error;
     });
-    const [trips, categories, guides, pickupPoints, users, leadStatuses, gstPercent, regions, departureCities] = await Promise.all([
+    const [trips, categories, guides, pickupPoints, users, leadStatuses, gstPercent, regions, departureCities, priceOptions] = await Promise.all([
       executeQuery(sqlQueries.lookupTrips),
       executeQuery(sqlQueries.lookupCategories),
       executeQuery(sqlQueries.lookupGuides),
@@ -120,9 +126,11 @@ class Cmds {
       this.getGstPercent(),
       orEmpty(sqlQueries.lookupRegions),
       orEmpty(sqlQueries.lookupDepartureCities),
+      // Treks' price options (the New booking form), empty before trip_price_options.sql
+      this.getActivePriceOptions(),
     ]);
 
-    return { trips, categories, guides, pickupPoints, users, leadStatuses, gstPercent, regions, departureCities };
+    return { trips, categories, guides, pickupPoints, users, leadStatuses, gstPercent, regions, departureCities, priceOptions };
   }
 
   // GST % from Settings (5 when not set)
@@ -219,6 +227,42 @@ class Cmds {
     await executeQuery(sqlQueries.updatePickupPoint, [data, id, tripId]);
   }
 
+  /* ----- Price options (empty before trip_price_options.sql has run) ----- */
+  // All of a trip's price options, active and hidden
+  async getTripPriceOptions(tripId) {
+    return executeQuery(sqlQueries.getTripPriceOptions, [tripId]).catch(orNone);
+  }
+
+  // Every active option, for the trip cards and the booking form
+  async getActivePriceOptions() {
+    return executeQuery(sqlQueries.activePriceOptions).catch(orNone);
+  }
+
+  async createPriceOption(data) {
+    return (await executeQuery(sqlQueries.createPriceOption, [data])).insertId;
+  }
+
+  async updatePriceOption(tripId, id, data) {
+    await executeQuery(sqlQueries.updatePriceOption, [data, id, tripId]);
+  }
+
+  // booking id -> [{ option_id, label, price, people, with_transport }]
+  async getBookingTicketOptions(bookingIds) {
+    const ids = [...new Set(bookingIds.map(Number).filter(Boolean))];
+    const byBooking = new Map();
+    if (!ids.length) return byBooking;
+    const rows = await executeQuery(sqlQueries.bookingTicketOptions, [ids]).catch(orNone);
+    for (const row of rows) byBooking.set(row.booking_id, [...(byBooking.get(row.booking_id) || []), row]);
+    return byBooking;
+  }
+
+  async addBookingTicketOptions(bookingId, lines) {
+    if (!lines.length) return;
+    await executeQuery(sqlQueries.addBookingTicketOptions, [lines.map((l) => [
+      bookingId, l.option_id || null, l.label, l.price, l.people, l.with_transport ? 1 : 0,
+    ])]);
+  }
+
   /* ================= TRIP COORDINATION ================= */
   // when: 'upcoming' | 'past' | 'all'
   async getDepartures({ when = 'upcoming', tripId } = {}) {
@@ -300,6 +344,16 @@ class Cmds {
   async getCoupons(id) {
     const sql = `${withWhere(sqlQueries.couponsBase, id ? ['c.id = ?'] : [])} GROUP BY c.id ORDER BY c.is_active DESC, c.id DESC`;
     return executeQuery(sql, id ? [id] : []);
+  }
+
+  // One coupon by its code (a booking entered in the admin)
+  async getCouponByCode(code) {
+    const sql = `${withWhere(sqlQueries.couponsBase, ['c.code = ?'])} GROUP BY c.id`;
+    return first(await executeQuery(sql, [code]));
+  }
+
+  async addCouponUse(id) {
+    await executeQuery(sqlQueries.addCouponUse, [id]);
   }
 
   async couponCodeTaken(code, exceptId = 0) {

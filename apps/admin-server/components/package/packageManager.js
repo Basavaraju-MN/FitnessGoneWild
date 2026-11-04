@@ -175,6 +175,67 @@ async function savePickupPoints(tripId, points) {
   }
 }
 
+// Checks the price options from the trip form ([{ id?, label, price }]
+// in order). None = the website keeps the default With / Without transport.
+// Returns the cleaned list, or undefined if not sent.
+function checkPriceOptions(list) {
+  if (list === undefined) return undefined;
+  if (!Array.isArray(list)) throw badRequest('Price options must be a list');
+
+  const options = list
+    .map((o) => ({
+      id: Number(o?.id) || null,
+      label: String(o?.label || '').trim(),
+      price: o?.price === '' || o?.price == null ? null : Number(o.price),
+    }))
+    .filter((o) => o.label || o.price !== null);
+
+  for (const option of options) {
+    if (!option.label) throw badRequest('Give every price option a name, e.g. "Chennai to Chennai"');
+    if (option.label.length > 120) throw badRequest(`Price option "${option.label.slice(0, 30)}…": keep the name shorter`);
+    if (!Number.isFinite(option.price) || option.price <= 0) throw badRequest(`Enter the price of "${option.label}"`);
+  }
+
+  const labels = options.map((o) => o.label.toLowerCase());
+  if (new Set(labels).size !== labels.length) throw badRequest('Two price options have the same name');
+
+  return options;
+}
+
+// Saves a checked option list: existing ones updated, new ones added, and
+// removed ones hidden (past bookings keep their own copy of name and price).
+async function savePriceOptions(tripId, options) {
+  if (options === undefined) return;
+
+  const existing = await dbops.getTripPriceOptions(tripId);
+  const kept = new Set();
+
+  for (const [index, option] of options.entries()) {
+    const match =
+      existing.find((e) => option.id && e.id === option.id) ||
+      existing.find((e) => !kept.has(e.id) && e.label.toLowerCase() === option.label.toLowerCase());
+
+    const data = { label: option.label, price: option.price, sort_order: index + 1, is_active: 1 };
+    try {
+      if (match) {
+        kept.add(match.id);
+        await dbops.updatePriceOption(tripId, match.id, data);
+      } else {
+        kept.add(await dbops.createPriceOption({ trip_id: tripId, ...data }));
+      }
+    } catch (error) {
+      if (error?.code === 'ER_NO_SUCH_TABLE') throw badRequest('Price options need the database update first: run trip_price_options.sql');
+      throw error;
+    }
+  }
+
+  for (const old of existing) {
+    if (!kept.has(old.id) && Number(old.is_active)) {
+      await dbops.updatePriceOption(tripId, old.id, { is_active: 0 });
+    }
+  }
+}
+
 async function findTrip(id) {
   const trip = await dbops.getTripById(id);
   if (!trip) throw notFound('Trip not found');
@@ -183,13 +244,14 @@ async function findTrip(id) {
 
 // Trip cards: each with its cover photo
 async function getTrips() {
-  const trips = await dbops.getTrips();
+  const [trips, options] = await Promise.all([dbops.getTrips(), dbops.getActivePriceOptions()]);
 
   return Promise.all(
     trips.map(async (trip) => {
       const images = await tripFiles.listImages(trip.slug);
       return {
         ...trip,
+        price_options: options.filter((o) => o.trip_id === trip.id),
         cover_url: images[0]?.url || null,
         image_count: images.length,
       };
@@ -200,17 +262,19 @@ async function getTrips() {
 // One trip for the edit panel, with all its photos
 async function getTrip(id) {
   const trip = await findTrip(id);
-  const [images, lists, pickups, terms] = await Promise.all([
+  const [images, lists, pickups, terms, options] = await Promise.all([
     tripFiles.listImages(trip.slug),
     dbops.getTripInclusions(trip.id),
     dbops.getTripPickupPoints(trip.id),
     dbops.getTripTerms(trip.id),
+    dbops.getTripPriceOptions(trip.id),
   ]);
   return {
     ...trip,
     ...lists,
     ...terms,
     pickup_points: pickups.filter((p) => Number(p.is_active)),
+    price_options: options.filter((o) => Number(o.is_active)),
     images,
   };
 }
@@ -219,6 +283,7 @@ async function createTrip(admin, body) {
   requireFields(body, ['slug', 'name', 'category_id', 'region_id', 'blurb', 'duration_label', 'price']);
   const data = cleanTrip(body);
   const pickups = checkPickupPoints(body.pickup_points);
+  const priceOptions = checkPriceOptions(body.price_options);
   const terms = checkTerms(body);
 
   if (await dbops.isSlugTaken(data.slug)) throw badRequest('Another trip already uses this slug');
@@ -226,6 +291,7 @@ async function createTrip(admin, body) {
   const id = await dbops.createTrip(data);
   await saveInclusions(id, body);
   await savePickupPoints(id, pickups);
+  await savePriceOptions(id, priceOptions);
   await dbops.saveTripTerms(id, terms.sections, terms.highlights);
   await logActivity(admin, 'create', 'trip', id, data.name);
   return { id };
@@ -235,10 +301,12 @@ async function updateTrip(admin, id, body) {
   const trip = await findTrip(id);
   const data = cleanTrip(body);
   const pickups = checkPickupPoints(body.pickup_points);
+  const priceOptions = checkPriceOptions(body.price_options);
   const terms = checkTerms(body);
   const hasTerms = terms.sections !== undefined || terms.highlights !== undefined;
   const hasLists =
-    body.inclusions !== undefined || body.exclusions !== undefined || body.pickup_points !== undefined || hasTerms;
+    body.inclusions !== undefined || body.exclusions !== undefined || body.pickup_points !== undefined ||
+    priceOptions !== undefined || hasTerms;
   if (!Object.keys(data).length && !hasLists) throw badRequest('Nothing to update');
 
   if (data.slug && (await dbops.isSlugTaken(data.slug, id))) {
@@ -248,6 +316,7 @@ async function updateTrip(admin, id, body) {
   if (Object.keys(data).length) await dbops.updateTrip(id, data);
   await saveInclusions(id, body);
   await savePickupPoints(id, pickups);
+  await savePriceOptions(id, priceOptions);
   if (hasTerms) await dbops.saveTripTerms(id, terms.sections, terms.highlights);
 
   // New slug: its photo and brochure folders move with it

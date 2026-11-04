@@ -3,6 +3,7 @@
 // created when the admin sends the invoice on WhatsApp.
 const { executeQuery } = require('../../db/connection');
 const { buildInvoicePdf } = require('./invoicePdf');
+const { ticketsText } = require('../coupon/couponRules');
 
 const queries = {
   booking: `
@@ -21,6 +22,10 @@ const queries = {
   bookingIdWhere: 'b.id = ?',
   payments: 'SELECT amount, method, reference, paid_at FROM booking_payments WHERE booking_id = ? ORDER BY paid_at',
   refunds: "SELECT amount, mode, method, completed_at, created_at FROM booking_refunds WHERE booking_id = ? AND state = 'completed' ORDER BY id",
+  // Price options booked (empty before trip_price_options.sql has run)
+  tickets: 'SELECT label, price, people FROM booking_ticket_options WHERE booking_id = ? ORDER BY id',
+  // Coupon used (columns added by coupons.sql; none before it has run)
+  coupon: 'SELECT coupon_code, discount_amount FROM bookings WHERE id = ? AND coupon_code IS NOT NULL AND discount_amount > 0',
   settings: "SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('business_name','contact_phone','contact_email','business_address','gst_percent')",
 };
 
@@ -48,19 +53,34 @@ async function loadInvoiceData(sql, param) {
   const booking = rows?.[0];
   if (!booking) return null;
 
-  const [payments, refunds, settingRows] = await Promise.all([
+  const [payments, refunds, tickets, coupon, settingRows] = await Promise.all([
     executeQuery(queries.payments, [booking.id]),
     executeQuery(queries.refunds, [booking.id]).catch(() => []),
+    executeQuery(queries.tickets, [booking.id]).catch(() => []),
+    executeQuery(queries.coupon, [booking.id]).catch(() => []),
     executeQuery(queries.settings),
   ]);
   const settings = Object.fromEntries((settingRows || []).map((r) => [r.setting_key, r.setting_value]));
-  return { booking, payments: payments || [], refunds: refunds || [], settings };
+  return {
+    booking: {
+      ...booking,
+      tickets: tickets || [],
+      coupon_code: coupon?.[0]?.coupon_code || null,
+      discount_amount: Number(coupon?.[0]?.discount_amount) || 0,
+    },
+    payments: payments || [],
+    refunds: refunds || [],
+    settings,
+  };
 }
 
 function renderInvoice({ booking: b, payments, refunds, settings }) {
   const gst = Number(settings.gst_percent || 5);
   const total = Number(b.amount);
-  const taxable = total / (1 + gst / 100);
+  // Coupon discount, taken off after GST: total = trip amount + GST − coupon
+  const discount = Number(b.discount_amount) || 0;
+  const withGst = total + discount;
+  const taxable = withGst / (1 + gst / 100);
   const recorded = payments.reduce((s, p) => s + Number(p.amount), 0);
   const online = Math.max(0, Number(b.amount_paid) - recorded);
 
@@ -76,7 +96,8 @@ function renderInvoice({ booking: b, payments, refunds, settings }) {
   const statusClass = cancelled ? 'grey' : balance > 0.009 ? 'due' : 'paid';
   const dates = b.trek_end_date && b.trek_end_date !== b.trek_start_date
     ? `${date(b.trek_start_date)} → ${date(b.trek_end_date)}` : date(b.trek_start_date);
-  const transport = b.travel_mode === 'mixed'
+  // Price options booked ("2 × Chennai to Chennai"), else with / without transport
+  const transport = b.tickets?.length ? ticketsText({ lines: b.tickets }) : b.travel_mode === 'mixed'
     ? `${b.with_transport_people} with transport, ${b.without_transport_people} without`
     : b.travel_mode === 'without_transport' ? 'Without transport' : 'With transport';
 
@@ -156,14 +177,16 @@ function renderInvoice({ booking: b, payments, refunds, settings }) {
         <tr>
           <td><strong>${esc(b.trip_name || 'Trip')}</strong><br><span style="color:#6b7c77">${transport} · Booking ${esc(b.booking_ref)}</span></td>
           <td class="r">${Number(b.people)}</td>
-          <td class="r">${rupees(total)}</td>
+          <td class="r">${rupees(taxable)}</td>
         </tr>
       </tbody>
     </table>
 
     <div class="totals">
       <div><span>Trip amount (without GST)</span><span>${rupees(taxable)}</span></div>
-      <div><span>GST (${gst}%)</span><span>${rupees(total - taxable)}</span></div>
+      <div><span>GST (${gst}%)</span><span>${rupees(withGst - taxable)}</span></div>
+      ${discount > 0 ? `<div><span>Total with GST</span><span>${rupees(withGst)}</span></div>
+      <div><span>Coupon ${esc(b.coupon_code)}</span><span>− ${rupees(discount)}</span></div>` : ''}
       <div class="big"><span>Total</span><span>${rupees(total)}</span></div>
       <div><span>Paid</span><span>${rupees(b.amount_paid)}</span></div>
       ${refunded > 0.009 ? `<div><span>Refunded</span><span>− ${rupees(refunded)}</span></div>` : ''}

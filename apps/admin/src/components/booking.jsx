@@ -103,14 +103,40 @@ export function NewBookingModal({ departureId, onClose, onSaved }) {
 
   const departureOf = (values) => departures.find((d) => String(d.id) === String(values.departure_id));
   const tripOf = (values) => lookups?.trips.find((t) => t.id === departureOf(values)?.trip_id);
+  // The trek's price options ("Chennai to Chennai"…); none = with / without transport
+  const allOptions = lookups?.priceOptions || [];
+  const optionsOf = (values) => allOptions.filter((o) => o.trip_id === departureOf(values)?.trip_id);
+  const optionPeople = (values, option) => Math.max(0, Number(values[`ticket_${option.id}`]) || 0);
 
   const gstPercent = Number(lookups?.gstPercent ?? GST_RATE * 100);
   const withGst = (base) => Math.round(Number(base || 0) * (1 + gstPercent / 100) * 100) / 100;
+
+  // Active coupons for this trek. The discount shown here is a preview: the
+  // server checks the coupon's rules (dates, uses, people, amount) on save.
+  const couponsOf = (values) => (lookups?.coupons || []).filter((c) =>
+    c.applies_to !== 'selected' || c.trip_ids.includes(departureOf(values)?.trip_id));
+  const couponOf = (values) => couponsOf(values).find((c) => c.code === values.coupon_code);
+  const discountOf = (values) => {
+    const coupon = couponOf(values);
+    const base = Number(values.trip_amount) || 0;
+    if (!coupon || base <= 0) return 0;
+    // GST first: the coupon comes off the total with GST
+    const gross = withGst(base);
+    let off = coupon.discount_type === 'percent' ? (gross * coupon.discount_value) / 100 : coupon.discount_value;
+    if (coupon.discount_type === 'percent' && coupon.max_discount != null) off = Math.min(off, coupon.max_discount);
+    return Math.round(Math.min(Math.max(0, off), gross) * 100) / 100;
+  };
+  // Trip amount + GST, minus the coupon
+  const totalOf = (values) => Math.round((withGst(values.trip_amount) - discountOf(values)) * 100) / 100;
 
   // Trip price × people, without GST (GST is added on top)
   const suggested = (values) => {
     const trip = tripOf(values);
     if (!trip) return 0;
+    const options = optionsOf(values);
+    if (options.length) {
+      return Math.round(options.reduce((sum, o) => sum + optionPeople(values, o) * Number(o.price), 0) * 100) / 100;
+    }
     const withPrice = Number(trip.with_transport_price || trip.price);
     const withoutPrice = Number(trip.without_transport_price || trip.price);
     const subtotal =
@@ -159,8 +185,17 @@ export function NewBookingModal({ departureId, onClose, onSaved }) {
               .filter((p) => p.trip_id === departureOf(values)?.trip_id)
               .map((p) => ({ value: p.id, label: p.address ? `${p.name} – ${p.address}` : p.name })),
         },
-        { name: 'with_transport_people', label: 'People with transport', type: 'number', min: 0 },
-        { name: 'without_transport_people', label: 'People without transport', type: 'number', min: 0 },
+        { name: 'with_transport_people', label: 'People with transport', type: 'number', min: 0, hidden: (values) => optionsOf(values).length > 0 },
+        { name: 'without_transport_people', label: 'People without transport', type: 'number', min: 0, hidden: (values) => optionsOf(values).length > 0 },
+        // A trek with price options: people per option instead
+        ...allOptions.map((o) => ({
+          name: `ticket_${o.id}`,
+          label: `${o.label} (${money(o.price)})`,
+          type: 'number',
+          min: 0,
+          hint: 'People',
+          hidden: (values) => departureOf(values)?.trip_id !== o.trip_id,
+        })),
         {
           name: 'trip_amount',
           label: 'Trip amount (₹, without GST)',
@@ -170,16 +205,31 @@ export function NewBookingModal({ departureId, onClose, onSaved }) {
           required: true,
           hint: (values) => {
             const base = Number(values.trip_amount) || 0;
+            const off = discountOf(values);
             const parts = [];
-            if (base > 0) parts.push(`+ GST ${gstPercent}% ${money(withGst(base) - base)} = Total ${money(withGst(base))}`);
+            if (base > 0) parts.push(`+ GST ${gstPercent}% ${money(withGst(base) - base)}`);
+            if (base > 0 && off > 0) parts.push(`− Coupon ${money(off)}`);
+            if (base > 0) parts.push(`= Total ${money(totalOf(values))}`);
             if (suggested(values)) parts.push(`Trip price × people: ${money(suggested(values))}`);
             return parts.join(' · ');
           },
         },
         {
+          name: 'coupon_code',
+          label: 'Coupon',
+          type: 'select',
+          placeholder: 'No coupon',
+          options: (values) => couponsOf(values).map((c) => ({ value: c.code, label: `${c.code} · ${c.label}` })),
+          hint: (values) => {
+            const off = discountOf(values);
+            if (!values.coupon_code) return couponsOf(values).length ? 'Coupon the customer used (comes off the total, after GST)' : 'No active coupons for this trek';
+            return off > 0 ? `${money(off)} off the total, after GST` : 'Enter the trip amount to see the discount';
+          },
+        },
+        {
           name: 'paid_amount', label: 'Paid now (₹)', type: 'number', min: 0, step: '0.01',
           hint: (values) => {
-            const total = withGst(values.trip_amount);
+            const total = totalOf(values);
             const paid = Number(values.paid_amount) || 0;
             return total > 0 ? `What the customer sent (e.g. advance) · Balance: ${money(Math.max(0, total - paid))}` : 'Leave 0 if nothing is paid yet';
           },
@@ -192,7 +242,11 @@ export function NewBookingModal({ departureId, onClose, onSaved }) {
       ]}
       onClose={onClose}
       onSubmit={async (values) => {
-        const { data } = await api('/bookings', { method: 'POST', body: values });
+        const options = optionsOf(values);
+        const body = options.length
+          ? { ...values, ticket_options: options.map((o) => ({ id: o.id, people: optionPeople(values, o) })).filter((t) => t.people > 0) }
+          : values;
+        const { data } = await api('/bookings', { method: 'POST', body });
         toast('Booking created');
         onSaved?.(data.id);
       }}
@@ -410,13 +464,15 @@ export function BookingDetailModal({ bookingId, onClose, onChanged }) {
     ['Email', booking.customer_email || '—'],
     ['Trip', booking.trip_name || '—'],
     ['Dates', `${date(booking.trek_start_date)}${booking.trek_end_date && booking.trek_end_date !== booking.trek_start_date ? ` → ${date(booking.trek_end_date)}` : ''}${Number(booking.is_custom_trip) ? ' (custom)' : ''}`],
-    ['People', `${booking.people} (${booking.with_transport_people} with transport, ${booking.without_transport_people} without)`],
+    ['People', booking.tickets?.length
+      ? `${booking.people} (${booking.tickets.map((t) => `${t.people} × ${t.label} at ${money(t.price)}`).join(', ')})`
+      : `${booking.people} (${booking.with_transport_people} with transport, ${booking.without_transport_people} without)`],
     ['Pickup', booking.pickup_name || '—'],
     ['Booked on', `${dateTime(booking.booked_at)}${booking.merchant_order_id ? ' · on the website' : ''}`],
     ['Sold by', booking.sold_by_name || 'Not assigned'],
     ['Trip amount (without GST)', money(Number(booking.amount) / (1 + Number(lookups?.gstPercent ?? 5) / 100))],
     [`GST (${Number(lookups?.gstPercent ?? 5)}%)`, money(Number(booking.amount) - Number(booking.amount) / (1 + Number(lookups?.gstPercent ?? 5) / 100))],
-    ...(booking.coupon_code ? [['Coupon', `${booking.coupon_code} · −${money(booking.discount_amount)} (before GST)`]] : []),
+    ...(booking.coupon_code ? [['Coupon', `${booking.coupon_code} · −${money(booking.discount_amount)} (after GST)`]] : []),
     ['Total (incl. GST)', money(booking.amount)],
     ['Paid', money(booking.amount_paid)],
     ['Balance', money(booking.balance_amount)],
@@ -587,7 +643,7 @@ export function BookingDetailModal({ bookingId, onClose, onChanged }) {
       {editing && (
         <FormModal
           title={`Edit ${booking.booking_ref}`}
-          initial={{ ...booking, trip_amount: Math.round((Number(booking.amount) / (1 + Number(lookups?.gstPercent ?? 5) / 100)) * 100) / 100 }}
+          initial={{ ...booking, trip_amount: Math.round(((Number(booking.amount) + (Number(booking.discount_amount) || 0)) / (1 + Number(lookups?.gstPercent ?? 5) / 100)) * 100) / 100 }}
           fields={[
             {
               name: 'pickup_point_id',
@@ -601,8 +657,10 @@ export function BookingDetailModal({ bookingId, onClose, onChanged }) {
               name: 'trip_amount', label: 'Trip amount (₹, without GST)', type: 'number', min: 0, step: '0.01',
               hint: (values) => {
                 const g = Number(lookups?.gstPercent ?? 5);
-                const total = Math.round(Number(values.trip_amount || 0) * (1 + g / 100) * 100) / 100;
-                return `+ GST ${g}% = Total ${money(total)} · Already paid: ${money(booking.amount_paid)}`;
+                const off = Number(booking.discount_amount) || 0;
+                const total = Math.round((Number(values.trip_amount || 0) * (1 + g / 100) - off) * 100) / 100;
+                const coupon = off > 0 ? ` − Coupon ${booking.coupon_code} ${money(off)}` : '';
+                return `+ GST ${g}%${coupon} = Total ${money(total)} · Already paid: ${money(booking.amount_paid)}`;
               },
             },
             soldByField(lookups, booking),

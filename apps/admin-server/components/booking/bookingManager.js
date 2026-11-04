@@ -5,6 +5,7 @@ const dbops = require('../../db/dbops');
 const tripCode = require('../../../server/src/components/trip/tripCode');
 const { publicSiteUrl } = require('../../config');
 const refundManager = require('../refund/refundManager');
+const { includesTransport, couponDiscount } = require('../../../server/src/components/coupon/couponRules');
 const {
   badRequest,
   notFound,
@@ -27,11 +28,13 @@ async function getBooking(id) {
   const booking = await dbops.getBookingById(id);
   if (!booking) throw notFound('Booking not found');
 
-  const [payments, refunds] = await Promise.all([
+  const [payments, refunds, tickets] = await Promise.all([
     dbops.getBookingPayments(booking.id),
     refundManager.getRefundsForBooking(booking),
+    dbops.getBookingTicketOptions([booking.id]),
   ]);
-  return { ...booking, payments, ...refunds };
+  // tickets: the price options booked ("2 × Chennai to Chennai"), if any
+  return { ...booking, payments, ...refunds, tickets: tickets.get(booking.id) || [] };
 }
 
 // Customers are added when they book; earlier leads with the same phone are linked
@@ -54,6 +57,35 @@ async function soldByFrom(value) {
   return id;
 }
 
+// [{ id, people }] from the New booking form -> lines with the option's name
+// and price, or null when the form sent with / without transport people
+async function ticketLines(tripId, list) {
+  if (!Array.isArray(list) || !list.length) return null;
+  const options = (await dbops.getTripPriceOptions(tripId)).filter((o) => Number(o.is_active));
+  const lines = [];
+  for (const ticket of list) {
+    const people = Math.max(0, Math.floor(Number(ticket?.people) || 0));
+    if (!people) continue;
+    const option = options.find((o) => o.id === Number(ticket.id));
+    if (!option) throw badRequest('A price option of this booking is not on this trek any more. Please reload.');
+    lines.push({ option_id: option.id, label: option.label, price: Number(option.price), people, with_transport: includesTransport(option.label) });
+  }
+  return lines.length ? lines : null;
+}
+
+// Coupon chosen on the New booking form: { coupon, discount } (taken off the
+// total with GST), with the same rules as the website (dates, uses, trek, people, amount)
+async function bookingCoupon(code, { tripId, people, tripAmount, gstPercent }) {
+  const clean = String(code || '').trim().toUpperCase();
+  if (!clean) return null;
+  if (!(tripAmount > 0)) throw badRequest('Enter the trip amount (without GST) to apply a coupon');
+  const row = await dbops.getCouponByCode(clean);
+  const coupon = row && { ...row, trip_ids: row.trip_ids ? String(row.trip_ids).split(',').map(Number) : [] };
+  const result = couponDiscount(coupon, { tripId, people, subtotal: tripAmount, gstRate: gstPercent / 100 });
+  if (result.problem) throw badRequest(`Coupon ${clean}: ${result.problem}`);
+  return { coupon, discount: result.discount };
+}
+
 // Booking taken by phone / WhatsApp / walk-in
 async function createBooking(admin, body) {
   requireFields(body, ['departure_id', 'name', 'phone']);
@@ -64,16 +96,32 @@ async function createBooking(admin, body) {
   const departure = await dbops.getDepartureForBooking(body.departure_id);
   if (!departure) throw badRequest('Trip coordination not found');
 
-  const withTransport = Math.max(0, Number(body.with_transport_people) || 0);
-  const withoutTransport = Math.max(0, Number(body.without_transport_people) || 0);
+  // A trek with price options: people per option ("Without transport" ones are without)
+  const tickets = await ticketLines(departure.trip_id, body.ticket_options);
+  const peopleIn = (lines) => lines.reduce((sum, l) => sum + l.people, 0);
+  const withTransport = tickets
+    ? peopleIn(tickets.filter((l) => l.with_transport))
+    : Math.max(0, Number(body.with_transport_people) || 0);
+  const withoutTransport = tickets
+    ? peopleIn(tickets.filter((l) => !l.with_transport))
+    : Math.max(0, Number(body.without_transport_people) || 0);
   const people = withTransport + withoutTransport;
   if (people < 1) throw badRequest('Add at least one person');
 
-  // The trip amount is entered without GST; GST (Settings, 5%) is added on top.
+  // The trip amount is entered without GST; GST (Settings, 5%) is added on
+  // top, then a coupon comes off that total.
   // "Paid now" is what the customer actually sent (e.g. an advance).
   const gst = await dbops.getGstPercent();
-  const amount = body.trip_amount !== undefined && body.trip_amount !== ''
-    ? toMoney(Number(body.trip_amount) * (1 + gst / 100))
+  const hasTripAmount = body.trip_amount !== undefined && body.trip_amount !== '';
+  const applied = await bookingCoupon(body.coupon_code, {
+    tripId: departure.trip_id,
+    people,
+    tripAmount: hasTripAmount ? toMoney(body.trip_amount) : 0,
+    gstPercent: gst,
+  });
+  const discount = applied?.discount || 0;
+  const amount = hasTripAmount
+    ? toMoney(Number(body.trip_amount) * (1 + gst / 100) - discount)
     : toMoney(body.amount);
   const paid = toMoney(body.paid_amount);
   if (amount <= 0) throw badRequest('Trip amount must be more than 0');
@@ -124,9 +172,13 @@ async function createBooking(admin, body) {
     notes: body.notes || null,
     sold_by: soldBy,
     paid_at: paid > 0 ? new Date() : null,
+    // Coupon columns only when one is used (they come with coupons.sql)
+    ...(applied ? { coupon_id: applied.coupon.id, coupon_code: applied.coupon.code, discount_amount: discount } : {}),
   });
 
   await dbops.setBookingRef(bookingId);
+  if (tickets) await dbops.addBookingTicketOptions(bookingId, tickets);
+  if (applied) await dbops.addCouponUse(applied.coupon.id);
 
   if (paid > 0) {
     await dbops.createBookingPayment({
@@ -141,7 +193,8 @@ async function createBooking(admin, body) {
 
   if (isActiveBooking(status)) await dbops.changeDepartureSeats(departure.id, people);
 
-  await logActivity(admin, 'create', 'booking', bookingId, `${body.name} · ${people} people · ₹${amount}`);
+  await logActivity(admin, 'create', 'booking', bookingId,
+    `${body.name} · ${people} people · ₹${amount}${applied ? ` · coupon ${applied.coupon.code} −₹${discount}` : ''}`);
 
   // First booking on this trip: it gets its trip code (Settings pattern)
   await tripCode.ensureTripCode(departure.id).catch((error) =>
@@ -163,9 +216,9 @@ async function updateBooking(admin, id, body) {
   if (body.sold_by !== undefined && String(body.sold_by ?? '') !== String(booking.sold_by ?? '')) {
     data.sold_by = await soldByFrom(body.sold_by);
   }
-  // Edited as the trip amount without GST: total = amount + GST
+  // Edited as the trip amount without GST: total = amount + GST − coupon
   if (body.trip_amount !== undefined && body.trip_amount !== '') {
-    data.amount = Number(body.trip_amount) * (1 + (await dbops.getGstPercent()) / 100);
+    data.amount = Number(body.trip_amount) * (1 + (await dbops.getGstPercent()) / 100) - (Number(booking.discount_amount) || 0);
   }
 
   if (data.status !== undefined && !BOOKING_STATUSES.includes(data.status)) {

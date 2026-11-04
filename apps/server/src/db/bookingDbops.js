@@ -7,6 +7,7 @@ const queries = {
   createDeparture: `INSERT INTO departures (trip_id, start_date, end_date, departure_type, seats_booked, status) VALUES (?, ?, ?, ?, 0, 'open')`,
   setBookingCoupon: 'UPDATE bookings SET coupon_id = ?, coupon_code = ?, discount_amount = ? WHERE id = ?',
   addCouponUse: 'UPDATE coupons SET used_count = used_count + 1 WHERE id = ?',
+  addTicketOptions: 'INSERT INTO booking_ticket_options (booking_id, option_id, label, price, people, with_transport) VALUES ?',
   addSeatsBooked: `UPDATE departures SET seats_booked = seats_booked + ?, status = IF(status = 'open' AND seats_booked >= seats_total, 'full', status) WHERE id = ?`,
 
   findCustomerByPhone: `SELECT id FROM customers WHERE phone = ? ORDER BY id DESC LIMIT 1`,
@@ -180,6 +181,19 @@ async function recordBooking(transaction) {
     await executeQuery(queries.addCouponUse, [details.couponId]);
   }
 
+  // Price options booked ("2 × Chennai to Chennai"), as priced at payment
+  const ticketOptions = Array.isArray(details.ticketOptions) ? details.ticketOptions : [];
+  if (ticketOptions.length) {
+    await executeQuery(queries.addTicketOptions, [ticketOptions.map((line) => [
+      result.insertId,
+      Number(line.id) || null,
+      String(line.label || 'Ticket').slice(0, 120),
+      toMoney(line.price),
+      toCount(line.people),
+      line.with_transport ? 1 : 0,
+    ])]).catch((error) => console.error('Saving ticket options failed:', error?.message || error));
+  }
+
   await executeQuery(queries.addSeatsBooked, [people, departureId]);
   // Seats changed: the website's dates (seats left / sold out) are read again
   require('../utils/apiCache').clearApiCache();
@@ -207,6 +221,9 @@ async function recordBooking(transaction) {
         people,
         withTransport,
         withoutTransport,
+        ticketOptions,
+        couponCode: details.couponId ? details.couponCode : null,
+        discount: details.couponId ? toMoney(details.discount) : 0,
         pickupLocation: details.pickupLocation,
         tripTotal,
         amountPaid,

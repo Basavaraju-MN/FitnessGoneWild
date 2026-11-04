@@ -229,6 +229,14 @@ const sqlqueries = {
   getTripPickupPoints: 'SELECT id, city_id, name, address, map_url, sort_order, is_active FROM pickup_points WHERE trip_id = ? ORDER BY sort_order, id',
   createPickupPoint: 'INSERT INTO pickup_points SET ?',
   updatePickupPoint: 'UPDATE pickup_points SET ? WHERE id = ? AND trip_id = ?',
+  // Price options of treks (trip_price_options.sql); removed ones are hidden
+  getTripPriceOptions: 'SELECT id, trip_id, label, price, sort_order, is_active FROM trip_price_options WHERE trip_id = ? ORDER BY sort_order, id',
+  activePriceOptions: 'SELECT id, trip_id, label, price FROM trip_price_options WHERE is_active = 1 ORDER BY trip_id, sort_order, id',
+  createPriceOption: 'INSERT INTO trip_price_options SET ?',
+  updatePriceOption: 'UPDATE trip_price_options SET ? WHERE id = ? AND trip_id = ?',
+  // Price options a booking was made with
+  bookingTicketOptions: 'SELECT booking_id, option_id, label, price, people, with_transport FROM booking_ticket_options WHERE booking_id IN (?) ORDER BY id',
+  addBookingTicketOptions: 'INSERT INTO booking_ticket_options (booking_id, option_id, label, price, people, with_transport) VALUES ?',
   createTripInclusions: 'INSERT INTO inclusion_exclusion (trip_id, inclusion, exclusion) VALUES (?, ?, ?)',
 
   /* ================= TRIP COORDINATION (departures) ================= */
@@ -309,6 +317,7 @@ const sqlqueries = {
     FROM coupons c
     LEFT JOIN coupon_trips ct ON ct.coupon_id = c.id`,
   couponCodeTaken: 'SELECT id FROM coupons WHERE code = ? AND id <> ?',
+  addCouponUse: 'UPDATE coupons SET used_count = used_count + 1 WHERE id = ?',
   createCoupon: 'INSERT INTO coupons SET ?',
   updateCoupon: 'UPDATE coupons SET ? WHERE id = ?',
   deleteCoupon: 'DELETE FROM coupons WHERE id = ?',

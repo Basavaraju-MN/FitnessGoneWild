@@ -6,7 +6,7 @@ import { checkCoupon, getCoupons, getPickupPoints, getTrekDates, getTripTerms } 
 import { couponConditions, couponDiscount } from '../../utils/coupon';
 import RichText from '../common/RichText';
 import { usePlaces } from '../../context/PlacesContext';
-import { isWithTransportOnly, tripWord } from '../../utils/tripPricing';
+import { getDisplayPrice, getPriceOptions, includesTransport, isWithTransportOnly, tripWord } from '../../utils/tripPricing';
 import useTrekImages from '../../hooks/useTrekImages';
 
 const GST_RATE = 0.05;
@@ -192,6 +192,11 @@ export default function BookingModal({
   const [pickupPoints, setPickupPoints] = useState([]);
   const [pickupLoading, setPickupLoading] = useState(true);
 
+  // The trek's own price options from the admin ("Bangalore to Bangalore",
+  // "Chennai to Chennai", "Without transport"…). None = With / Without transport.
+  const priceOptions = getPriceOptions(trek);
+  const hasOptions = priceOptions.length > 0;
+
   // Pickups in more than one city: choose the city first (the one picked
   // in the header when the trek leaves from it)
   const { city: chosenCity } = usePlaces();
@@ -225,6 +230,14 @@ export default function BookingModal({
 
   const [withoutTransportTickets, setWithoutTransportTickets] =
     useState(0);
+
+  // Price options: option id -> tickets
+  const [optionTickets, setOptionTickets] = useState({});
+  const bookedOptions = priceOptions
+    .filter((option) => (optionTickets[option.id] || 0) > 0)
+    .map((option) => ({ ...option, people: optionTickets[option.id] }));
+  const changeOptionTickets = (id, delta) =>
+    setOptionTickets((current) => ({ ...current, [id]: Math.max(0, (current[id] || 0) + delta) }));
 
   // This trek's terms, shown under the tick box when the link is clicked
   const [showTerms, setShowTerms] = useState(false);
@@ -339,37 +352,50 @@ export default function BookingModal({
     transportTickets *
     (transportationPrice || price);
 
-  const subtotal =
-    withoutTransportationAmount +
-    transportationAmount;
+  // People with / without transport ("Without transport" options are without)
+  const countOf = (list) => list.reduce((sum, option) => sum + option.people, 0);
+  const withTransportCount = hasOptions
+    ? countOf(bookedOptions.filter(includesTransport))
+    : transportTickets;
+  const withoutTransportCount = hasOptions
+    ? countOf(bookedOptions.filter((option) => !includesTransport(option)))
+    : transportOnly ? 0 : withoutTransportTickets;
 
-  const totalTickets =
-    transportTickets + (transportOnly ? 0 : withoutTransportTickets);
+  const subtotal = hasOptions
+    ? bookedOptions.reduce((sum, option) => sum + option.people * Number(option.price), 0)
+    : withoutTransportationAmount + transportationAmount;
 
-  // Coupon: comes off the trip price before GST. If the tickets no longer
-  // meet its conditions (e.g. fewer people), it gives no discount and is not sent.
-  const couponResult = couponDiscount(appliedCoupon, { people: totalTickets, subtotal });
+  const totalTickets = withTransportCount + withoutTransportCount;
+
+  // Sent with the payment (the server prices them again): [{ id, people }]
+  const ticketOptions = hasOptions
+    ? bookedOptions.map((option) => ({ id: option.id, people: option.people }))
+    : null;
+
+  // GST first, on the full trip price; the coupon then comes off the total.
+  // If the tickets no longer meet its conditions (e.g. fewer people), it
+  // gives no discount and is not sent.
+  const gst = subtotal * GST_RATE;
+
+  const couponResult = couponDiscount(appliedCoupon, { people: totalTickets, subtotal, gstRate: GST_RATE });
   const discount = couponResult.discount || 0;
   const couponWorks = Boolean(appliedCoupon) && discount > 0;
-  const afterDiscount = subtotal - discount;
 
-  const gst = afterDiscount * GST_RATE;
-
-  const total = afterDiscount + gst;
+  const total = subtotal + gst - discount;
 
   const advanceSubtotal =
     ADVANCE_PER_TICKET * totalTickets;
 
-  // Advance only makes sense when it is less than the full price
-  const canPayAdvance =
-    totalTickets > 0 && advanceSubtotal < afterDiscount;
-
-  const isAdvance =
-    paymentType === 'advance' && canPayAdvance;
-
   const advanceGst = advanceSubtotal * GST_RATE;
 
   const advanceTotal = advanceSubtotal + advanceGst;
+
+  // Advance only makes sense when it is less than the full price
+  const canPayAdvance =
+    totalTickets > 0 && advanceTotal < total;
+
+  const isAdvance =
+    paymentType === 'advance' && canPayAdvance;
 
   // What is charged now and what is left to pay later
   const payableNow = isAdvance ? advanceTotal : total;
@@ -394,8 +420,9 @@ export default function BookingModal({
       const { coupon } = await checkCoupon({
         code: clean,
         tripId: trek.id,
-        withTransport: transportTickets,
-        withoutTransport: transportOnly ? 0 : withoutTransportTickets,
+        withTransport: withTransportCount,
+        withoutTransport: withoutTransportCount,
+        options: ticketOptions,
       });
       setAppliedCoupon(coupon);
       setCouponInput('');
@@ -482,10 +509,15 @@ export default function BookingModal({
       mobile,
       email,
       pickupLocation,
-      transportTickets,
-      withoutTransportTickets: transportOnly ? 0 : withoutTransportTickets,
+      transportTickets: withTransportCount,
+      withoutTransportTickets: withoutTransportCount,
       withTransportPrice: transportationPrice || price,
       withoutTransportPrice: price,
+      // Price options: what was booked, and "2 × Chennai to Chennai" for the receipt
+      ticketOptions,
+      ticketsLabel: hasOptions
+        ? bookedOptions.map((option) => `${option.people} × ${option.label}`).join(', ')
+        : null,
       subtotal,
       // Coupon (checked again by the server before the payment)
       couponCode: couponWorks ? appliedCoupon.code : null,
@@ -606,10 +638,7 @@ export default function BookingModal({
 
                   <strong>
                     ₹
-                    {(transportOnly
-                      ? transportationPrice || price
-                      : price
-                    ).toLocaleString('en-IN')}
+                    {getDisplayPrice(trek).toLocaleString('en-IN')}
                     <small> / person</small>
                   </strong>
                 </div>
@@ -888,60 +917,79 @@ export default function BookingModal({
 
                 <h3>Select Ticket(s)</h3>
 
+                {/* PRICE OPTIONS of this trek (replace With / Without transport) */}
+                {hasOptions && priceOptions.map((option) => (
+                  <div className="ticket-row" key={option.id}>
+                    <div>
+                      <span>{option.label}</span>
+                      <strong>₹{Number(option.price).toLocaleString('en-IN')}</strong>
+                    </div>
+
+                    <div className="ticket-controls">
+                      <button type="button" onClick={() => changeOptionTickets(option.id, -1)}>−</button>
+                      <span>{optionTickets[option.id] || 0}</span>
+                      <button type="button" onClick={() => changeOptionTickets(option.id, 1)}>+</button>
+                    </div>
+                  </div>
+                ))}
+
                 {/* WITH TRANSPORT */}
-                <div className="ticket-row">
+                {!hasOptions && (
+                  <div className="ticket-row">
 
-                  <div>
-                    <span>
-                      With Transportation
-                    </span>
+                    <div>
+                      <span>
+                        With Transportation
+                      </span>
 
-                    <strong>
-                      ₹
-                      {(
-                        transportationPrice ||
-                        price
-                      ).toLocaleString('en-IN')}
-                    </strong>
-                  </div>
+                      <strong>
+                        ₹
+                        {(
+                          transportationPrice ||
+                          price
+                        ).toLocaleString('en-IN')}
+                      </strong>
+                    </div>
 
-                  <div className="ticket-controls">
+                    <div className="ticket-controls">
 
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setTransportTickets(
-                          Math.max(
-                            0,
-                            transportTickets - 1
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setTransportTickets(
+                            Math.max(
+                              0,
+                              transportTickets - 1
+                            )
                           )
-                        )
-                      }
-                    >
-                      −
-                    </button>
+                        }
+                      >
+                        −
+                      </button>
 
-                    <span>
-                      {transportTickets}
-                    </span>
+                      <span>
+                        {transportTickets}
+                      </span>
 
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setTransportTickets(
-                          transportTickets + 1
-                        )
-                      }
-                    >
-                      +
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setTransportTickets(
+                            transportTickets + 1
+                          )
+                        }
+                      >
+                        +
+                      </button>
+
+                    </div>
 
                   </div>
 
-                </div>
+                )}
 
                 {/* WITHOUT TRANSPORT: not offered for transport-only trips */}
-                {!transportOnly && (
+                {!hasOptions && !transportOnly && (
                   <div className="ticket-row">
 
                     <div>
@@ -1188,13 +1236,6 @@ export default function BookingModal({
                         </strong>
                       </div>
 
-                      {couponWorks && (
-                        <div className="discount-row">
-                          <span>Coupon {appliedCoupon.code}</span>
-                          <strong>−₹{discount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</strong>
-                        </div>
-                      )}
-
                       <div>
                         <span>GST (5%)</span>
                         <strong>
@@ -1207,6 +1248,13 @@ export default function BookingModal({
                           )}
                         </strong>
                       </div>
+
+                      {couponWorks && (
+                        <div className="discount-row">
+                          <span>Coupon {appliedCoupon.code}</span>
+                          <strong>−₹{discount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</strong>
+                        </div>
+                      )}
 
                       {isAdvance && (
                         <>

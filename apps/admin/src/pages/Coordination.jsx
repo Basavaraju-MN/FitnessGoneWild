@@ -14,6 +14,10 @@ const TRIP_STATUS = ['upcoming', 'ongoing', 'completed', 'cancelled'].map((v) =>
 const BOOKING_STATUS = [{ value: 'open', label: 'Open for booking' }, { value: 'full', label: 'Sold out' }];
 // Completed tab: trips marked completed (or cancelled); everything else is Upcoming
 const isDone = (d) => d.trip_status === 'completed' || d.trip_status === 'cancelled';
+
+// "2 × Chennai to Chennai" for price options booked, else With / Without transport
+const ticketsLabel = (r) =>
+  r.tickets?.length ? r.tickets.map((t) => `${t.people} × ${t.label}`).join(', ') : label(r.travel_mode);
 // "Sold out" when marked so, or when every seat is booked
 const isSoldOut = (d) => d.status === 'full' || (Number(d.seats_total) > 0 && Number(d.seats_booked) >= Number(d.seats_total));
 
@@ -265,7 +269,7 @@ export default function Coordination() {
               { key: 'customer_phone', label: 'Phone', render: (r) => <a className="link" href={whatsappLink(r.customer_phone)} target="_blank" rel="noreferrer">{r.customer_phone}</a>, csv: (r) => r.customer_phone },
               { key: 'booking_ref', label: 'Booking', render: (r) => <button className="link" onClick={() => setOpenBookingId(r.id)}>{r.booking_ref}</button>, csv: (r) => r.booking_ref },
               { key: 'people', label: 'People' },
-              { key: 'travel_mode', label: 'Transport', render: (r) => label(r.travel_mode) || '—', csv: (r) => label(r.travel_mode) },
+              { key: 'travel_mode', label: 'Transport', render: (r) => ticketsLabel(r) || '—', csv: (r) => ticketsLabel(r) },
               { key: 'pickup_name', label: 'Pickup', render: (r) => r.pickup_name || 'Self' },
               { key: 'amount', label: 'Total', render: (r) => money(r.amount) },
               { key: 'amount_paid', label: 'Paid', render: (r) => money(r.amount_paid) },

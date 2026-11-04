@@ -119,7 +119,7 @@ export default function Coupons() {
           ['Coupons', list.length, `${usable.length} can be used now`],
           ['Shown to customers', usable.filter((c) => Number(c.is_public)).length, 'On the booking pop-up'],
           ['Bookings with a coupon', sum('bookings'), 'Not counting cancelled'],
-          ['Discount given', money(sum('discount_given')), 'Before GST'],
+          ['Discount given', money(sum('discount_given')), 'Off the total, after GST'],
         ]}
       />
 

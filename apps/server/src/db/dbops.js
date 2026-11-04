@@ -116,6 +116,29 @@ class Cmds {
     return (await executeQuery(sqlQueries.getTripForPricing, [tripId]))?.[0] || null;
   }
 
+  // trip id -> its active price options [{ id, label, price }].
+  // Empty until trip_price_options.sql has run (treks keep with / without transport).
+  async getPriceOptionsByTrip(tripIds) {
+    const ids = [...new Set(tripIds.map(Number).filter(Boolean))];
+    const byTrip = new Map();
+    if (!ids.length) return byTrip;
+    let rows = [];
+    try {
+      rows = (await executeQuery(sqlQueries.getPriceOptionsForTrips, [ids])) || [];
+    } catch (error) {
+      if (!['ER_NO_SUCH_TABLE', 'ER_BAD_FIELD_ERROR'].includes(error?.code)) throw error;
+    }
+    for (const row of rows) {
+      const option = { id: row.id, label: row.label, price: Number(row.price) };
+      byTrip.set(row.trip_id, [...(byTrip.get(row.trip_id) || []), option]);
+    }
+    return byTrip;
+  }
+
+  async getTripPriceOptions(tripId) {
+    return (await this.getPriceOptionsByTrip([tripId])).get(Number(tripId)) || [];
+  }
+
   // One hero's photo { mime, data } from the database, or null
   async getHeroPhoto(heroId) {
     const rows = await executeQuery(sqlQueries.getHeroPhoto, [heroId]);

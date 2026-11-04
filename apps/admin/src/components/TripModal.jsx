@@ -35,6 +35,7 @@ const slugify = (text) =>
 const daysFrom = (label) => Math.max(1, parseInt(String(label || '').match(/\d+/)?.[0] || '1', 10));
 
 const emptyPickup = (cityId = '') => ({ name: '', address: '', city_id: cityId });
+const emptyPriceOption = () => ({ label: '', price: '' });
 
 // Shrinks a photo to PHOTO_MAX_WIDTH wide JPEG so the website stays fast
 function resizePhoto(file) {
@@ -132,6 +133,7 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
         terms_sections: [], terms_highlights: '',
         region_id: (lookups?.regions || []).find((r) => Number(r.is_active))?.id || '',
         pickup_points: [emptyPickup(firstCityId), emptyPickup(firstCityId)],
+        price_options: [],
       });
       return;
     }
@@ -140,7 +142,8 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
       .then(({ data }) => {
         const pickups = (data.pickup_points || []).map((p) => ({ id: p.id, name: p.name, address: p.address || '', city_id: p.city_id || '' }));
         while (pickups.length < MIN_PICKUP_POINTS) pickups.push(emptyPickup(firstCityId));
-        setValues({ ...data, pickup_points: pickups });
+        const priceOptions = (data.price_options || []).map((o) => ({ id: o.id, label: o.label, price: o.price }));
+        setValues({ ...data, pickup_points: pickups, price_options: priceOptions });
         setPhotos(Object.fromEntries((data.images || []).map((img) => [img.number, img])));
       })
       .catch((err) => {
@@ -182,6 +185,18 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
     set('pickup_points', list);
   };
 
+  /* ---------- Price options ("Chennai to Chennai" ₹4,200) ---------- */
+  const setPriceOption = (index, key, value) =>
+    set('price_options', values.price_options.map((o, i) => (i === index ? { ...o, [key]: value } : o)));
+  const addPriceOption = () => set('price_options', [...(values.price_options || []), emptyPriceOption()]);
+  // Options set: their prices replace "Price per person" and With / Without transport
+  const hasPriceOptions = (values.price_options || []).length > 0;
+  const lowestOptionPrice = () => {
+    const prices = (values.price_options || []).map((o) => Number(o.price)).filter((p) => p > 0);
+    return prices.length ? Math.min(...prices) : values.price;
+  };
+  const removePriceOption = (index) => set('price_options', values.price_options.filter((_, i) => i !== index));
+
   /* ---------- Photos ---------- */
   const photoAt = (n) => {
     const change = photoChanges[n];
@@ -221,8 +236,11 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
       if (!values.category_id) return 'Choose a category';
       if (hasRegions && !values.region_id) return 'Choose a region';
       if (!String(values.duration_label || '').trim()) return 'Enter the duration, e.g. 2 days';
-      if (values.price === '' || values.price === undefined || values.price === null) return 'Enter the price per person';
+      if (!hasPriceOptions && (values.price === '' || values.price === undefined || values.price === null)) return 'Enter the price per person';
       if (isNew && !slug) return 'The trek name needs some letters or numbers (used for the web address)';
+      const filled = (values.price_options || []).filter((o) => String(o.label || '').trim() || String(o.price ?? '') !== '');
+      if (filled.some((o) => !String(o.label || '').trim())) return 'Give every price option a name, e.g. Chennai to Chennai';
+      if (filled.some((o) => !(Number(o.price) > 0))) return 'Enter the price of every price option';
     }
     if (index === 2) {
       const named = values.pickup_points.filter((p) => String(p.name || '').trim());
@@ -263,7 +281,10 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
     const body = {
       ...values,
       duration_days: daysFrom(values.duration_label),
+      // With price options the base price is the cheapest option (cards, lists)
+      price: hasPriceOptions ? lowestOptionPrice() : values.price,
       pickup_points: values.pickup_points.filter((p) => String(p.name || '').trim()),
+      price_options: (values.price_options || []).filter((o) => String(o.label || '').trim()),
       terms_sections: (values.terms_sections || [])
         .map((t) => ({ title: String(t.title || '').trim(), body: t.body || '' }))
         .filter((t) => t.title || plainText(t.body)),
@@ -385,22 +406,65 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
                 {input('distance_label', { placeholder: '14 km' })}
               </div>
 
-              <div className="field">
-                <label>Price per person (₹) *</label>
-                {input('price', { type: 'number', min: 0, step: '0.01' })}
-              </div>
+              {/* With price options the tickets carry their own prices,
+                  so these manual prices are not needed */}
+              {!hasPriceOptions && (
+                <div className="field">
+                  <label>Price per person (₹) *</label>
+                  {input('price', { type: 'number', min: 0, step: '0.01' })}
+                </div>
+              )}
               <div className="field">
                 <label>Price note</label>
                 {input('price_note', { placeholder: 'per person, transport incl.' })}
               </div>
 
-              <div className="field">
-                <label>Without transport (₹)</label>
-                {input('without_transport_price', { type: 'number', min: 0, step: '0.01' })}
-              </div>
-              <div className="field">
-                <label>With transport (₹)</label>
-                {input('with_transport_price', { type: 'number', min: 0, step: '0.01' })}
+              {!hasPriceOptions && (
+                <>
+                  <div className="field">
+                    <label>Without transport (₹)</label>
+                    {input('without_transport_price', { type: 'number', min: 0, step: '0.01' })}
+                  </div>
+                  <div className="field">
+                    <label>With transport (₹)</label>
+                    {input('with_transport_price', { type: 'number', min: 0, step: '0.01' })}
+                  </div>
+                </>
+              )}
+
+              <div className="field full">
+                <label>Price options <span className="muted">(optional)</span></label>
+                {(values.price_options || []).length > 0 && (
+                  <div className="pickup-list">
+                    {values.price_options.map((o, i) => (
+                      <div key={o.id || `new-${i}`} className="pickup-row">
+                        <span className="pickup-num">{i + 1}</span>
+                        <input
+                          value={o.label}
+                          onChange={(e) => setPriceOption(i, 'label', e.target.value)}
+                          placeholder="Name, e.g. Bangalore to Bangalore"
+                        />
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={o.price ?? ''}
+                          onChange={(e) => setPriceOption(i, 'price', e.target.value)}
+                          placeholder="Price per person (₹)"
+                        />
+                        <div className="pickup-actions">
+                          <button type="button" className="remove" onClick={() => removePriceOption(i)} aria-label="Remove price option" title="Remove">✕</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <button type="button" className="add-pickup" onClick={addPriceOption}>＋ Add price option</button>
+                <small>
+                  {(values.price_options || []).length
+                    ? 'The booking form shows only these tickets instead of With / Without transport, so those prices are not needed (the cheapest option is shown on the trek card). Name a ticket “Without transport” (or “No transport”) when it has no transport; every other ticket counts as with transport.'
+                    : 'None: the booking form shows With transport and Without transport with the prices above. Add options for tickets like “Bangalore to Bangalore”, “Chennai to Chennai”.'}
+                </small>
               </div>
 
               <div className="field">

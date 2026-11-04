@@ -242,8 +242,10 @@ export function PaymentMethodChooser({ booking, onBack }) {
             'pickupLocation', 'selectedPickupLocation', 'boardingPoint'
           ]),
 
-          transportation: receiptDetails.transportation,
+          // Trek with price options: "2 × Chennai to Chennai", and [{ id, people }]
+          transportation: booking?.ticketsLabel || receiptDetails.transportation,
           transportationAmount: receiptDetails.transportationAmount,
+          ticketOptions: booking?.ticketOptions || null,
 
           withoutTransportTickets: receiptDetails.withoutTransportTickets,
           withoutTransportPrice: receiptDetails.withoutTransportPrice,

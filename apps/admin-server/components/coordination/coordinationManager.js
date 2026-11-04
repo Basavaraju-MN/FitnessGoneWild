@@ -70,7 +70,9 @@ async function getDeparture(id) {
   if (!departure) throw notFound('Trip coordination not found');
 
   const customers = await dbops.getDepartureCustomers(id);
-  return { ...departure, customers };
+  // Price options each customer booked ("2 × Chennai to Chennai"), if any
+  const tickets = await dbops.getBookingTicketOptions(customers.map((c) => c.id));
+  return { ...departure, customers: customers.map((c) => ({ ...c, tickets: tickets.get(c.id) || [] })) };
 }
 
 async function createDeparture(admin, body) {
