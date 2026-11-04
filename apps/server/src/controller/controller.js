@@ -8,6 +8,10 @@ const component = require('../components/trekDetails');
 const brochureComponent = require('../components/broucher/broucher')
 const couponComponent = require('../components/coupon/coupon');
 
+// "Customise dates" on the booking pop-up: off for now. Set to true to allow
+// customised trips again (and SHOW_CUSTOM_DATES in BookingModal.jsx).
+const CUSTOM_DATES_ENABLED = false;
+
 // Site the customer is paying from. Falls back to the Referer
 // when a browser or proxy does not send the Origin header.
 function getRequestOrigin(req) {
@@ -391,6 +395,14 @@ exports.createPhonePePayment = async (req, res) => {
       return res.status(409).json({
         success: false,
         message: 'The price of this booking has changed. Please close the booking window and book again.',
+      });
+    }
+
+    // Customised dates are switched off for now (hidden on the booking pop-up)
+    if (isCustomTrip && !CUSTOM_DATES_ENABLED) {
+      return res.status(409).json({
+        success: false,
+        message: 'Customised dates are not available right now. Please choose one of the listed dates.',
       });
     }
 

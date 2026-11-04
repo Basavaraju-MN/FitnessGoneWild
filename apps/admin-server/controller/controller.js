@@ -440,6 +440,15 @@ exports.updateEnquiry = async (req, res, next) => {
    PAYMENTS
    ===================================================================== */
 
+exports.checkPhonePePayment = async (req, res, next) => {
+  try {
+    const data = await paymentManager.checkPhonePePayment(req.admin, req.body?.merchant_order_id);
+    return res.status(200).json({ success: true, message: 'Checked with PhonePe', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 exports.getPayments = async (req, res, next) => {
   try {
     const { data, stats } = await paymentManager.getPayments();

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { useToast } from './ui';
 import RichTextEditor, { plainText } from './RichTextEditor';
+import SearchSelect from './SearchSelect';
 
 // Headings offered as one-click starters (any heading can be typed)
 const SUGGESTED = ['Cancellation & refund policy', 'Trek rules', 'Health & fitness', 'Things to carry', 'Weather & route changes', 'General terms & conditions'];
@@ -68,10 +69,15 @@ export default function TermsEditor({ tripId, sections, highlights, onSections, 
         <div className="field full terms-copy">
           <label htmlFor="terms-copy">Start from another trek&apos;s terms</label>
           <div className="terms-copy-row">
-            <select id="terms-copy" value={copyFrom} onChange={(e) => setCopyFrom(e.target.value)} disabled={copying}>
-              <option value="">Choose a trek…</option>
-              {sources.map((t) => <option key={t.id} value={t.id}>{t.name} ({t.sections} section{Number(t.sections) === 1 ? '' : 's'})</option>)}
-            </select>
+            <SearchSelect
+              id="terms-copy"
+              value={copyFrom}
+              onChange={setCopyFrom}
+              disabled={copying}
+              placeholder="Choose a trek…"
+              searchable
+              options={sources.map((t) => ({ value: t.id, label: `${t.name} (${t.sections} section${Number(t.sections) === 1 ? '' : 's'})` }))}
+            />
             <button type="button" className="btn alt" onClick={copy} disabled={!copyFrom || copying}>
               {copying ? 'Copying…' : 'Copy sections'}
             </button>

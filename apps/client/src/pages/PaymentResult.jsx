@@ -32,6 +32,9 @@ const STATUS_CHECK_INTERVAL_MS = 3000;
 // About 2 minutes of retries before showing an error.
 const MAX_FAILED_STATUS_CHECKS = 40;
 
+// PhonePe still says "pending" after about 3 minutes: stop and explain
+const MAX_PROCESSING_CHECKS = 60;
+
 const MAX_RECEIPT_ATTEMPTS = 5;
 
 export default function PaymentResult() {
@@ -67,6 +70,7 @@ export default function PaymentResult() {
     let cancelled = false;
     let timeoutId;
     let failedAttempts = 0;
+    let processingChecks = 0;
 
     const checkStatus = async () => {
       try {
@@ -118,6 +122,18 @@ export default function PaymentResult() {
           setState({
             status: 'FAILED',
             error: '',
+          });
+
+          return;
+        }
+
+        processingChecks += 1;
+
+        if (processingChecks >= MAX_PROCESSING_CHECKS) {
+          setState({
+            status: 'UNKNOWN',
+            error:
+              `PhonePe is still confirming this payment. If money was deducted, your booking will be confirmed automatically once PhonePe completes it. Please refresh this page in a few minutes, or contact us with your order reference ${merchantOrderId}.`,
           });
 
           return;

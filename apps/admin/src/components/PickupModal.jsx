@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { useAdmin } from '../context';
 import { useToast } from './ui';
+import SearchSelect from './SearchSelect';
 
 const MIN_PICKUP_POINTS = 2;
 const emptyPickup = (cityId = '') => ({ name: '', address: '', city_id: cityId });
@@ -103,15 +104,14 @@ export default function PickupModal({ tripId, onClose, onSaved }) {
                     <div key={p.id || `new-${i}`} className="pickup-row">
                       <span className="pickup-num">{i + 1}</span>
                       {cities.length > 0 && (
-                        <select
+                        <SearchSelect
                           className="pickup-city"
                           value={p.city_id ?? ''}
-                          onChange={(e) => setPoint(i, 'city_id', e.target.value)}
-                          aria-label="Departure city"
-                        >
-                          <option value="">City…</option>
-                          {cities.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        </select>
+                          onChange={(value) => setPoint(i, 'city_id', value)}
+                          ariaLabel="Departure city"
+                          placeholder="City…"
+                          options={cities.map((c) => ({ value: c.id, label: c.name }))}
+                        />
                       )}
                       <input
                         value={p.name}

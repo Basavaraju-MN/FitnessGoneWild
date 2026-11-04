@@ -5,6 +5,7 @@ import { useAdmin } from '../context';
 import { date, dateTime, label, money, whatsappLink } from '../format';
 import { FormModal, Modal, Pill, useToast } from './ui';
 import { useInvoiceActions } from './invoiceActions';
+import SearchSelect from './SearchSelect';
 
 const GST_RATE = 0.05;
 
@@ -70,17 +71,16 @@ export function SoldBySelect({ booking, onSaved }) {
   };
 
   return (
-    <select
+    <SearchSelect
       className="sold-by-select"
       value={value}
       disabled={saving}
-      aria-label={`Sold by for ${booking.booking_ref}`}
+      ariaLabel={`Sold by for ${booking.booking_ref}`}
       onClick={(event) => event.stopPropagation()}
-      onChange={(event) => change(event.target.value)}
-    >
-      <option value="">Not assigned</option>
-      {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-    </select>
+      onChange={change}
+      placeholder="Not assigned"
+      options={options}
+    />
   );
 }
 

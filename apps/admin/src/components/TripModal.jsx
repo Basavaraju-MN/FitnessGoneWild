@@ -8,6 +8,7 @@ import { useToast } from './ui';
 import { saveTrekInBrochureList } from '../pages/Brochures';
 import RichTextEditor, { plainText } from './RichTextEditor';
 import TermsEditor, { termsProblem } from './TermsEditor';
+import SearchSelect from './SearchSelect';
 
 const MAX_PHOTOS = 5;
 const PHOTO_MAX_WIDTH = 1600;
@@ -376,17 +377,21 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
 
               <div className="field">
                 <label>Category *</label>
-                <select value={values.category_id ?? ''} onChange={(e) => set('category_id', e.target.value)}>
-                  {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                <SearchSelect
+                  value={values.category_id ?? ''}
+                  onChange={(value) => set('category_id', value)}
+                  allowEmpty={false}
+                  options={categories.map((c) => ({ value: c.id, label: c.name }))}
+                />
               </div>
               {hasRegions && (
                 <div className="field">
                   <label>Region *</label>
-                  <select value={values.region_id ?? ''} onChange={(e) => set('region_id', e.target.value)}>
-                    <option value="">Select…</option>
-                    {regions.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-                  </select>
+                  <SearchSelect
+                    value={values.region_id ?? ''}
+                    onChange={(value) => set('region_id', value)}
+                    options={regions.map((r) => ({ value: r.id, label: r.name }))}
+                  />
                   <small>“Select region” on the website</small>
                 </div>
               )}
@@ -572,15 +577,14 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
                     <div key={p.id || `new-${i}`} className="pickup-row">
                       <span className="pickup-num">{i + 1}</span>
                       {cities.length > 0 && (
-                        <select
+                        <SearchSelect
                           className="pickup-city"
                           value={p.city_id ?? ''}
-                          onChange={(e) => setPickup(i, 'city_id', e.target.value)}
-                          aria-label="Departure city"
-                        >
-                          <option value="">City…</option>
-                          {cities.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        </select>
+                          onChange={(value) => setPickup(i, 'city_id', value)}
+                          ariaLabel="Departure city"
+                          placeholder="City…"
+                          options={cities.map((c) => ({ value: c.id, label: c.name }))}
+                        />
                       )}
                       <input
                         value={p.name}

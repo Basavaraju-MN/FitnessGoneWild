@@ -6,6 +6,7 @@ import { date, label, money } from '../format';
 import { PERIODS, periodRange } from '../periods';
 import DataTable from './DataTable';
 import { Pill, Stats } from './ui';
+import SearchSelect from './SearchSelect';
 
 /* ---------- Sales performance (Users & Roles) ----------
  * Pick a person (or everyone) and a period: their bookings, travellers and
@@ -46,11 +47,17 @@ export default function SalesPerformance() {
       <div className="booking-filters">
         <label>
           <span>Sales representative</span>
-          <select value={person} onChange={(e) => setPerson(e.target.value)}>
-            <option value="all">Everyone</option>
-            {people.map(([id, u]) => <option key={id} value={id}>{u.name}{u.role ? ` (${label(u.role)})` : ''}</option>)}
-            <option value="none">Not assigned (no one credited)</option>
-          </select>
+          <SearchSelect
+            value={person}
+            onChange={setPerson}
+            allowEmpty={false}
+            searchable
+            options={[
+              { value: 'all', label: 'Everyone' },
+              ...people.map(([id, u]) => ({ value: id, label: `${u.name}${u.role ? ` (${label(u.role)})` : ''}` })),
+              { value: 'none', label: 'Not assigned (no one credited)' },
+            ]}
+          />
         </label>
         <label>
           <span>Booked</span>

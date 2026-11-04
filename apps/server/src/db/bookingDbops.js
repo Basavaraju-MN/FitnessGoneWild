@@ -5,9 +5,12 @@ const queries = {
   // Scheduled departures match on trip + start date; custom trips also on end date
   findDeparture: `SELECT id FROM departures WHERE trip_id = ? AND start_date = ? AND departure_type = ? AND (departure_type = 'scheduled' OR end_date = ?) ORDER BY id LIMIT 1`,
   createDeparture: `INSERT INTO departures (trip_id, start_date, end_date, departure_type, seats_booked, status) VALUES (?, ?, ?, ?, 0, 'open')`,
-  setBookingCoupon: 'UPDATE bookings SET coupon_id = ?, coupon_code = ?, discount_amount = ? WHERE id = ?',
+  // Only once per booking (coupon_id still empty), so a retry does not count the coupon twice
+  setBookingCoupon: 'UPDATE bookings SET coupon_id = ?, coupon_code = ?, discount_amount = ? WHERE id = ? AND coupon_id IS NULL',
   addCouponUse: 'UPDATE coupons SET used_count = used_count + 1 WHERE id = ?',
   addTicketOptions: 'INSERT INTO booking_ticket_options (booking_id, option_id, label, price, people, with_transport) VALUES ?',
+  countTicketOptions: 'SELECT COUNT(*) AS n FROM booking_ticket_options WHERE booking_id = ?',
+  findBookingByOrder: 'SELECT id, booking_ref FROM bookings WHERE merchant_order_id = ?',
   addSeatsBooked: `UPDATE departures SET seats_booked = seats_booked + ?, status = IF(status = 'open' AND seats_booked >= seats_total, 'full', status) WHERE id = ?`,
 
   findCustomerByPhone: `SELECT id FROM customers WHERE phone = ? ORDER BY id DESC LIMIT 1`,
@@ -19,8 +22,9 @@ const queries = {
   // merchant_order_id is UNIQUE, so the same payment is booked only once
   createBooking: `INSERT INTO bookings (booking_ref, departure_id, customer_id, trip_id, pickup_point_id, people, with_transport_people, without_transport_people, travel_mode, trek_start_date, trek_end_date, trip_days, is_custom_trip, amount, amount_paid, advance_amount, balance_amount, payment_type, status, payment_status, merchant_order_id, payment_transaction_id, phonepe_order_id, payment_method, paid_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', ?, ?, ?, ?, ?, NOW())`,
   getBookingRef: `SELECT booking_ref FROM bookings WHERE id = ?`,
-  // Readable reference from the row id, e.g. TFGW-2026-0042
-  setBookingRef: `UPDATE bookings SET booking_ref = CONCAT('TFGW-', YEAR(booked_at), '-', LPAD(id, 4, '0')) WHERE id = ?`,
+  // Readable reference from the row id, e.g. TFGW-2026-0042. Given once (the
+  // TMP- ref is still there): it marks the booking as finished.
+  setBookingRef: `UPDATE bookings SET booking_ref = CONCAT('TFGW-', YEAR(booked_at), '-', LPAD(id, 4, '0')) WHERE id = ? AND booking_ref LIKE 'TMP-%'`,
 };
 
 const toDateOrNull = (value) => {
@@ -139,9 +143,9 @@ async function recordBooking(transaction) {
 
   const pickupPointId = await findPickupPointId(tripId, details.pickupLocation);
 
-  let result;
+  let bookingId;
   try {
-    result = await executeQuery(queries.createBooking, [
+    const result = await executeQuery(queries.createBooking, [
       // Temporary unique ref, replaced with TFGW-YYYY-NNNN below
       `TMP-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
       departureId,
@@ -167,32 +171,53 @@ async function recordBooking(transaction) {
       transaction.phonepe_order_id || null,
       transaction.payment_method || null,
     ]);
+    bookingId = result.insertId;
   } catch (error) {
-    // Already booked by an earlier success notification
-    if (error?.code === 'ER_DUP_ENTRY') return null;
-    throw error;
+    if (error?.code !== 'ER_DUP_ENTRY') throw error;
+    // Already saved by an earlier success notification. Finished (it has its
+    // TFGW ref): nothing to do. Still TMP-: an earlier try stopped half way
+    // (e.g. a database error), so finish it now.
+    const saved = (await executeQuery(queries.findBookingByOrder, [transaction.merchant_order_id]))[0];
+    if (!saved || !String(saved.booking_ref).startsWith('TMP-')) return null;
+    bookingId = saved.id;
+    console.warn(`Finishing booking ${bookingId} for ${transaction.merchant_order_id} (left unfinished earlier)`);
   }
 
-  await executeQuery(queries.setBookingRef, [result.insertId]);
-
+  // Extras: a problem here is logged and never stops the booking
   // Coupon used: saved on the booking, and counted once on the coupon
   if (details.couponId) {
-    await executeQuery(queries.setBookingCoupon, [details.couponId, details.couponCode || null, toMoney(details.discount), result.insertId]);
-    await executeQuery(queries.addCouponUse, [details.couponId]);
+    try {
+      const saved = await executeQuery(queries.setBookingCoupon, [details.couponId, details.couponCode || null, toMoney(details.discount), bookingId]);
+      if (saved.affectedRows) await executeQuery(queries.addCouponUse, [details.couponId]);
+    } catch (error) {
+      console.error(`Saving coupon ${details.couponCode} on booking ${bookingId} failed${error?.code === 'ER_BAD_FIELD_ERROR' ? ' (run coupons.sql on the database)' : ''}:`, error?.message || error);
+    }
   }
 
   // Price options booked ("2 × Chennai to Chennai"), as priced at payment
   const ticketOptions = Array.isArray(details.ticketOptions) ? details.ticketOptions : [];
   if (ticketOptions.length) {
-    await executeQuery(queries.addTicketOptions, [ticketOptions.map((line) => [
-      result.insertId,
-      Number(line.id) || null,
-      String(line.label || 'Ticket').slice(0, 120),
-      toMoney(line.price),
-      toCount(line.people),
-      line.with_transport ? 1 : 0,
-    ])]).catch((error) => console.error('Saving ticket options failed:', error?.message || error));
+    try {
+      const [{ n } = {}] = await executeQuery(queries.countTicketOptions, [bookingId]);
+      if (!Number(n)) {
+        await executeQuery(queries.addTicketOptions, [ticketOptions.map((line) => [
+          bookingId,
+          Number(line.id) || null,
+          String(line.label || 'Ticket').slice(0, 120),
+          toMoney(line.price),
+          toCount(line.people),
+          line.with_transport ? 1 : 0,
+        ])]);
+      }
+    } catch (error) {
+      console.error('Saving ticket options failed:', error?.message || error);
+    }
   }
+
+  // The TFGW ref finishes the booking. Only the request that gives it goes
+  // on to count the seats, save the invoice and email the admin (once).
+  const finished = await executeQuery(queries.setBookingRef, [bookingId]);
+  if (!finished.affectedRows) return null;
 
   await executeQuery(queries.addSeatsBooked, [people, departureId]);
   // Seats changed: the website's dates (seats left / sold out) are read again
@@ -203,11 +228,11 @@ async function recordBooking(transaction) {
     .catch((error) => console.error('Trip code failed:', error?.message || error));
 
   // Save the invoice PDF in the background (never holds up the booking)
-  require('../components/invoice/invoiceStore').ensureInvoice(result.insertId)
+  require('../components/invoice/invoiceStore').ensureInvoice(bookingId)
     .catch((error) => console.error('Invoice save failed:', error?.message || error));
 
   // Email the admin in the background (the admin bell picks it up too)
-  executeQuery(queries.getBookingRef, [result.insertId])
+  executeQuery(queries.getBookingRef, [bookingId])
     .then((rows) =>
       sendBookingAlert({
         bookingRef: rows[0]?.booking_ref,
@@ -233,7 +258,7 @@ async function recordBooking(transaction) {
     )
     .catch((error) => console.error('Booking alert failed:', error?.message || error));
 
-  return result.insertId;
+  return bookingId;
 }
 
 module.exports = {
