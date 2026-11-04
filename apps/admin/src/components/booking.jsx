@@ -417,6 +417,7 @@ export function BookingDetailModal({ bookingId, onClose, onChanged }) {
   const [paying, setPaying] = useState(false);
   const [refunding, setRefunding] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const load = async () => {
     try {
@@ -483,6 +484,8 @@ export function BookingDetailModal({ bookingId, onClose, onChanged }) {
   ];
   const info = booking.refundInfo || {};
   const canRefund = user?.modules?.includes('payments') && info.refundable > 0;
+  // Deleting removes its payments too, so it needs the Payments screen as well
+  const canDelete = user?.modules?.includes('bookings') && user?.modules?.includes('payments');
 
   const checkRefund = async (refund) => {
     try {
@@ -512,6 +515,7 @@ export function BookingDetailModal({ bookingId, onClose, onChanged }) {
               <button className="btn" onClick={() => setPaying(true)}>Collect balance</button>
             )}
             {canRefund && <button className={`btn ${booking.status === 'cancelled' ? 'danger' : 'alt'}`} onClick={() => setRefunding(true)}>Refund</button>}
+            {canDelete && <button className="btn danger" onClick={() => setDeleting(true)}>Delete booking</button>}
           </>
         }
       >
@@ -636,6 +640,45 @@ export function BookingDetailModal({ bookingId, onClose, onChanged }) {
           onSaved={() => {
             setRefunding(false);
             changed();
+          }}
+        />
+      )}
+
+      {deleting && (
+        <FormModal
+          title={`Delete ${booking.booking_ref}`}
+          submitLabel="Delete booking"
+          fields={[
+            {
+              name: 'what',
+              label: 'This cannot be undone',
+              type: 'info',
+              full: true,
+              text: [
+                `${booking.customer_name || 'Customer'} · ${booking.trip_name || 'Trip'} · ${booking.people} people · Total ${money(booking.amount)} · Paid ${money(booking.amount_paid)}.`,
+                ' Deleted everywhere: the booking, its payments and refunds, saved invoices, WhatsApp messages',
+                booking.merchant_order_id ? ' and its PhonePe payment record' : '',
+                '.',
+                booking.status !== 'cancelled' ? ` Its ${booking.people} seat${Number(booking.people) === 1 ? '' : 's'} go back to the trip date.` : '',
+                booking.coupon_code ? ` Coupon ${booking.coupon_code} gets its use back.` : '',
+                ' The customer is kept. Refund the customer first if money is owed.',
+              ].join(''),
+            },
+            {
+              name: 'confirm', label: `Type ${booking.booking_ref} to confirm`, required: true, full: true,
+              placeholder: booking.booking_ref,
+            },
+          ]}
+          onClose={() => setDeleting(false)}
+          onSubmit={async (values) => {
+            if (String(values.confirm).trim().toUpperCase() !== String(booking.booking_ref).toUpperCase()) {
+              throw new Error(`Type ${booking.booking_ref} exactly to delete this booking`);
+            }
+            await api(`/bookings/${booking.id}`, { method: 'DELETE', body: { confirm: values.confirm } });
+            toast(`Booking ${booking.booking_ref} deleted`);
+            setDeleting(false);
+            onChanged?.();
+            onClose();
           }}
         />
       )}

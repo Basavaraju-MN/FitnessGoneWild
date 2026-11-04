@@ -53,6 +53,8 @@ router.get('/bookings', can('bookings'), controller.getBookings);
 router.get('/bookings/:id', can('bookings'), controller.getBooking);
 router.post('/bookings', can('bookings'), controller.createBooking);
 router.patch('/bookings/:id', can('bookings'), controller.updateBooking);
+// Deletes the booking and its payments everywhere: needs Bookings and Payments
+router.delete('/bookings/:id', can('bookings'), can('payments'), controller.deleteBooking);
 router.post('/bookings/:id/payments', can('bookings'), controller.addBookingPayment);
 router.post('/bookings/:id/invoice', can('bookings'), controller.getInvoiceLink);
 router.get('/bookings/:id/invoice.pdf', can('bookings'), controller.getInvoicePdf);

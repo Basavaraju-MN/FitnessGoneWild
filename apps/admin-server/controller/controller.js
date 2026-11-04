@@ -312,6 +312,15 @@ exports.createBooking = async (req, res, next) => {
   }
 };
 
+exports.deleteBooking = async (req, res, next) => {
+  try {
+    const data = await bookingManager.deleteBooking(req.admin, idParam(req), req.body || {});
+    return res.status(200).json({ success: true, message: 'Booking deleted', data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 exports.updateBooking = async (req, res, next) => {
   try {
     const data = await bookingManager.updateBooking(req.admin, idParam(req), req.body || {});

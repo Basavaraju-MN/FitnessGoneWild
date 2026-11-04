@@ -410,6 +410,36 @@ class Cmds {
     return first(await executeQuery(sqlQueries.getBookingRow, [id]));
   }
 
+  // PhonePe refunds of a booking still being processed (0 before refunds.sql)
+  async countPendingPhonePeRefunds(bookingId) {
+    const rows = await executeQuery(sqlQueries.pendingPhonePeRefunds, [bookingId]).catch(orNone);
+    return Number(rows[0]?.n) || 0;
+  }
+
+  /**
+   * Deletes a booking and everything that belongs to it: its website payment
+   * (PhonePe transaction + webhook log), payments, refunds, tickets, saved
+   * invoices and WhatsApp messages, then the booking. Tables not on the
+   * database yet are skipped. Returns how many rows went from each table.
+   */
+  async deleteBookingEverywhere(booking) {
+    const removed = {};
+    for (const [table, sql, key] of sqlQueries.deleteBookingParts) {
+      const param = key === 'order' ? booking.merchant_order_id : booking.id;
+      if (!param) continue;
+      try {
+        removed[table] = (await executeQuery(sql, [param])).affectedRows || 0;
+      } catch (error) {
+        if (error?.code !== 'ER_NO_SUCH_TABLE') throw error;
+      }
+    }
+    if (booking.coupon_id) {
+      await executeQuery(sqlQueries.removeCouponUse, [booking.coupon_id]).catch(orNone);
+    }
+    removed.bookings = (await executeQuery(sqlQueries.deleteBooking, [booking.id])).affectedRows || 0;
+    return removed;
+  }
+
   async setInvoiceToken(id, token) {
     await executeQuery(sqlQueries.setInvoiceToken, [token, id]);
   }
