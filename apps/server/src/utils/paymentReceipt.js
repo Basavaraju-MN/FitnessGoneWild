@@ -40,6 +40,27 @@ function replaceTemplateValues(template, data) {
   );
 }
 
+// ticketLines: [{ label, quantity, price, amount }] (prices as "1999.00")
+function ticketRowsHtml(lines = []) {
+  return lines
+    .map((line) => `<tr>
+          <td>${escapeHtml(line.label)}</td>
+          <td class="right">${escapeHtml(line.quantity)}</td>
+          <td class="right">₹${escapeHtml(line.price)}</td>
+          <td class="right">₹${escapeHtml(line.amount)}</td>
+        </tr>`)
+    .join('\n        ');
+}
+
+// Coupon applied: "Coupon FAMILY500  − ₹500.00" (taken off the total with GST)
+function couponRowHtml({ couponCode, discount }) {
+  if (!couponCode || !(Number(discount) > 0)) return '';
+  return `<tr>
+        <td>Coupon ${escapeHtml(couponCode)}</td>
+        <td class="value">− ₹${escapeHtml(Number(discount).toFixed(2))}</td>
+      </tr>`;
+}
+
 async function generatePaymentReceiptHtml(data) {
   const template = await fs.promises.readFile(
     TEMPLATE_PATH,
@@ -55,10 +76,13 @@ async function generatePaymentReceiptHtml(data) {
     headerLogoDataUrl,
   };
 
+  // Ticket rows go in after the {{values}}, so a ticket name is never read as one
   return replaceTemplateValues(
     template,
     receiptData
-  );
+  )
+    .replace(/<!-- TICKET_ROWS:[^>]*-->/, () => ticketRowsHtml(data.ticketLines))
+    .replace(/<!-- COUPON_ROW:[^>]*-->/, () => couponRowHtml(data));
 }
 
 module.exports = {

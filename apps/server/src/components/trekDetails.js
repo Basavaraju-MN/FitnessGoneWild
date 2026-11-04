@@ -29,10 +29,16 @@ async function getPlaces() {
     }
 }
 
-// Adds region and departure_cities to each trek
+// Adds each trek's price options (empty = the default with / without transport)
+async function withPriceOptions(trips) {
+    const options = await dbCmds.getPriceOptionsByTrip(trips.map((trip) => trip.id));
+    return trips.map((trip) => ({ ...trip, price_options: options.get(trip.id) || [] }));
+}
+
+// Adds region, departure_cities and price_options to each trek
 async function withPlaces(trips) {
-    const places = await getPlaces();
-    return trips.map((trip) => {
+    const [places, priced] = await Promise.all([getPlaces(), withPriceOptions(trips)]);
+    return priced.map((trip) => {
         const place = places.get(trip.id);
         return { ...trip, region: place?.region || null, departure_cities: place?.departure_cities || [] };
     });
@@ -122,7 +128,8 @@ const getTrekDetails = async (categoryId) => {
 const getTrekBySlug = async (slug) => {
     const result = {};
     try {
-        result.data = await dbCmds.getTrekBySlug(slug);
+        const trek = await dbCmds.getTrekBySlug(slug);
+        result.data = trek ? (await withPriceOptions([trek]))[0] : null;
         result.success = true;
     } catch (error) {
         result.success = false;

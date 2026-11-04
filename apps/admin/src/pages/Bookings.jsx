@@ -20,7 +20,7 @@ export const bookingColumns = (open, collect, invoice, onSoldBy) => [
   // Coupon the customer applied (website booking pop-up)
   {
     key: 'coupon_code', label: 'Coupon',
-    render: (r) => (r.coupon_code ? <span className="coupon-tag" title={`−${money(r.discount_amount)} before GST`}>{r.coupon_code}<small>−{money(r.discount_amount)}</small></span> : <span className="muted">—</span>),
+    render: (r) => (r.coupon_code ? <span className="coupon-tag" title={`−${money(r.discount_amount)} off the total (after GST)`}>{r.coupon_code}<small>−{money(r.discount_amount)}</small></span> : <span className="muted">—</span>),
     csv: (r) => (r.coupon_code ? `${r.coupon_code} (−${r.discount_amount})` : ''),
   },
   { key: 'amount_paid', label: 'Paid', render: (r) => money(r.amount_paid) },

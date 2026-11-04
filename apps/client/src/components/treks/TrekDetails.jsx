@@ -8,6 +8,7 @@ import TrekTerms from './TrekTerms';
 import useTrekImages, { FALLBACK_IMAGE } from '../../hooks/useTrekImages';
 import {
   getDisplayPrice,
+  getPriceOptions,
   getWithTransportPrice,
   getWithoutTransportPrice,
   isWithTransportOnly,
@@ -122,6 +123,9 @@ export default function TrekDetails({ trek, onBack }) {
 
   // Backpacking trips are sold only with transportation
   const transportOnly = isWithTransportOnly(trek);
+
+  // Admin's price options ("Chennai to Chennai"…) replace With / Without transport
+  const priceOptions = getPriceOptions(trek);
 
   // Duration and Starting Price always show; Difficulty and Distance
   // depend on the category
@@ -593,7 +597,20 @@ export default function TrekDetails({ trek, onBack }) {
 
                 <div className="pricing-main">
 
-                  {!transportOnly && (
+                  {/* The trek's own price options, when the admin set them */}
+                  {priceOptions.map((option) => (
+                    <div className="pricing-option" key={option.id}>
+                      <span>{option.label}</span>
+                      <strong>
+                        ₹{new Intl.NumberFormat('en-IN', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        }).format(Number(option.price))}
+                      </strong>
+                    </div>
+                  ))}
+
+                  {!priceOptions.length && !transportOnly && (
                     <div className="pricing-option">
                       <span>Without Transportation</span>
                       <strong>
@@ -605,15 +622,17 @@ export default function TrekDetails({ trek, onBack }) {
                     </div>
                   )}
 
-                  <div className="pricing-option">
-                    <span>With Transportation</span>
-                    <strong>
-                      ₹{new Intl.NumberFormat('en-IN', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      }).format(withTransportPrice)}
-                    </strong>
-                  </div>
+                  {!priceOptions.length && (
+                    <div className="pricing-option">
+                      <span>With Transportation</span>
+                      <strong>
+                        ₹{new Intl.NumberFormat('en-IN', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        }).format(withTransportPrice)}
+                      </strong>
+                    </div>
+                  )}
 
                 </div>
 

@@ -27,16 +27,24 @@ async function couponsForTrip(tripId) {
   return (await dbops.getPublicCouponsForTrip(tripId)).map(publicCoupon);
 }
 
+// The trek's prices, with its price options (none = with / without transport)
 async function loadTrip(tripId) {
   const trip = await dbops.getTripForPricing(tripId);
   if (!trip) throw problem('This trek could not be found.');
-  return trip;
+  return { ...trip, price_options: await dbops.getTripPriceOptions(trip.id) };
+}
+
+// tickets: { withTransport, withoutTransport } or { options: [{ id, people }] }
+function priceOf(trip, tickets) {
+  const price = tripPrice(trip, tickets);
+  if (price.problem) throw problem(price.problem);
+  return price;
 }
 
 /** "Apply": does the code work for this trek and these tickets? */
-async function checkCoupon({ code, tripId, withTransport, withoutTransport }) {
+async function checkCoupon({ code, tripId, tickets }) {
   const trip = await loadTrip(tripId);
-  const price = tripPrice(trip, withTransport, withoutTransport);
+  const price = priceOf(trip, tickets);
   const coupon = cleanCode(code) ? await dbops.getCouponByCode(cleanCode(code)) : null;
   const result = couponDiscount(coupon, { tripId: trip.id, people: price.people, subtotal: price.subtotal });
   if (result.problem) throw problem(result.problem);
@@ -48,9 +56,9 @@ async function checkCoupon({ code, tripId, withTransport, withoutTransport }) {
  * coupon (never trusted from the browser). Throws a customer-facing problem
  * when the coupon no longer applies.
  */
-async function quoteBooking({ tripId, withTransport, withoutTransport, couponCode, paymentType }) {
+async function quoteBooking({ tripId, tickets, couponCode, paymentType }) {
   const trip = await loadTrip(tripId);
-  const price = tripPrice(trip, withTransport, withoutTransport);
+  const price = priceOf(trip, tickets);
   if (price.people < 1) throw problem('Please select at least one ticket.');
 
   let coupon = null;

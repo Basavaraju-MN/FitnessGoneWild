@@ -130,6 +130,12 @@ const sqlqueries = {
   // A trek's own prices: the server works out what a booking costs
   // Only published treks can be booked
   getTripForPricing: "SELECT id, category_id, price, without_transport_price, with_transport_price FROM trips WHERE id = ? AND status = 'published'",
+  // Price options of treks (trip_price_options.sql), e.g. "Chennai to Chennai"
+  getPriceOptionsForTrips: `
+    SELECT o.id, o.trip_id, o.label, o.price
+    FROM trip_price_options o
+    WHERE o.is_active = 1 AND o.trip_id IN (?)
+    ORDER BY o.trip_id, o.sort_order, o.id`,
   // Start-up: heroes whose photo is still a file of the website, moved into hero_photos
   getHeroesWithFilePhotos: "SELECT id, image_path FROM hero_slides WHERE image_path LIKE '/images/%'",
   saveHeroPhoto: `

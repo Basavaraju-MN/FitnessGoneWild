@@ -117,11 +117,12 @@ export async function getCoupons(tripId, options) {
 }
 
 // "Apply": { coupon, discount, subtotal }, or throws with the reason
-export async function checkCoupon({ code, tripId, withTransport, withoutTransport }) {
+// options: [{ id, people }] for a trek with price options
+export async function checkCoupon({ code, tripId, withTransport, withoutTransport, options }) {
   const response = await fetch(`${API_BASE_URL}/coupons/check`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code, trip_id: tripId, with_transport: withTransport, without_transport: withoutTransport }),
+    body: JSON.stringify({ code, trip_id: tripId, with_transport: withTransport, without_transport: withoutTransport, options }),
   });
   const result = await response.json().catch(() => null);
   if (!response.ok || !result?.success) throw new Error(result?.message || 'The coupon could not be checked. Please try again.');

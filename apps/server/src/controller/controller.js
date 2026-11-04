@@ -184,12 +184,13 @@ exports.getCoupons = async (req, res) => {
   }
 };
 
-// "Apply" on the booking pop-up: { code, trip_id, with_transport, without_transport }
+// "Apply" on the booking pop-up: { code, trip_id, with_transport, without_transport },
+// or for a trek with price options { code, trip_id, options: [{ id, people }] }
 exports.checkCoupon = async (req, res) => {
-  const { code, trip_id: tripId, with_transport: withTransport, without_transport: withoutTransport } = req.body || {};
+  const { code, trip_id: tripId, with_transport: withTransport, without_transport: withoutTransport, options } = req.body || {};
   if (!String(code || '').trim()) return res.status(400).json({ success: false, message: 'Enter a coupon code' });
   try {
-    const data = await couponComponent.checkCoupon({ code, tripId: Number(tripId), withTransport, withoutTransport });
+    const data = await couponComponent.checkCoupon({ code, tripId: Number(tripId), tickets: { withTransport, withoutTransport, options } });
     return res.status(200).json({ success: true, message: 'Coupon applied', data });
   } catch (error) {
     if (error.status === 400) return res.status(400).json({ success: false, message: error.message });
@@ -360,6 +361,8 @@ exports.createPhonePePayment = async (req, res) => {
       user_id,
       preferred_payment_method,
       couponCode,
+      // Trek with price options: [{ id, people }]
+      ticketOptions,
     } = req.body;
 
     // Validate payment amount
@@ -376,8 +379,7 @@ exports.createPhonePePayment = async (req, res) => {
     try {
       quote = await couponComponent.quoteBooking({
         tripId: Number(trekId),
-        withTransport: withTransportTickets,
-        withoutTransport: withoutTransportTickets,
+        tickets: { withTransport: withTransportTickets, withoutTransport: withoutTransportTickets, options: ticketOptions },
         couponCode,
         paymentType,
       });
@@ -395,8 +397,7 @@ exports.createPhonePePayment = async (req, res) => {
     // A public date must still be open with enough seats (the page may be old).
     // Customised trips choose their own dates, so they are not checked.
     if (!isCustomTrip) {
-      const people = (Number(withTransportTickets) || 0) + (Number(withoutTransportTickets) || 0);
-      const problem = await component.trekDateProblem(Number(trekId), String(tripStartDate || ''), Math.max(1, people));
+      const problem = await component.trekDateProblem(Number(trekId), String(tripStartDate || ''), Math.max(1, quote.people));
       if (problem) {
         return res.status(409).json({
           success: false,
@@ -426,13 +427,18 @@ exports.createPhonePePayment = async (req, res) => {
         transportation,
         transportationAmount,
 
-        withoutTransportTickets,
+        // Ticket counts as worked out here (price options counted as with /
+        // without transport: an option with a city includes transport)
+        withoutTransportTickets: quote.withoutTransport,
         withoutTransportPrice,
         withoutTransportAmount,
 
-        withTransportTickets,
+        withTransportTickets: quote.withTransport,
         withTransportPrice,
         withTransportAmount,
+
+        // Price options booked: [{ id, label, price, people, with_transport }]
+        ticketOptions: quote.lines,
 
         // Amounts as worked out here (coupon included)
         subtotal: quote.subtotal,
@@ -832,7 +838,23 @@ const customerPhone =
       withTransportAmount:
         withTransportAmount.toFixed(2),
 
+      // One receipt row per price option booked, or the default two rows
+      ticketLines: Array.isArray(bookingDetails.ticketOptions) && bookingDetails.ticketOptions.length
+        ? bookingDetails.ticketOptions.map((line) => ({
+          label: line.label,
+          quantity: line.people,
+          price: Number(line.price).toFixed(2),
+          amount: (Number(line.price) * Number(line.people)).toFixed(2),
+        }))
+        : [
+          { label: 'Without Transportation', quantity: withoutTransportTickets, price: withoutTransportPrice.toFixed(2), amount: withoutTransportAmount.toFixed(2) },
+          { label: 'With Transportation', quantity: withTransportTickets, price: withTransportPrice.toFixed(2), amount: withTransportAmount.toFixed(2) },
+        ],
+
       subtotal: subtotal.toFixed(2),
+      // Coupon applied on the booking pop-up (taken off after GST)
+      couponCode: bookingDetails.couponCode || '',
+      discount: Number(bookingDetails.discount) || 0,
       gst: gst.toFixed(2),
       totalAmount: paidAmount.toFixed(2),
 

@@ -2,6 +2,7 @@
 // Used by the website (/invoice/<token>/pdf) and the admin (attach on WhatsApp).
 const path = require('path');
 const PDFDocument = require('pdfkit');
+const { ticketsText } = require('../coupon/couponRules');
 
 const FONTS = path.join(__dirname, '../../utils/templates/fonts');
 // Small copy of the logo (keeps each PDF light)
@@ -34,7 +35,10 @@ function buildInvoicePdf({ booking: b, payments, refunds, settings, invoiceNo })
 
     const gst = Number(settings.gst_percent || 5);
     const total = Number(b.amount);
-    const taxable = total / (1 + gst / 100);
+    // Coupon discount, taken off after GST: total = trip amount + GST − coupon
+    const discount = Number(b.discount_amount) || 0;
+    const withGst = total + discount;
+    const taxable = withGst / (1 + gst / 100);
     const recorded = payments.reduce((s, p) => s + Number(p.amount), 0);
     const online = Math.max(0, Number(b.amount_paid) - recorded);
     const refunded = refunds.reduce((s, r) => s + Number(r.amount), 0);
@@ -89,7 +93,8 @@ function buildInvoicePdf({ booking: b, payments, refunds, settings, invoiceNo })
       .text('People', left + width - 190, y + 7, { width: 60, align: 'right' })
       .text('Amount', left + width - 120, y + 7, { width: 110, align: 'right' });
     y += 32;
-    const transport = b.travel_mode === 'mixed'
+    // Price options booked ("2 × Chennai to Chennai"), else with / without transport
+    const transport = b.tickets?.length ? ticketsText({ lines: b.tickets }) : b.travel_mode === 'mixed'
       ? `${b.with_transport_people} with transport, ${b.without_transport_people} without`
       : b.travel_mode === 'without_transport' ? 'Without transport' : 'With transport';
     doc.font('bold').fontSize(10).fillColor('#1D2A27').text(b.trip_name || 'Trip', left + 10, y, { width: width - 210 });
@@ -110,7 +115,11 @@ function buildInvoicePdf({ booking: b, payments, refunds, settings, invoiceNo })
       y += opts.gap || 18;
     };
     row('Trip amount (without GST)', rupees(taxable));
-    row(`GST (${gst}%)`, rupees(total - taxable));
+    row(`GST (${gst}%)`, rupees(withGst - taxable));
+    if (discount > 0) {
+      row('Total with GST', rupees(withGst));
+      row(`Coupon ${b.coupon_code}`, `− ${rupees(discount)}`, { color: '#1F6B3D' });
+    }
     doc.moveTo(tx, y - 2).lineTo(right, y - 2).strokeColor(PINE).lineWidth(1.5).stroke();
     y += 6;
     row('Total', rupees(total), { bold: true, size: 12, gap: 22 });

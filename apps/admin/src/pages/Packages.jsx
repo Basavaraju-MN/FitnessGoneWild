@@ -45,12 +45,15 @@ function CategoriesModal({ onClose }) {
   );
 }
 
-// Same price the website shows on cards: backpacking (category 3) is sold
-// with transport only, everything else shows the without-transport price
-const displayPrice = (trip) =>
-  Number(trip.category_id) === 3
+// Same price the website shows on cards: the lowest price option when the
+// trek has them; else backpacking (category 3) is sold with transport only,
+// everything else shows the without-transport price
+const displayPrice = (trip) => {
+  if (trip.price_options?.length) return Math.min(...trip.price_options.map((o) => Number(o.price)));
+  return Number(trip.category_id) === 3
     ? Number(trip.with_transport_price || trip.price)
     : Number(trip.without_transport_price || trip.price);
+};
 
 function TripCard({ trip, onEdit }) {
   const cover = siteUrl(trip.cover_url);

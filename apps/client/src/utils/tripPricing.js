@@ -15,12 +15,26 @@ export const getWithTransportPrice = (trip) =>
       getWithoutTransportPrice(trip)
   );
 
-// Price shown on cards and headers: the with-transport price for
-// transport-only trips, otherwise the (lower) without-transport price.
-export const getDisplayPrice = (trip) =>
-  isWithTransportOnly(trip)
+// The trek's own tickets set in the admin ("Bangalore to Bangalore",
+// "Chennai to Chennai"…). None = the default With / Without transport.
+export const getPriceOptions = (trip) =>
+  Array.isArray(trip?.price_options) ? trip.price_options : [];
+
+// An option named "Without transport" / "No transport" is a ticket without
+// transport; every other option includes it (same rule as the server)
+export const includesTransport = (option) =>
+  !/\b(without|no)\s+transport/i.test(String(option?.label || ''));
+
+// Price shown on cards and headers: the lowest price option, else the
+// with-transport price for transport-only trips, otherwise the (lower)
+// without-transport price.
+export const getDisplayPrice = (trip) => {
+  const options = getPriceOptions(trip);
+  if (options.length) return Math.min(...options.map((o) => Number(o.price) || 0));
+  return isWithTransportOnly(trip)
     ? getWithTransportPrice(trip)
     : getWithoutTransportPrice(trip);
+};
 
 // Categories that do not show a difficulty level.
 // 3 = Backpacking

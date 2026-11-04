@@ -291,19 +291,7 @@
       </thead>
 
       <tbody>
-        <tr>
-          <td>Without Transportation</td>
-          <td class="right">{{withoutTransportTickets}}</td>
-          <td class="right">₹{{withoutTransportPrice}}</td>
-          <td class="right">₹{{withoutTransportAmount}}</td>
-        </tr>
-
-        <tr>
-          <td>With Transportation</td>
-          <td class="right">{{withTransportTickets}}</td>
-          <td class="right">₹{{withTransportPrice}}</td>
-          <td class="right">₹{{withTransportAmount}}</td>
-        </tr>
+        <!-- TICKET_ROWS: one row per ticket type (paymentReceipt.js) -->
       </tbody>
     </table>
 
@@ -317,6 +305,7 @@
         <td>GST (5%)</td>
         <td class="value">₹{{gst}}</td>
       </tr>
+      <!-- COUPON_ROW: coupon discount, only when one was applied, after GST (paymentReceipt.js) -->
       <tr>
         <td>Trip Total</td>
         <td class="value">₹{{tripTotal}}</td>

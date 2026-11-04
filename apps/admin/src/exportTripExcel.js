@@ -7,6 +7,8 @@ const border = { top: thin, left: thin, bottom: thin, right: thin };
 const rupees = '"₹"#,##0.00';
 
 const travelLabel = (r) => {
+  // Price options booked, e.g. "2 × Chennai to Chennai"
+  if (r.tickets?.length) return r.tickets.map((t) => `${t.people} × ${t.label}`).join(', ');
   if (r.travel_mode === 'mixed') return `${r.with_transport_people} with / ${r.without_transport_people} without`;
   if (r.travel_mode === 'without_transport') return 'Without transport';
   return 'With transport';

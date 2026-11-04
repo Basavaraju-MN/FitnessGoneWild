@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const { ticketsText } = require('../components/coupon/couponRules');
 
 // Gmail account that sends the emails (GMAIL_APP_PASSWORD is a Google
 // "App password", not the normal Gmail password).
@@ -171,17 +172,14 @@ async function sendBookingAlert(booking) {
 
   const {
     bookingRef, name, phone, email, tripName, startDate, endDate, isCustomTrip,
-    people, withTransport, withoutTransport, pickupLocation,
-    tripTotal, amountPaid, balance, isAdvance,
+    people, withTransport, withoutTransport, ticketOptions, pickupLocation,
+    tripTotal, amountPaid, balance, isAdvance, couponCode, discount,
   } = booking;
 
   const dates = endDate && endDate !== startDate
     ? `${shortDate(startDate)} → ${shortDate(endDate)}`
     : shortDate(startDate);
-  const transport = [
-    withTransport ? `${withTransport} with transport` : '',
-    withoutTransport ? `${withoutTransport} without transport` : '',
-  ].filter(Boolean).join(', ');
+  const transport = ticketsText({ lines: ticketOptions, withTransport, withoutTransport });
   const payment = isAdvance
     ? `Advance ${rupees(amountPaid)} paid · balance ${rupees(balance)} to collect`
     : `Paid in full ${rupees(amountPaid)}`;
@@ -198,6 +196,7 @@ async function sendBookingAlert(booking) {
     ['Dates', dates],
     ['People', `${people} (${transport || '—'})`],
     ['Pickup', pickupLocation || '—'],
+    ...(couponCode && discount > 0 ? [['Coupon', `${couponCode} · − ${rupees(discount)} (after GST)`]] : []),
     ['Trip total', rupees(tripTotal)],
     ['Payment', payment],
   ];
