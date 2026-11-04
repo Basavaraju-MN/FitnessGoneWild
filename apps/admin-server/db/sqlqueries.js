@@ -364,6 +364,21 @@ const sqlqueries = {
   bookingsWhereCustomer: 'b.customer_id = ?',
   bookingsWhereId: 'b.id = ?',
   getBookingRow: 'SELECT * FROM bookings WHERE id = ?',
+  /* Deleting a booking: everything that belongs to it, in this order
+     (the booking row last). The customer is kept. */
+  pendingPhonePeRefunds: "SELECT COUNT(*) AS n FROM booking_refunds WHERE booking_id = ? AND state = 'pending' AND mode = 'phonepe'",
+  deleteBookingParts: [
+    ['phonepe_webhook_logs', 'DELETE FROM phonepe_webhook_logs WHERE merchant_order_id = ?', 'order'],
+    // The website payment: gone, so the automatic PhonePe check cannot book it again
+    ['phonepe_transactions', 'DELETE FROM phonepe_transactions WHERE merchant_order_id = ?', 'order'],
+    ['booking_payments', 'DELETE FROM booking_payments WHERE booking_id = ?', 'id'],
+    ['booking_refunds', 'DELETE FROM booking_refunds WHERE booking_id = ?', 'id'],
+    ['booking_ticket_options', 'DELETE FROM booking_ticket_options WHERE booking_id = ?', 'id'],
+    ['booking_invoices', 'DELETE FROM booking_invoices WHERE booking_id = ?', 'id'],
+    ['whatsapp_messages', 'DELETE FROM whatsapp_messages WHERE booking_id = ?', 'id'],
+  ],
+  removeCouponUse: 'UPDATE coupons SET used_count = GREATEST(0, used_count - 1) WHERE id = ?',
+  deleteBooking: 'DELETE FROM bookings WHERE id = ?',
   setInvoiceToken: 'UPDATE bookings SET invoice_token = ? WHERE id = ? AND invoice_token IS NULL',
   getBookingPayments: `
     SELECT bp.id, bp.amount, bp.method, bp.reference, bp.note, bp.paid_at,

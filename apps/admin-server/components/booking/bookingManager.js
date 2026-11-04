@@ -250,6 +250,43 @@ async function updateBooking(admin, id, body) {
   return { id: booking.id };
 }
 
+/**
+ * Deletes a booking everywhere (e.g. the customer cancelled): its payments,
+ * refunds, tickets, invoices, WhatsApp messages and website payment record.
+ * Its seats go back to the trip date and the coupon use is given back. The
+ * customer stays (with their enquiries and other bookings). The admin types
+ * the booking number to confirm. Kept in the Activity Log.
+ */
+async function deleteBooking(admin, id, { confirm } = {}) {
+  const booking = await dbops.getBookingRow(id);
+  if (!booking) throw notFound('Booking not found');
+  if (String(confirm || '').trim().toUpperCase() !== String(booking.booking_ref).toUpperCase()) {
+    throw badRequest(`Type the booking number ${booking.booking_ref} to delete it`);
+  }
+  if (await dbops.countPendingPhonePeRefunds(booking.id)) {
+    throw badRequest('A PhonePe refund of this booking is still in process. Wait until it completes, then delete the booking.');
+  }
+
+  const details = await dbops.getBookingById(booking.id);
+  // Seats first: a cancelled booking already gave them back
+  if (isActiveBooking(booking.status) && booking.departure_id) {
+    await dbops.changeDepartureSeats(booking.departure_id, -Number(booking.people || 0));
+  }
+  const removed = await dbops.deleteBookingEverywhere(booking);
+
+  await logActivity(admin, 'delete', 'booking', booking.id, [
+    `${booking.booking_ref} deleted`,
+    details?.customer_name && `${details.customer_name} (${details.customer_phone})`,
+    details?.trip_name,
+    `${booking.people} people`,
+    `total ₹${booking.amount}, paid ₹${booking.amount_paid}${Number(booking.refund_amount) > 0 ? `, refunded ₹${booking.refund_amount}` : ''}`,
+    booking.merchant_order_id && `PhonePe order ${booking.merchant_order_id}`,
+    booking.coupon_code && `coupon ${booking.coupon_code}`,
+  ].filter(Boolean).join(' · '));
+
+  return { id: booking.id, booking_ref: booking.booking_ref, removed };
+}
+
 // Balance collected after booking (cash, UPI, bank transfer…)
 async function addBookingPayment(admin, id, body) {
   requireFields(body, ['amount']);
@@ -435,5 +472,6 @@ module.exports = {
   getBooking,
   createBooking,
   updateBooking,
+  deleteBooking,
   addBookingPayment,
 };
