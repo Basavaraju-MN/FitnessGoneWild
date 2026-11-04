@@ -7,6 +7,7 @@ import { LEAD_SOURCES, MANUAL_SOURCES, sourceOf } from '../sources';
 import DataTable from '../components/DataTable';
 import { FormModal, PageHead, Stats, useToast } from '../components/ui';
 import { LeadStatusSelect, ManageLeadStatuses, useLeadStatuses } from '../components/LeadStatus';
+import SearchSelect from '../components/SearchSelect';
 
 // First WhatsApp message, depending on how the lead reached us
 const firstMessage = (lead) =>
@@ -122,10 +123,15 @@ export default function Enquiries() {
           {
             key: 'assigned_name', label: 'Assigned to',
             render: (r) => (
-              <select className="inline-select" value={r.assigned_to || ''} onChange={(e) => update(r.id, { assigned_to: e.target.value })}>
-                <option value="">—</option>
-                {userOptions.map((u) => <option key={u.value} value={u.value}>{u.label}</option>)}
-              </select>
+              <SearchSelect
+                className="inline-select"
+                value={r.assigned_to || ''}
+                onChange={(value) => update(r.id, { assigned_to: value })}
+                placeholder="—"
+                ariaLabel="Assigned to"
+                options={userOptions}
+                onClick={(event) => event.stopPropagation()}
+              />
             ),
           },
           {

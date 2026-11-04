@@ -1,4 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  BookOpen, CalendarDays, ChartColumn, History, Image as ImageIcon, LayoutDashboard,
+  Map as MapIcon, MapPin, MessagesSquare, Mountain, Settings as SettingsIcon,
+  ShieldCheck, Star, Ticket, TicketPercent, Users as UsersIcon, UsersRound, Wallet,
+} from 'lucide-react';
 import { LOGO_URL } from './assets';
 
 import { api } from './api';
@@ -31,25 +36,36 @@ import Users from './pages/Users';
 import Settings from './pages/Settings';
 import Regions from './pages/Regions';
 
+// Sidebar sections, in menu order
+const GROUPS = [
+  'Overview',
+  'Trip Management',
+  'Bookings & Revenue',
+  'Customer Management',
+  'Marketing & Content',
+  'Reports & Analytics',
+  'System Settings',
+];
+
 const PAGES = [
-  { id: 'dashboard', label: 'Dashboard', icon: '▦', component: Dashboard },
-  { id: 'packages', label: 'Treks & Trips', icon: '▣', component: Packages },
-  { id: 'brochures', label: 'Brochures', icon: '❐', component: Brochures },
-  { id: 'coupons', label: 'Coupons', icon: '%', component: Coupons },
-  { id: 'bookings', label: 'Bookings', icon: '▤', component: Bookings },
-  { id: 'coordination', label: 'Trip Coordination', icon: '⌖', component: Coordination },
-  { id: 'customers', label: 'Customers', icon: '♙', component: Customers },
-  { id: 'enquiries', label: 'Enquiries & Leads', icon: '✉', component: Enquiries },
-  { id: 'payments', label: 'Payments', icon: '₹', component: Payments },
-  { id: 'reviews', label: 'Reviews', icon: '★', component: Reviews },
-  { id: 'reports', label: 'Reports & Exports', icon: '▥', component: Reports, group: 'MANAGEMENT' },
-  { id: 'guides', label: 'Guides', icon: '⛰', component: Guides, group: 'MANAGEMENT' },
-  { id: 'pickup-points', label: 'Pickup Points', icon: '⚑', component: PickupPoints, group: 'MANAGEMENT' },
-  { id: 'regions', label: 'Regions & Cities', icon: '◎', component: Regions, group: 'MANAGEMENT' },
-  { id: 'hero', label: 'Website Hero', icon: '▭', component: WebsiteHero, group: 'MANAGEMENT' },
-  { id: 'activity', label: 'Activity Log', icon: '☰', component: Activity, group: 'MANAGEMENT' },
-  { id: 'users', label: 'Users & Roles', icon: '♟', component: Users, group: 'MANAGEMENT' },
-  { id: 'settings', label: 'Settings', icon: '☷', component: Settings, group: 'MANAGEMENT' },
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, component: Dashboard, group: 'Overview' },
+  { id: 'packages', label: 'Treks & Trips', icon: Mountain, component: Packages, group: 'Trip Management' },
+  { id: 'coordination', label: 'Trip Coordination', icon: CalendarDays, component: Coordination, group: 'Trip Management' },
+  { id: 'pickup-points', label: 'Pickup Points', icon: MapPin, component: PickupPoints, group: 'Trip Management' },
+  { id: 'regions', label: 'Regions & Cities', icon: MapIcon, component: Regions, group: 'Trip Management' },
+  { id: 'guides', label: 'Guides', icon: UsersRound, component: Guides, group: 'Trip Management' },
+  { id: 'bookings', label: 'Bookings', icon: Ticket, component: Bookings, group: 'Bookings & Revenue' },
+  { id: 'payments', label: 'Payments', icon: Wallet, component: Payments, group: 'Bookings & Revenue' },
+  { id: 'coupons', label: 'Coupons', icon: TicketPercent, component: Coupons, group: 'Bookings & Revenue' },
+  { id: 'customers', label: 'Customers', icon: UsersIcon, component: Customers, group: 'Customer Management' },
+  { id: 'enquiries', label: 'Enquiries & Leads', icon: MessagesSquare, component: Enquiries, group: 'Customer Management' },
+  { id: 'reviews', label: 'Reviews', icon: Star, component: Reviews, group: 'Customer Management' },
+  { id: 'brochures', label: 'Brochures', icon: BookOpen, component: Brochures, group: 'Marketing & Content' },
+  { id: 'hero', label: 'Website Hero', icon: ImageIcon, component: WebsiteHero, group: 'Marketing & Content' },
+  { id: 'reports', label: 'Reports & Exports', icon: ChartColumn, component: Reports, group: 'Reports & Analytics' },
+  { id: 'activity', label: 'Activity Log', icon: History, component: Activity, group: 'System Settings' },
+  { id: 'users', label: 'Users & Roles', icon: ShieldCheck, component: Users, group: 'System Settings' },
+  { id: 'settings', label: 'Settings', icon: SettingsIcon, component: Settings, group: 'System Settings' },
 ];
 
 export default function App() {
@@ -152,22 +168,26 @@ export default function App() {
           </div>
 
           <nav className="nav">
-            {['WORKSPACE', 'MANAGEMENT'].map((group) => {
-              const items = allowedPages.filter((p) => (p.group || 'WORKSPACE') === group);
+            {GROUPS.map((group) => {
+              const items = allowedPages.filter((p) => p.group === group);
               if (!items.length) return null;
               return (
-                <div key={group}>
+                <div key={group} className="navgroup">
                   <div className="navlabel">{group}</div>
-                  {items.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      className={p.id === current?.id ? 'active' : ''}
-                      onClick={() => go(p.id)}
-                    >
-                      {p.icon} &nbsp; {p.label}
-                    </button>
-                  ))}
+                  {items.map((p) => {
+                    const Icon = p.icon;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        className={p.id === current?.id ? 'active' : ''}
+                        onClick={() => go(p.id)}
+                      >
+                        <Icon size={17} strokeWidth={1.8} aria-hidden="true" />
+                        <span>{p.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               );
             })}

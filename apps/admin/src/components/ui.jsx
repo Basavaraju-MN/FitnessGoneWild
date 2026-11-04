@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { label } from '../format';
+import SearchSelect from './SearchSelect';
 
 /* ---------- Toast ---------- */
 const ToastContext = createContext(() => {});
@@ -159,13 +160,16 @@ export function Field({ field, value, values, onChange }) {
 
   let input;
   if (field.type === 'select') {
+    // A dropdown with a search box (long lists: treks, dates, people…)
     input = (
-      <select {...common}>
-        <option value="">{field.placeholder || 'Select…'}</option>
-        {(options || []).map((option) => (
-          <option key={option.value} value={option.value}>{option.label}</option>
-        ))}
-      </select>
+      <SearchSelect
+        id={common.id}
+        value={common.value}
+        required={field.required}
+        placeholder={field.placeholder || 'Select…'}
+        options={options || []}
+        onChange={onChange}
+      />
     );
   } else if (field.type === 'textarea') {
     input = <textarea rows={field.rows || 3} {...common} />;

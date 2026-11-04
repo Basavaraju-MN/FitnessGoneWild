@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from '../api';
 import DataTable from '../components/DataTable';
 import { Modal, PageHead, useToast } from '../components/ui';
+import SearchSelect from '../components/SearchSelect';
 
 const MAX_BYTES = 20 * 1024 * 1024;
 
@@ -126,12 +127,15 @@ function AddBrochure({ trips, onClose, onSaved }) {
         <div className="form">
           <div className="field full">
             <label htmlFor="brochure-trek">Trek *</label>
-            <select id="brochure-trek" value={tripId} onChange={(e) => setTripId(e.target.value)} disabled={saving}>
-              <option value="">Choose a trek without a brochure…</option>
-              {trips.map((t) => (
-                <option key={t.id} value={t.id}>{t.name}{t.status !== 'published' ? ` (${t.status})` : ''}</option>
-              ))}
-            </select>
+            <SearchSelect
+              id="brochure-trek"
+              value={tripId}
+              onChange={setTripId}
+              disabled={saving}
+              placeholder="Choose a trek without a brochure…"
+              searchable
+              options={trips.map((t) => ({ value: t.id, label: `${t.name}${t.status !== 'published' ? ` (${t.status})` : ''}` }))}
+            />
           </div>
           <div className="field full">
             <label htmlFor="brochure-file">Brochure PDF *</label>

@@ -176,8 +176,12 @@ a { color: inherit; }
   box-shadow: 0 6px 18px rgba(0, 0, 0, .35), 0 0 0 1px rgba(255, 255, 255, .6) inset;
 }
 .brand small { display: block; color: var(--muted); font-family: var(--body); font-size: 11px; font-weight: 500; letter-spacing: .16em; margin-top: 10px; text-align: center; }
-.navlabel { font-size: 12px; font-weight: 700; letter-spacing: .04em; color: var(--heading); margin: 14px 10px 4px; }
-.nav button { display: block; width: 100%; text-align: left; padding: 7px 12px; border: 0; border-radius: 10px; background: none; color: var(--ink); margin: 1px 0; }
+/* Sidebar sections ("Trip Management"…), a thin line between them */
+.navgroup + .navgroup { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 2px; }
+.navlabel { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 12px 12px 4px; }
+.nav button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 7px 12px; border: 0; border-radius: 10px; background: none; color: var(--ink); margin: 1px 0; }
+.nav button svg { flex: none; opacity: .85; }
+.nav button.active svg { opacity: 1; }
 .nav button:hover { background: var(--cp-lighter-blue-gray); }
 .nav button.active { background: var(--cp-light-blue-gray); color: var(--cp-brand-blue); font-weight: 700; }
 .main { flex: 1; min-width: 0; }
@@ -898,3 +902,32 @@ button.avatar:hover { background: var(--cp-brand-blue-90); }
 .coupon-code { font-family: ui-monospace, Consolas, monospace; letter-spacing: .03em; }
 .coupon-tag { display: inline-flex; flex-direction: column; padding: 2px 8px; border-radius: 8px; background: var(--tint-green-bg); color: var(--tint-green); font-weight: 700; font-size: 12px; line-height: 1.3; }
 .coupon-tag small { font-weight: 600; font-size: 11px; }
+
+/* ---------- Dropdown with search (components/SearchSelect.jsx) ---------- */
+.ss { position: relative; display: inline-block; min-width: 0; vertical-align: middle; }
+.field .ss, .toolbar .ss, .trip-toolbar .ss { display: block; width: 100%; }
+.ss-trigger { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 38px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--cp-card); color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.ss-trigger:disabled { opacity: .6; cursor: default; }
+.ss-trigger:focus-visible { outline: 2px solid var(--cp-brand-blue); outline-offset: 1px; }
+.ss-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ss-placeholder .ss-value { color: var(--muted); }
+.ss-chevron { flex: none; width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; opacity: .6; }
+.trip-step-grid .ss-trigger { border-radius: 10px; padding: 10px 13px; }
+.trip-toolbar .ss-trigger { border-radius: 10px; padding: 10px 14px; }
+.toolbar .ss-trigger { min-height: 34px; padding: 6px 9px; }
+/* Small dropdowns in tables and rows keep their own size */
+.inline-select .ss-trigger, .sold-by-select .ss-trigger { min-height: 0; padding: 5px 8px; border-radius: 7px; font-size: 12px; }
+.ss.sold-by-select, .ss.inline-select { padding: 0; border: 0; background: none; }
+.ss.pickup-city { display: block; padding: 0; border: 0; background: none; }
+.ss-required { position: absolute; left: 0; bottom: 0; width: 100%; height: 1px; padding: 0; border: 0; opacity: 0; pointer-events: none; }
+.ss-panel { position: fixed; z-index: 50; display: flex; flex-direction: column; background: var(--cp-card); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 14px 34px rgba(15, 23, 42, .22); overflow: hidden; }
+.ss-search { margin: 6px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--cp-card); color: var(--ink); font: inherit; }
+.ss-list { position: relative; list-style: none; margin: 0; padding: 4px; overflow-y: auto; outline: none; }
+.ss-list li { padding: 8px 10px; border-radius: 7px; cursor: pointer; color: var(--ink); line-height: 1.35; }
+.ss-list li.active { background: var(--cp-lighter-blue-gray); }
+.ss-list li.chosen { color: var(--cp-brand-blue); font-weight: 700; }
+.ss-list li.ss-empty-choice { color: var(--muted); }
+.ss-list li.disabled { opacity: .45; cursor: default; }
+.ss-list li.ss-none { color: var(--muted); cursor: default; }
+:root[data-theme='dark'] .ss-trigger, :root[data-theme='dark'] .ss-search { background-color: var(--cp-input); color: var(--ink); border-color: #717d96; }
+:root[data-theme='dark'] .ss-panel { box-shadow: 0 14px 34px rgba(0, 0, 0, .45); }

@@ -8,6 +8,7 @@ import { FormModal, PageHead, Pill, Stats, useToast } from '../components/ui';
 import { BookingDetailModal, NewBookingModal, PaymentModal } from '../components/booking';
 import { exportTripExcel } from '../exportTripExcel';
 import { RowMenu, useInvoiceActions } from '../components/invoiceActions';
+import SearchSelect from '../components/SearchSelect';
 
 const TRIP_STATUS = ['upcoming', 'ongoing', 'completed', 'cancelled'].map((v) => ({ value: v, label: label(v) }));
 // departures.status: whether the website still takes bookings for this date
@@ -139,13 +140,13 @@ export default function Coordination() {
       <div className="coord-filter">
         <label className="coord-trek">
           <span>Trek</span>
-          <select
+          <SearchSelect
             value={tripId}
-            onChange={(e) => { setTripId(e.target.value); setSelectedId(null); }}
-          >
-            <option value="">All treks</option>
-            {(lookups?.trips || []).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
+            onChange={(value) => { setTripId(value); setSelectedId(null); }}
+            placeholder="All treks"
+            searchable
+            options={(lookups?.trips || []).map((t) => ({ value: t.id, label: t.name }))}
+          />
         </label>
         <div className="tabs coord-tabs" role="tablist">
           {[['upcoming', 'Upcoming', open.length], ['completed', 'Completed', done.length]].map(([key, text, count]) => (
