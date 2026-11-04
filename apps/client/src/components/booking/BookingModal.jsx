@@ -23,6 +23,10 @@ function toLocalId(date) {
   return `${year}-${month}-${day}`;
 }
 
+// "Customise dates" (any start date, 1-3 days) is hidden for now: set to
+// true to show it again (and CUSTOM_DATES_ENABLED in the server controller)
+const SHOW_CUSTOM_DATES = false;
+
 // Customised trips can be 1, 2 or 3 days long
 const CUSTOM_DAY_OPTIONS = [1, 2, 3];
 
@@ -650,27 +654,31 @@ export default function BookingModal({
                 <div className="booking-section-title">
                   <span>Select Date</span>
 
-                  <button
-                    type="button"
-                    className="all-dates"
-                    onClick={openCalendar}
-                  >
-                    <span>▣</span>
-                    Customise dates
-                  </button>
+                  {SHOW_CUSTOM_DATES && (
+                    <>
+                      <button
+                        type="button"
+                        className="all-dates"
+                        onClick={openCalendar}
+                      >
+                        <span>▣</span>
+                        Customise dates
+                      </button>
 
-                  <input
-                    ref={dateInputRef}
-                    type="date"
-                    className="all-dates-input"
-                    min={todayId}
-                    value={customStart ? toLocalId(customStart) : ''}
-                    onChange={(event) =>
-                      handleCalendarPick(event.target.value)
-                    }
-                    tabIndex={-1}
-                    aria-hidden="true"
-                  />
+                      <input
+                        ref={dateInputRef}
+                        type="date"
+                        className="all-dates-input"
+                        min={todayId}
+                        value={customStart ? toLocalId(customStart) : ''}
+                        onChange={(event) =>
+                          handleCalendarPick(event.target.value)
+                        }
+                        tabIndex={-1}
+                        aria-hidden="true"
+                      />
+                    </>
+                  )}
                 </div>
 
                 <div className="date-list">
@@ -681,8 +689,9 @@ export default function BookingModal({
 
                   {!datesLoading && weekends.length === 0 && (
                     <p className="date-note">
-                      No dates are scheduled for this {tripWord(trek)} yet. Pick your own with
-                      “Customise dates”, or WhatsApp us for the next departure.
+                      {SHOW_CUSTOM_DATES
+                        ? <>No dates are scheduled for this {tripWord(trek)} yet. Pick your own with “Customise dates”, or WhatsApp us for the next departure.</>
+                        : <>No dates are scheduled for this {tripWord(trek)} yet. WhatsApp us for the next departure.</>}
                     </p>
                   )}
 
@@ -714,7 +723,7 @@ export default function BookingModal({
                 </div>
 
                 {/* CUSTOMISED TRIP */}
-                {customStart && (
+                {SHOW_CUSTOM_DATES && customStart && (
                   <div
                     className={`custom-trip ${selectedWeekend?.isCustom ? 'selected' : ''}`}
                   >
@@ -761,11 +770,13 @@ export default function BookingModal({
                   </div>
                 )}
 
-                <p className="date-help">
-                  {selectedWeekend?.isCustom
-                    ? `Customised trip for ${selectedWeekend.days} day${selectedWeekend.days > 1 ? 's' : ''}.`
-                    : 'Need other dates? Use Customise dates.'}
-                </p>
+                {SHOW_CUSTOM_DATES && (
+                  <p className="date-help">
+                    {selectedWeekend?.isCustom
+                      ? `Customised trip for ${selectedWeekend.days} day${selectedWeekend.days > 1 ? 's' : ''}.`
+                      : 'Need other dates? Use Customise dates.'}
+                  </p>
+                )}
 
               </div>
 
