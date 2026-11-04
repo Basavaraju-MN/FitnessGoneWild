@@ -23,6 +23,12 @@ const pool = mysql.createPool({
   connectTimeout: 15000,
 });
 
+// Run MySQL in IST (Hostinger's server is UTC): NOW()/CURDATE() give Indian
+// time and TIMESTAMP columns are read back in IST
+pool.on('connection', (connection) => {
+  connection.query(`SET time_zone = '${db.timezone}'`);
+});
+
 const promisePool = pool.promise();
 
 const RETRYABLE_ERROR_CODES = new Set([
