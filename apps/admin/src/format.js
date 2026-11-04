@@ -8,25 +8,22 @@ const parse = (value) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
+// Timestamps show date and time (IST, as sent by the server). Plain dates
+// (travel dates) and dates entered without a time (stored as 00:00) show
+// the date only.
 export const date = (value) => {
   const d = parse(value);
-  return d
-    ? d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-    : '—';
+  if (!d) return '—';
+  const hasTime = /[ T]\d{2}:\d{2}/.test(String(value)) && !/[ T]00:00(:00)?$/.test(String(value));
+  return d.toLocaleString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    ...(hasTime && { hour: 'numeric', minute: '2-digit' }),
+  });
 };
 
-export const dateTime = (value) => {
-  const d = parse(value);
-  return d
-    ? d.toLocaleString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-      })
-    : '—';
-};
+export const dateTime = date;
 
 export const label = (value) =>
   String(value || '')

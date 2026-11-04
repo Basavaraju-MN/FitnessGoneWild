@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 
 import { useApi } from '../api';
-import { date, label, money } from '../format';
+import { date, dateTime, label, money } from '../format';
 import DataTable from '../components/DataTable';
 import { PageHead, Pill, Stats } from '../components/ui';
 import { BookingDetailModal, NewBookingModal, PaymentModal, SoldBySelect } from '../components/booking';
@@ -27,7 +27,7 @@ export const bookingColumns = (open, collect, invoice, onSoldBy) => [
   { key: 'balance_amount', label: 'Balance', render: (r) => (Number(r.balance_amount) > 0 ? <b>{money(r.balance_amount)}</b> : money(0)) },
   { key: 'payment_status', label: 'Payment', render: (r) => <Pill value={r.payment_status} /> },
   { key: 'status', label: 'Status', render: (r) => <Pill value={r.status} /> },
-  { key: 'booked_at', label: 'Booked on', render: (r) => date(r.booked_at) },
+  { key: 'booked_at', label: 'Booked on', render: (r) => dateTime(r.booked_at) },
   // Sales representative (admin only): chosen right here in the list
   {
     key: 'sold_by_name', label: 'Sold by',
