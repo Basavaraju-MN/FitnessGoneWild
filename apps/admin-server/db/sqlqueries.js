@@ -306,6 +306,23 @@ const sqlqueries = {
     LEFT JOIN trips t ON t.id = b.trip_id
     LEFT JOIN pickup_points p ON p.id = b.pickup_point_id
     LEFT JOIN admin_users s ON s.id = b.sold_by`,
+  // The same list before booking_sold_by.sql / coupons.sql have run on the database
+  bookingsBaseOld: `
+    SELECT b.id, b.booking_ref, b.departure_id, b.trip_id, t.name AS trip_name,
+           b.trek_start_date, b.trek_end_date, b.trip_days, b.is_custom_trip,
+           b.people, b.with_transport_people, b.without_transport_people, b.travel_mode,
+           b.amount, b.amount_paid, b.advance_amount, b.balance_amount,
+           b.refund_amount, b.refunded_at,
+           b.payment_type, b.status, b.payment_status, b.notes,
+           b.merchant_order_id, b.payment_transaction_id, b.payment_method, b.paid_at, b.booked_at,
+           c.id AS customer_id, c.name AS customer_name, c.phone AS customer_phone, c.email AS customer_email,
+           b.pickup_point_id, p.name AS pickup_name,
+           NULL AS sold_by, NULL AS sold_by_name,
+           NULL AS coupon_id, NULL AS coupon_code, 0 AS discount_amount
+    FROM bookings b
+    JOIN customers c ON c.id = b.customer_id
+    LEFT JOIN trips t ON t.id = b.trip_id
+    LEFT JOIN pickup_points p ON p.id = b.pickup_point_id`,
   /* ================= COUPONS (coupons.sql) ================= */
   // Each coupon with its treks (comma list) and how many bookings used it
   couponsBase: `

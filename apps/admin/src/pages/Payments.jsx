@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { api, useApi } from '../api';
 import { dateTime, label, money } from '../format';
 import DataTable from '../components/DataTable';
-import { PageHead, Pill, Stats, useToast } from '../components/ui';
+import { FormModal, PageHead, Pill, Stats, useToast } from '../components/ui';
 import { BookingDetailModal, RefundModal } from '../components/booking';
 import { useAdmin } from '../context';
 
@@ -14,7 +14,28 @@ export default function Payments() {
   const [tab, setTab] = useState('online');
   const [bookingId, setBookingId] = useState(null);
   const [refunding, setRefunding] = useState(null); // { bookingId, mode }
+  const [checkingId, setCheckingId] = useState(''); // order being checked with PhonePe
+  const [askOrderId, setAskOrderId] = useState(false);
   const { user } = useAdmin();
+
+  // Paid at PhonePe but still "processing" here (or no booking): ask PhonePe
+  // again; a paid one is booked straight away. The server also does this by
+  // itself every few minutes.
+  const checkWithPhonePe = async (merchantOrderId) => {
+    setCheckingId(merchantOrderId);
+    try {
+      const { data: d } = await api('/payments/phonepe-check', { method: 'POST', body: { merchant_order_id: merchantOrderId } });
+      if (d.booking) toast(`Paid at PhonePe · booking ${d.booking.booking_ref}`);
+      else if (d.status === 'SUCCESS') toast('PhonePe: paid, but the booking could not be made. See the server log.', 'error');
+      else toast(d.status === 'FAILED' ? 'PhonePe: payment failed (no money taken)' : 'PhonePe: still processing. Check again later.', d.status === 'FAILED' ? 'error' : 'success');
+      afterChange();
+      return d;
+    } finally {
+      setCheckingId('');
+    }
+  };
+  const needsCheck = (r) => ['PROCESSING', 'PENDING'].includes(String(r.status).toUpperCase())
+    || (String(r.status).toUpperCase() === 'SUCCESS' && !r.booking_id);
 
   // Refunded amount of the payment's booking, plus a Refund action
   const refundColumns = (mode) => [
@@ -88,7 +109,11 @@ export default function Payments() {
 
   return (
     <>
-      <PageHead title="Payments" subtitle="PhonePe transactions and payments recorded in the admin." />
+      <PageHead title="Payments" subtitle="PhonePe transactions and payments recorded in the admin.">
+        {user.modules.includes('payments') && (
+          <button className="btn alt" onClick={() => setAskOrderId(true)}>Check PhonePe payment</button>
+        )}
+      </PageHead>
 
       <div className="tabs">
         <button className={tab === 'online' ? 'active' : ''} onClick={() => setTab('online')}>Online (PhonePe)</button>
@@ -161,6 +186,14 @@ export default function Payments() {
             { key: 'payment_method', label: 'Method', render: (r) => label(r.payment_method) || '—' },
             { key: 'created_at', label: 'Date', render: (r) => dateTime(r.created_at) },
             { key: 'status', label: 'Status', render: (r) => <Pill value={r.status} /> },
+            {
+              key: 'phonepe_check', label: '', sortable: false, export: false,
+              render: (r) => needsCheck(r) && user.modules.includes('payments') && (
+                <button className="link" disabled={Boolean(checkingId)} onClick={() => checkWithPhonePe(r.merchant_order_id).catch((err) => toast(err.message, 'error'))}>
+                  {checkingId === r.merchant_order_id ? 'Checking…' : 'Check with PhonePe'}
+                </button>
+              ),
+            },
             ...refundColumns('phonepe'),
           ]}
         />
@@ -190,6 +223,25 @@ export default function Payments() {
       )}
 
       {bookingId && <BookingDetailModal bookingId={bookingId} onClose={() => setBookingId(null)} onChanged={afterChange} />}
+
+      {askOrderId && (
+        <FormModal
+          title="Check a PhonePe payment"
+          submitLabel="Check with PhonePe"
+          fields={[
+            {
+              name: 'merchant_order_id', label: 'Merchant order ID', required: true, full: true,
+              placeholder: 'FGW_1793806865382_3c0993e9d683',
+              hint: 'From the PhonePe dashboard. If PhonePe says it is paid, the booking is made now (never twice).',
+            },
+          ]}
+          onClose={() => setAskOrderId(false)}
+          onSubmit={async (values) => {
+            await checkWithPhonePe(String(values.merchant_order_id).trim());
+            setAskOrderId(false);
+          }}
+        />
+      )}
 
       {refunding && (
         <RefundModal

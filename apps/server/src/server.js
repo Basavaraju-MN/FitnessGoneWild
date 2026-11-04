@@ -385,5 +385,8 @@ app.listen(
       require('./components/broucher/ftpBrochure').warmUp()
         .catch((error) => console.error('Brochure warm-up failed:', error?.message || error));
     }, 5000);
+
+    // Payments PhonePe completed that are still "processing" here: ask again and book them
+    require('./components/payment/paymentRecovery').startPaymentRecovery();
   }
 );

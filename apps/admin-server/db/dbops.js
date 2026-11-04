@@ -330,13 +330,22 @@ class Cmds {
       params.push(customerId);
     }
 
-    const sql = `${withWhere(sqlQueries.bookingsBase, conditions)} ORDER BY b.booked_at DESC LIMIT 2000`;
-    return executeQuery(sql, params);
+    return this.queryBookings(conditions, ' ORDER BY b.booked_at DESC LIMIT 2000', params);
   }
 
   async getBookingById(id) {
-    const sql = withWhere(sqlQueries.bookingsBase, [sqlQueries.bookingsWhereId]);
-    return first(await executeQuery(sql, [id]));
+    return first(await this.queryBookings([sqlQueries.bookingsWhereId], '', [id]));
+  }
+
+  // Bookings list query; before booking_sold_by.sql / coupons.sql have run
+  // (no sold_by / coupon columns yet) the list still loads, without them
+  async queryBookings(conditions, suffix, params) {
+    try {
+      return await executeQuery(`${withWhere(sqlQueries.bookingsBase, conditions)}${suffix}`, params);
+    } catch (error) {
+      if (error?.code !== 'ER_BAD_FIELD_ERROR') throw error;
+      return executeQuery(`${withWhere(sqlQueries.bookingsBaseOld, conditions)}${suffix}`, params);
+    }
   }
 
   /* ================= COUPONS ================= */

@@ -75,6 +75,8 @@ router.post('/enquiries', can('enquiries'), controller.createEnquiry);
 router.patch('/enquiries/:id', can('enquiries'), controller.updateEnquiry);
 
 router.get('/payments', can('payments'), controller.getPayments);
+// Ask PhonePe again about a website payment and book it if it was paid
+router.post('/payments/phonepe-check', can('payments'), controller.checkPhonePePayment);
 
 router.get('/masters/:type', canMaster, controller.getMasterList);
 router.post('/masters/:type', canMaster, controller.createMaster);
