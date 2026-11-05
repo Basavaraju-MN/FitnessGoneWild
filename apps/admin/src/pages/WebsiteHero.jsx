@@ -5,7 +5,7 @@ import { siteUrl, SITE_URL } from '../assets';
 import { Modal, PageHead, useToast } from '../components/ui';
 import { CachedImg, useCachedPhoto } from '../imageCache';
 
-const PHOTO_MAX_WIDTH = 1920;
+const PHOTO_MAX_WIDTH = 1600;
 const MAX_HEROES = 8;
 const TARGET_LABELS = {
   trips: 'Treks section',
@@ -29,7 +29,7 @@ const EMPTY_HERO = {
 };
 const FACT_HINTS = [['25', 'max group size'], ['4.9', 'average rating'], ['300+', 'trips completed'], ['0', 'hidden charges']];
 
-// Full-width background: shrink to 1920px JPEG so the home page stays fast
+// Full-width background: shrink to 1600px JPEG (quality 80) so the home page stays fast
 function resizePhoto(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -41,7 +41,7 @@ function resizePhoto(file) {
         canvas.width = Math.round(img.width * scale);
         canvas.height = Math.round(img.height * scale);
         canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL('image/jpeg', 0.85));
+        resolve(canvas.toDataURL('image/jpeg', 0.8));
       };
       img.onerror = () => reject(new Error('That file is not a picture'));
       img.src = reader.result;
@@ -120,6 +120,30 @@ function HeroEditor({ hero, targets, onClose, onSaved }) {
   const addPart = (part) => setShown((s) => new Set(s).add(part.key));
   const hidden = PARTS.filter((part) => !has(part.key));
 
+  // A photo saved before photos were made lighter: shrink it here, then Save
+  const [shrinking, setShrinking] = useState(false);
+  const makeLighter = async () => {
+    setShrinking(true);
+    try {
+      const response = await fetch(siteUrl(hero.image_path));
+      if (!response.ok) throw new Error('The photo could not be loaded');
+      const photo = await response.blob();
+      const lighter = await resizePhoto(photo);
+      const newSize = Math.round((lighter.length - lighter.indexOf(',') - 1) * 0.75);
+      const kb = (bytes) => `${Math.round(bytes / 1024)} KB`;
+      if (newSize > photo.size * 0.9) {
+        toast(`This photo is already light (${kb(photo.size)})`);
+      } else {
+        set('dataUrl', lighter);
+        toast(`Photo: ${kb(photo.size)} → ${kb(newSize)}. Click Save to keep it.`);
+      }
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setShrinking(false);
+    }
+  };
+
   const onFile = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -187,6 +211,11 @@ function HeroEditor({ hero, targets, onClose, onSaved }) {
           <button type="button" className="btn alt" onClick={() => { fileInput.current.value = ''; fileInput.current.click(); }}>
             {photoOf(values) ? 'Change photo' : 'Choose photo *'}
           </button>
+          {!isNew && !values.dataUrl && hero.image_path && (
+            <button type="button" className="btn alt" onClick={makeLighter} disabled={shrinking}>
+              {shrinking ? 'Making lighter…' : 'Make photo lighter'}
+            </button>
+          )}
           <small>JPG, PNG or WebP · resized to {PHOTO_MAX_WIDTH}px wide</small>
           <label className="hero-slide-on">
             <input type="checkbox" checked={values.is_active} onChange={(e) => set('is_active', e.target.checked)} />
