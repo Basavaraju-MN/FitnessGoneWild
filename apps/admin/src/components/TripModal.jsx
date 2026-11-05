@@ -11,7 +11,7 @@ import TermsEditor, { termsProblem } from './TermsEditor';
 import SearchSelect from './SearchSelect';
 
 const MAX_PHOTOS = 5;
-const PHOTO_MAX_WIDTH = 1600;
+const PHOTO_MAX_WIDTH = 1280;
 const MIN_PICKUP_POINTS = 2;
 const BLURB_MAX = 300; // characters of text (formatting not counted)
 
@@ -38,7 +38,7 @@ const daysFrom = (label) => Math.max(1, parseInt(String(label || '').match(/\d+/
 const emptyPickup = (cityId = '') => ({ name: '', address: '', city_id: cityId });
 const emptyPriceOption = () => ({ label: '', price: '' });
 
-// Shrinks a photo to PHOTO_MAX_WIDTH wide JPEG so the website stays fast
+// Shrinks a photo to PHOTO_MAX_WIDTH wide JPEG (quality 80) so the website stays fast
 function resizePhoto(file) {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -50,7 +50,7 @@ function resizePhoto(file) {
       canvas.height = Math.round(img.height * scale);
       canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
       URL.revokeObjectURL(url);
-      resolve(canvas.toDataURL('image/jpeg', 0.85));
+      resolve(canvas.toDataURL('image/jpeg', 0.8));
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);

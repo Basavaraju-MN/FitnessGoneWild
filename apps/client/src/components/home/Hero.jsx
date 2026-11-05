@@ -34,9 +34,14 @@ const DEFAULT_SLIDES = [
   },
 ];
 
+// The built-in slides; their photos are only used when the admin has no heroes
+const defaultSlides = () => DEFAULT_SLIDES.map((sl) => ({ ...DEFAULT_TEXT, ...sl }));
+
 export default function Hero() {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [heroSlides, setHeroSlides] = useState(() => DEFAULT_SLIDES.map((sl) => ({ ...DEFAULT_TEXT, ...sl })));
+  // Until the admin's heroes arrive: the default text on the dark background,
+  // without a photo, so no photo is downloaded twice
+  const [heroSlides, setHeroSlides] = useState(() => defaultSlides().slice(0, 1).map((sl) => ({ ...sl, image: null })));
   const [seconds, setSeconds] = useState(4);
 
   // Heroes from the admin (Website Hero screen); empty fields stay empty
@@ -44,17 +49,18 @@ export default function Hero() {
     let cancelled = false;
     getHero()
       .then((data) => {
-        if (cancelled || !data) return;
-        const heroes = (data.heroes || [])
+        if (cancelled) return;
+        const heroes = (data?.heroes || [])
           .filter((h) => h.image_path && h.headline_line1)
           .map((h) => ({ ...h, image: h.image_path, facts: Array.isArray(h.facts) ? h.facts : [] }));
-        if (heroes.length) {
-          setHeroSlides(heroes);
-          setCurrentSlide(0);
-        }
-        if (data.slide_seconds) setSeconds(Number(data.slide_seconds));
+        setHeroSlides(heroes.length ? heroes : defaultSlides());
+        setCurrentSlide(0);
+        if (data?.slide_seconds) setSeconds(Number(data.slide_seconds));
       })
-      .catch((error) => console.error('Hero could not load, showing the default:', error));
+      .catch((error) => {
+        console.error('Hero could not load, showing the default:', error);
+        if (!cancelled) setHeroSlides(defaultSlides());
+      });
     return () => {
       cancelled = true;
     };
@@ -109,8 +115,8 @@ export default function Hero() {
             rgba(4,30,23,.91) 0%,
             rgba(4,30,23,.67) 49%,
             rgba(4,30,23,.2) 100%
-          ),
-          url('${slide.image}')
+          )${slide.image ? `,
+          url('${slide.image}')` : ''}
         `,
         backgroundPosition: 'center 55%',
         backgroundSize: 'cover',
