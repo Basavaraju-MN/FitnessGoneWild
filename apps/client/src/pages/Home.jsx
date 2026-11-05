@@ -17,6 +17,7 @@ import { getTrekBySlug } from '../api/treks';
 import { tripPath } from '../utils/tripPricing';
 
 const SITE_TITLE = 'The Fitness Gone Wild';
+const HOME_TITLE = 'Weekend Treks & Trips from Bangalore | The Fitness Gone Wild';
 
 export default function Home() {
 
@@ -78,7 +79,8 @@ export default function Home() {
 
   // Browser tab title: the trek's name on its page
   useEffect(() => {
-    document.title = selectedTrek ? `${selectedTrek.name} | ${SITE_TITLE}` : SITE_TITLE;
+    // Same titles as the server sends (utils/seo.js, trekShare.js)
+    document.title = selectedTrek ? `${selectedTrek.name} | ${SITE_TITLE}` : HOME_TITLE;
   }, [selectedTrek]);
 
   // Opened as /#trips (e.g. from another page): go to that section
