@@ -365,7 +365,7 @@ export default function TrekDetails({ trek, onBack }) {
 
           <img
             src={images[currentImage] ?? images[0]}
-            alt={trek.name}
+            alt={`${trek.name} – photo ${currentImage + 1}`}
             className="trek-details-image"
             onError={handleImageError}
           />

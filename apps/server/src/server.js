@@ -11,6 +11,7 @@ dotenv.config({
 const trekRoutes = require('./routes/routes');
 const { cachePublicApi, clearOnAdminChange } = require('./utils/apiCache');
 const { trekPage } = require('./utils/trekShare');
+const { robotsTxt, sitemapXml, homePage, otherPage } = require('./utils/seo');
 const { heroPhoto, moveHeroPhotosToDb } = require('./utils/heroPhoto');
 const { clientOrigins } = require('./config/config');
 const { checkDatabaseConnection } = require('./db/connection');
@@ -318,6 +319,11 @@ app.use('/api', cachePublicApi, trekRoutes);
 // of the two moves to the right address.
 app.get(['/treks/:slug', '/trips/:slug'], trekPage(CLIENT_DIST_PATH));
 
+// Search engines: what to crawl, every page, and the home page's own tags and text
+app.get('/robots.txt', robotsTxt);
+app.get('/sitemap.xml', sitemapXml);
+app.get('/', homePage(CLIENT_DIST_PATH));
+
 app.use(express.static(CLIENT_DIST_PATH, { setHeaders: keepFiles(CLIENT_DIST_PATH) }));
 
 app.use('/api', (req, res) => {
@@ -327,26 +333,9 @@ app.use('/api', (req, res) => {
   });
 });
 
-app.use((req, res, next) => {
-  if (
-    req.method !== 'GET' ||
-    req.path.startsWith('/api')
-  ) {
-    return next();
-  }
-
-  return res.sendFile(
-    path.join(
-      CLIENT_DIST_PATH,
-      'index.html'
-    ),
-    (error) => {
-      if (error) {
-        next(error);
-      }
-    }
-  );
-});
+// Any other address: the website (its own pages as usual, unknown ones as
+// "404 not found" so search engines drop them)
+app.use(otherPage(CLIENT_DIST_PATH));
 
 app.use((error, req, res, next) => {
   console.error(

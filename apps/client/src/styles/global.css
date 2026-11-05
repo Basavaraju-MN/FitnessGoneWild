@@ -42,3 +42,5 @@
 .hero-slide{grid-area:1/1;visibility:hidden;opacity:0;transition:opacity .5s ease,visibility .5s}
 .hero-slide.active{visibility:visible;opacity:1}
 @media (prefers-reduced-motion:reduce){.hero-slide{transition:none}}
+/* Page text sent by the server for search engines; shown only until the website starts */
+.seo-text{max-width:900px;margin:40px auto;padding:0 22px;color:var(--ink)}.seo-text h1{font-size:2rem;color:var(--forest);margin-bottom:12px}.seo-text h2{font-size:1.3rem;color:var(--forest);margin:24px 0 8px}.seo-text h3{font-size:1rem;margin-top:12px}.seo-text li{margin:6px 0 6px 18px}.seo-text a{color:var(--forest);text-decoration:underline}
