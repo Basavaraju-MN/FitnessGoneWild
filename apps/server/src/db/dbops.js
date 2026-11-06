@@ -1,6 +1,15 @@
 const { executeQuery } = require('./connection');
 const sqlQueries = require('../db/sqlqueries');
 
+// A departure leaving today can still be booked until 10 PM India time;
+// after that the first bookable date is tomorrow. YYYY-MM-DD (India).
+const BOOK_TODAY_UNTIL_HOUR = 22;
+function firstBookableDate(now = new Date()) {
+  const india = new Date(now.getTime() + 5.5 * 3600 * 1000);
+  if (india.getUTCHours() >= BOOK_TODAY_UNTIL_HOUR) india.setUTCDate(india.getUTCDate() + 1);
+  return india.toISOString().slice(0, 10);
+}
+
 class Cmds {
 
   async getTrekCategories() {
@@ -53,7 +62,7 @@ class Cmds {
   }
 
   async getTrekDates(tripId) {
-    return (await executeQuery(sqlQueries.getTrekDates, [tripId])) || [];
+    return (await executeQuery(sqlQueries.getTrekDates, [tripId, firstBookableDate()])) || [];
   }
 
   async getPickupPoints(tripId) {
