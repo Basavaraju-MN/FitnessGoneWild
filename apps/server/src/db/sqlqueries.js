@@ -174,12 +174,13 @@ const sqlqueries = {
   `,
   getPickupCities: `SELECT pp.id, dc.id AS city_id, dc.name AS city_name FROM pickup_points pp LEFT JOIN departure_cities dc ON dc.id = pp.city_id WHERE pp.trip_id = ?`,
   // Dates a trek can be booked for: its public (scheduled) Trip Coordination
-  // departures from tomorrow on, open or sold out ("full")
+  // departures from the first bookable date on (today until 10 PM India time,
+  // see dbops.getTrekDates), open or sold out ("full")
   getTrekDates: `
     SELECT id, DATE_FORMAT(start_date, '%Y-%m-%d') AS start_date, DATE_FORMAT(end_date, '%Y-%m-%d') AS end_date,
            seats_total, seats_booked, status
     FROM departures
-    WHERE trip_id = ? AND departure_type = 'scheduled' AND status IN ('open', 'full') AND start_date > CURDATE()
+    WHERE trip_id = ? AND departure_type = 'scheduled' AND status IN ('open', 'full') AND start_date >= ?
     ORDER BY start_date ASC
     LIMIT 24`,
   getPickupPoints: `SELECT id, trip_id, name, address, map_url, sort_order FROM pickup_points WHERE is_active = 1 AND trip_id = ? ORDER BY sort_order ASC, id ASC`,
