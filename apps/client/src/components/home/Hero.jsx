@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getHero } from '../../api/treks';
 
 // Shown until the admin's heroes load (and if they cannot load).
@@ -34,6 +34,9 @@ const DEFAULT_SLIDES = [
   },
 ];
 
+// How long one hero photo takes to fade into the next (keep in step with .hero-photo in global.css)
+const HERO_FADE_MS = 1200;
+
 // The built-in slides; their photos are only used when the admin has no heroes
 const defaultSlides = () => DEFAULT_SLIDES.map((sl) => ({ ...DEFAULT_TEXT, ...sl }));
 
@@ -66,10 +69,30 @@ export default function Hero() {
     };
   }, []);
 
+  // The slides only move while the hero is on screen and the tab is open,
+  // so a visitor who scrolls down or leaves does not download every photo
+  const heroRef = useRef(null);
+  const [onScreen, setOnScreen] = useState(true);
+  const [tabOpen, setTabOpen] = useState(() => typeof document === 'undefined' || !document.hidden);
+  useEffect(() => {
+    const section = heroRef.current;
+    if (!section || typeof IntersectionObserver === 'undefined') return undefined;
+    const observer = new IntersectionObserver(([entry]) => setOnScreen(entry.isIntersecting));
+    observer.observe(section);
+    return () => observer.disconnect();
+  }, []);
+  useEffect(() => {
+    const onChange = () => setTabOpen(!document.hidden);
+    document.addEventListener('visibilitychange', onChange);
+    return () => document.removeEventListener('visibilitychange', onChange);
+  }, []);
+  const moving = onScreen && tabOpen && heroSlides.length > 1;
+
   /*
-   * Automatically change image every 5 seconds.
+   * Automatically change image every few seconds (admin setting).
    */
   useEffect(() => {
+    if (!moving) return undefined;
     const interval = setInterval(() => {
       setCurrentSlide((prev) =>
         (prev + 1) % heroSlides.length
@@ -77,7 +100,7 @@ export default function Hero() {
     }, Math.max(2, seconds || 4) * 1000);
 
     return () => clearInterval(interval);
-  }, [heroSlides.length, seconds]);
+  }, [heroSlides.length, seconds, moving]);
 
   const handlePrevious = () => {
     setCurrentSlide((prev) =>
@@ -95,35 +118,73 @@ export default function Hero() {
 
   const slide = heroSlides[currentSlide] || heroSlides[0];
 
-  // Load every hero photo once up front, so changing slide shows the photo
-  // at once instead of a blank moment while it downloads
+  // Load only the next slide's photo, while this one is showing, so it is
+  // ready when the slide changes (not every photo up front)
   useEffect(() => {
-    heroSlides.forEach((s) => {
-      if (s.image) new Image().src = s.image;
+    if (!moving) return;
+    const next = heroSlides[(currentSlide + 1) % heroSlides.length];
+    if (next?.image) new Image().src = next.image;
+  }, [heroSlides, currentSlide, moving]);
+
+  // Photo layers: the new photo fades in over the previous one (once it has
+  // loaded), and each photo zooms in slowly while it shows
+  const [layers, setLayers] = useState([]); // [{ id, image, ready }]
+  const layerId = useRef(0);
+  useEffect(() => {
+    if (!slide.image) return;
+    setLayers((list) => {
+      if (list[list.length - 1]?.image === slide.image) return list;
+      layerId.current += 1;
+      return [...list.slice(-1), { id: layerId.current, image: slide.image, ready: false }];
     });
-  }, [heroSlides]);
+  }, [slide.image]);
+  useEffect(() => {
+    const top = layers[layers.length - 1];
+    if (!top) return undefined;
+    if (!top.ready) {
+      // Shown two frames after it has loaded, so the browser has drawn it
+      // see-through first and fades it in (a photo already downloaded would
+      // otherwise appear at once)
+      let frame;
+      const show = () => {
+        frame = requestAnimationFrame(() => {
+          frame = requestAnimationFrame(() => setLayers((list) => list.map((l) => (l.id === top.id ? { ...l, ready: true } : l))));
+        });
+      };
+      const img = new Image();
+      img.onload = show;
+      img.onerror = show;
+      img.src = top.image;
+      return () => { img.onload = null; img.onerror = null; cancelAnimationFrame(frame); };
+    }
+    if (layers.length > 1) {
+      // Faded in: the photo underneath is no longer needed
+      const timer = setTimeout(() => setLayers((list) => list.filter((l) => l.id === top.id)), HERO_FADE_MS);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [layers]);
+  // The zoom lasts a little longer than a slide, so it never stops while showing
+  const zoomSeconds = Math.max(2, seconds || 4) + 2;
 
   return (
     <section
+      ref={heroRef}
       className="hero"
       id="top"
-      style={{
-        // Dark on the left behind the text, the photo shows on the right
-        backgroundImage: `
-          linear-gradient(
-            90deg,
-            rgba(4,30,23,.91) 0%,
-            rgba(4,30,23,.67) 49%,
-            rgba(4,30,23,.2) 100%
-          )${slide.image ? `,
-          url('${slide.image}')` : ''}
-        `,
-        backgroundPosition: 'center 55%',
-        backgroundSize: 'cover',
-        transition: 'background-image 0.8s ease-in-out',
-        position: 'relative',
-      }}
     >
+      {/* The photos (fading into each other), then the shade: dark on the
+          left behind the text, the photo shows on the right */}
+      <div className="hero-photos" aria-hidden="true">
+        {layers.map((layer) => (
+          <div
+            key={layer.id}
+            className={`hero-photo ${layer.ready ? 'is-ready' : ''}`}
+            style={{ backgroundImage: `url('${layer.image}')`, animationDuration: `${zoomSeconds}s` }}
+          />
+        ))}
+      </div>
+      <div className="hero-shade" aria-hidden="true" />
 
       {/* Previous button */}
       <button

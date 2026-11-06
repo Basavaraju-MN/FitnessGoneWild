@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getFeaturedTrips, saveTripInterest } from '../../api/treks';
 import SectionHeader from '../common/SectionHeader';
 import RichText from '../common/RichText';
+import FadeImage from '../common/FadeImage';
 import useTrekImages, { FALLBACK_IMAGE } from '../../hooks/useTrekImages';
 import '../../styles/trekcard.css';
 import { getDisplayPrice, showsDifficulty } from '../../utils/tripPricing';
@@ -20,7 +21,9 @@ const formatPrice = (price) => {
 
 // Photo slideshow at the top of a featured trip card. Shows only the
 // images that exist; dots appear only when there is more than one.
-function FeaturedTripImage({ slug, name }) {
+// The photos change by themselves only while the mouse is over the trip
+// (moving), so visitors do not download every photo of every trip.
+function FeaturedTripImage({ slug, name, moving }) {
   const images = useTrekImages(slug);
   const [currentImage, setCurrentImage] = useState(0);
 
@@ -29,20 +32,20 @@ function FeaturedTripImage({ slug, name }) {
   }, [slug, images.length]);
 
   useEffect(() => {
-    if (images.length <= 1) {
+    if (images.length <= 1 || !moving) {
       return undefined;
     }
 
     const timer = setTimeout(() => {
       setCurrentImage((previous) => (previous + 1) % images.length);
-    }, 3500);
+    }, 2000);
 
     return () => clearTimeout(timer);
-  }, [images.length, currentImage]);
+  }, [images.length, currentImage, moving]);
 
   return (
     <div className="thumb trip-thumb">
-      <img
+      <FadeImage
         src={images[currentImage] ?? images[0]}
         alt={name}
         loading="lazy"
@@ -81,6 +84,27 @@ export default function FeaturedTrips({ onTrekSelect }) {
   const [enquiryCounts, setEnquiryCounts] = useState({});
   const [current, setCurrent] = useState(0);
   const [paused, setPaused] = useState(false); // mouse over the slide
+
+  // The trips only slide on while this section is on screen and the tab is
+  // open (each new trip is another photo to download)
+  const sectionRef = useRef(null);
+  const [onScreen, setOnScreen] = useState(false);
+  const [tabOpen, setTabOpen] = useState(() => typeof document === 'undefined' || !document.hidden);
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section || typeof IntersectionObserver === 'undefined') {
+      setOnScreen(true);
+      return undefined;
+    }
+    const observer = new IntersectionObserver(([entry]) => setOnScreen(entry.isIntersecting));
+    observer.observe(section);
+    return () => observer.disconnect();
+  }, []);
+  useEffect(() => {
+    const onChange = () => setTabOpen(!document.hidden);
+    document.addEventListener('visibilitychange', onChange);
+    return () => document.removeEventListener('visibilitychange', onChange);
+  }, []);
 
   useEffect(() => {
     const fetchTrips = async () => {
@@ -174,13 +198,13 @@ export default function FeaturedTrips({ onTrekSelect }) {
 
   // Counts again from the start after every change, also a click on a dot
   useEffect(() => {
-    if (count <= 1 || paused) return undefined;
+    if (count <= 1 || paused || !onScreen || !tabOpen) return undefined;
     const timer = setTimeout(() => setCurrent((index) => (index + 1) % count), SLIDE_MS);
     return () => clearTimeout(timer);
-  }, [current, count, paused]);
+  }, [current, count, paused, onScreen, tabOpen]);
 
   return (
-    <section className="section section-alt" id="featured">
+    <section className="section section-alt" id="featured" ref={sectionRef}>
       <SectionHeader eyebrow="Booking fastest right now" title="Featured trips" />
 
       {error && <p>{error}</p>}
@@ -197,7 +221,7 @@ export default function FeaturedTrips({ onTrekSelect }) {
         >
           {/* key: each trip slides in fresh */}
           <article className="featured-slide" key={shown.id} onClick={() => onTrekSelect?.(shown)}>
-            <FeaturedTripImage slug={shown.slug} name={shown.name} />
+            <FeaturedTripImage slug={shown.slug} name={shown.name} moving={paused && tabOpen} />
 
             <div className="featured-text">
               <span className="trip-rank">{shown.rank}</span>
