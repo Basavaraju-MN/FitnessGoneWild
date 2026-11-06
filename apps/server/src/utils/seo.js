@@ -56,10 +56,17 @@ const siteUrl = (req) => (
 // JSON-LD block (structured data); "</" is escaped so it cannot end the script
 const jsonLd = (data) => `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, '\\u003c')}</script>`;
 
-let template = null; // the website's index.html, read once
+// The website's index.html, read again when a new build replaces it (its
+// script names change with every build, so an old copy would break the page)
+let template = { html: null, changed: 0 };
 function indexHtml(clientDist) {
-  if (template === null) template = fs.readFileSync(path.join(clientDist, 'index.html'), 'utf8');
-  return template;
+  const file = path.join(clientDist, 'index.html');
+  const changed = fs.statSync(file).mtimeMs;
+  if (template.html === null || template.changed !== changed) {
+    template = { html: fs.readFileSync(file, 'utf8'), changed };
+    homeKept.at = 0; // the home page is built again from the new file
+  }
+  return template.html;
 }
 
 /**
@@ -167,6 +174,7 @@ function homePage(clientDist) {
   return async (req, res, next) => {
     try {
       const base = siteUrl(req);
+      indexHtml(clientDist); // a new build: forget the kept home page
       if (Date.now() - homeKept.at > KEEP_MS || homeKept.base !== base) {
         const [trips, faq, biz] = await Promise.all([
           publishedTrips(),

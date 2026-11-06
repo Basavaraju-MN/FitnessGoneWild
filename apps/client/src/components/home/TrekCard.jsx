@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import '../../styles/trekcard.css'
 import RichText from '../common/RichText';
+import FadeImage from '../common/FadeImage';
 import BookingModal from '../booking/BookingModal';
 import { API_BASE_URL, getDownloadFileName } from '../../api/treks';
 import useTrekImages, { FALLBACK_IMAGE } from '../../hooks/useTrekImages';
@@ -57,6 +58,9 @@ export default function TrekCard({ trek, onClick }) {
   const [brochureError, setBrochureError] = useState('');
 
   const cardRef = useRef(null);
+  // Photos change by themselves only while the mouse is over the card (the
+  // arrows always work), so a visitor does not download every trek photo
+  const [hovered, setHovered] = useState(false);
 
 
   // Only the images that exist, in order 1 to 5. Checked once the
@@ -96,23 +100,26 @@ export default function TrekCard({ trek, onClick }) {
   }, []);
 
   /*
-   * Automatic slideshow.
+   * Automatic slideshow while the mouse is over the card: the first photo
+   * changes soon after, then every 2 seconds (each one fades in).
    */
   useEffect(() => {
-    if (images.length <= 1 || !isVisible) {
+    if (images.length <= 1 || !isVisible || !hovered) {
       return undefined;
     }
 
-    const interval = setInterval(() => {
-      setCurrentImage((previous) => {
-        return (previous + 1) % images.length;
-      });
-    }, 3000);
+    const next = () => setCurrentImage((previous) => (previous + 1) % images.length);
+    let interval;
+    const first = setTimeout(() => {
+      next();
+      interval = setInterval(next, 2000);
+    }, 900);
 
     return () => {
+      clearTimeout(first);
       clearInterval(interval);
     };
-  }, [trek.slug, isVisible, images.length]);
+  }, [trek.slug, isVisible, images.length, hovered]);
 
   /*
    * Previous image.
@@ -325,6 +332,8 @@ export default function TrekCard({ trek, onClick }) {
       <article
         className="trek-card"
         ref={cardRef}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
         onClick={onClick}
         role="button"
         tabIndex={0}
@@ -340,7 +349,7 @@ export default function TrekCard({ trek, onClick }) {
         {/* ========================= */}
 
         <div className="thumb">
-          <img
+          <FadeImage
             src={images[currentImage] ?? images[0]}
             alt={trek.name}
             loading="lazy"

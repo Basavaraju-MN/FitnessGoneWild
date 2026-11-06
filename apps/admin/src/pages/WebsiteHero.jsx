@@ -29,7 +29,8 @@ const EMPTY_HERO = {
 };
 const FACT_HINTS = [['25', 'max group size'], ['4.9', 'average rating'], ['300+', 'trips completed'], ['0', 'hidden charges']];
 
-// Full-width background: shrink to 1600px JPEG (quality 80) so the home page stays fast
+// Full-width background: shrink to 1600px WebP (about half the size of a
+// JPEG, same look) so the home page stays fast; JPEG if the browser cannot make WebP
 function resizePhoto(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -40,8 +41,11 @@ function resizePhoto(file) {
         const canvas = document.createElement('canvas');
         canvas.width = Math.round(img.width * scale);
         canvas.height = Math.round(img.height * scale);
-        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL('image/jpeg', 0.8));
+        const context = canvas.getContext('2d');
+        context.imageSmoothingQuality = 'high';
+        context.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const webp = canvas.toDataURL('image/webp', 0.75);
+        resolve(webp.startsWith('data:image/webp') ? webp : canvas.toDataURL('image/jpeg', 0.75));
       };
       img.onerror = () => reject(new Error('That file is not a picture'));
       img.src = reader.result;

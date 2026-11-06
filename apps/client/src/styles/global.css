@@ -44,3 +44,19 @@
 @media (prefers-reduced-motion:reduce){.hero-slide{transition:none}}
 /* Page text sent by the server for search engines; shown only until the website starts */
 .seo-text{max-width:900px;margin:40px auto;padding:0 22px;color:var(--ink)}.seo-text h1{font-size:2rem;color:var(--forest);margin-bottom:12px}.seo-text h2{font-size:1.3rem;color:var(--forest);margin:24px 0 8px}.seo-text h3{font-size:1rem;margin-top:12px}.seo-text li{margin:6px 0 6px 18px}.seo-text a{color:var(--forest);text-decoration:underline}
+/* Hero photos (components/home/Hero.jsx): each new photo fades in over the
+   last (1.2 s) and zooms in slowly while it shows; the shade sits on top */
+.hero{position:relative;overflow:hidden}
+.hero-photos,.hero-shade{position:absolute;inset:0;pointer-events:none}
+.hero-photos{z-index:0}
+.hero-photo{position:absolute;inset:0;background-size:cover;background-position:center 55%;opacity:0;transform:scale(1.02);transition:opacity 1.2s ease-in-out;will-change:opacity,transform}
+.hero-photo.is-ready{opacity:1;animation:hero-zoom linear forwards}
+@keyframes hero-zoom{from{transform:scale(1.02)}to{transform:scale(1.1)}}
+.hero-shade{z-index:1;background:linear-gradient(90deg,rgba(4,30,23,.91) 0%,rgba(4,30,23,.67) 49%,rgba(4,30,23,.2) 100%)}
+.hero>.hero-inner{position:relative;z-index:2}
+.hero-slide{transform:translateY(12px);transition:opacity .7s ease,transform .7s ease,visibility .7s}
+.hero-slide.active{transform:none}
+/* Card photos (components/common/FadeImage.jsx): the new photo fades in on top */
+.thumb img.fade-top{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .7s ease;pointer-events:none}
+.thumb img.fade-top.is-ready{opacity:1}
+@media (prefers-reduced-motion:reduce){.hero-photo{transition:none}.hero-photo.is-ready{animation:none}.hero-slide{transform:none;transition:none}.thumb img.fade-top{transition:none}}
