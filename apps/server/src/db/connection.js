@@ -1,6 +1,20 @@
+const net = require('net');
 const mysql = require('mysql2');
 // Shared with the admin portal, which uses this same pool
 const { db } = require('../config/database');
+
+// Connect over IPv4 only. Hostinger's host also has an IPv6 address that
+// Render cannot reach, and Node otherwise races IPv4/IPv6 with only 250ms per
+// attempt: from far away the IPv4 handshake takes longer, so every connect
+// failed with ETIMEDOUT (IPv4) + ENETUNREACH (IPv6)
+const connectIPv4 = ({ config }) => {
+  const socket = net.connect({ host: config.host, port: config.port, family: 4 });
+  socket.setNoDelay(true);
+  if (config.enableKeepAlive) {
+    socket.on('connect', () => socket.setKeepAlive(true, config.keepAliveInitialDelay));
+  }
+  return socket;
+};
 
 const pool = mysql.createPool({
   host: db.host,
@@ -21,6 +35,7 @@ const pool = mysql.createPool({
   maxIdle: db.connectionLimit,
   idleTimeout: 10 * 60 * 1000,
   connectTimeout: 15000,
+  stream: connectIPv4,
 });
 
 // Run MySQL in IST (Hostinger's server is UTC): NOW()/CURDATE() give Indian
