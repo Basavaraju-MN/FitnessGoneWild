@@ -2,6 +2,7 @@ const express = require('express');
 const compression = require('compression');
 const cors = require('cors');
 const path = require('path');
+const net = require('net');
 const dotenv = require('dotenv');
 
 dotenv.config({
@@ -232,6 +233,39 @@ app.get('/health', (req, res) => {
   return res.status(200).json({
     success: true,
     message: 'Fitness Gone Wild server is running',
+  });
+});
+
+// Network check for the hosting provider (no Shell on Render's free plan):
+// this server's exact outbound IP, and a plain TCP test to the database port
+// (the same as `nc -zv -w 5 <db host> 3306`)
+const tcpTest = (host, port, timeoutMs = 5000) => new Promise((resolve) => {
+  const socket = net.connect({ host, port, family: 4 });
+  const done = (result) => {
+    socket.destroy();
+    resolve(result);
+  };
+  socket.setTimeout(timeoutMs);
+  socket.once('connect', () => done('succeeded'));
+  socket.once('timeout', () => done('timed out'));
+  socket.once('error', (error) => done(
+    error.code === 'ECONNREFUSED' ? 'refused' : `failed (${error.code})`
+  ));
+});
+
+app.get('/api/health/network', async (req, res) => {
+  const [outboundIp, dbPort] = await Promise.all([
+    fetch('https://api.ipify.org', { signal: AbortSignal.timeout(5000) })
+      .then((response) => response.text())
+      .catch((error) => `unknown (${error.message})`),
+    tcpTest(db.host, db.port),
+  ]);
+
+  return res.status(200).json({
+    outboundIp,
+    dbHost: db.host,
+    dbPort: db.port,
+    dbTcpTest: dbPort,
   });
 });
 
