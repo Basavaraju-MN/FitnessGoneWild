@@ -22,7 +22,7 @@ services:
       - key: DB_PASSWORD
         sync: false
       - key: DB_CONNECTION_LIMIT
-        value: "10"
+        value: "4"
       - key: CLIENT_URL
         value: https://thefitnessgonewild.in,https://www.thefitnessgonewild.in
       - key: PHONEPE_CLIENT_ID
