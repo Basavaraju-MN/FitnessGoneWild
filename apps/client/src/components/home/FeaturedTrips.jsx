@@ -23,13 +23,13 @@ const formatPrice = (price) => {
 // images that exist; dots appear only when there is more than one.
 // The photos change by themselves only while the mouse is over the trip
 // (moving), so visitors do not download every photo of every trip.
-function FeaturedTripImage({ slug, name, moving }) {
-  const images = useTrekImages(slug);
+function FeaturedTripImage({ trip, name, moving }) {
+  const images = useTrekImages(trip);
   const [currentImage, setCurrentImage] = useState(0);
 
   useEffect(() => {
     setCurrentImage(0);
-  }, [slug, images.length]);
+  }, [trip?.id, images.length]);
 
   useEffect(() => {
     if (images.length <= 1 || !moving) {
@@ -221,7 +221,7 @@ export default function FeaturedTrips({ onTrekSelect }) {
         >
           {/* key: each trip slides in fresh */}
           <article className="featured-slide" key={shown.id} onClick={() => onTrekSelect?.(shown)}>
-            <FeaturedTripImage slug={shown.slug} name={shown.name} moving={paused && tabOpen} />
+            <FeaturedTripImage trip={shown} name={shown.name} moving={paused && tabOpen} />
 
             <div className="featured-text">
               <span className="trip-rank">{shown.rank}</span>

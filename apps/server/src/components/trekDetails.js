@@ -1,5 +1,6 @@
 const dbCmds = require('../db/dbops');
 const { sendTripInterestAlert } = require('../utils/mail');
+const { withPhotos } = require('../utils/tripPhoto');
 
 // Regions / departure cities are newer tables: until the database has them
 // (regions_cities.sql), the website works as before without them.
@@ -30,9 +31,13 @@ async function getPlaces() {
 }
 
 // Adds each trek's price options (empty = the default with / without transport)
+// and its photos (photos: [url, ...], cover first; kept in the database)
 async function withPriceOptions(trips) {
-    const options = await dbCmds.getPriceOptionsByTrip(trips.map((trip) => trip.id));
-    return trips.map((trip) => ({ ...trip, price_options: options.get(trip.id) || [] }));
+    const [options, photographed] = await Promise.all([
+        dbCmds.getPriceOptionsByTrip(trips.map((trip) => trip.id)),
+        withPhotos(trips),
+    ]);
+    return photographed.map((trip) => ({ ...trip, price_options: options.get(trip.id) || [] }));
 }
 
 // Adds region, departure_cities and price_options to each trek

@@ -72,8 +72,8 @@ export default function TrekDetails({ trek, onBack }) {
   const [brochureError, setBrochureError] = useState('');
 
 
-  // Only the images that exist, in order 1 to 5
-  const images = useTrekImages(trek.slug);
+  // The trek's photos, in order (cover first)
+  const images = useTrekImages(trek);
 
   useEffect(() => {
     setCurrentImage(0);

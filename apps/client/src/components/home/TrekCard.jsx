@@ -63,9 +63,8 @@ export default function TrekCard({ trek, onClick }) {
   const [hovered, setHovered] = useState(false);
 
 
-  // Only the images that exist, in order 1 to 5. Checked once the
-  // card is near the screen.
-  const images = useTrekImages(trek.slug, isVisible);
+  // The trek's photos, in order (cover first)
+  const images = useTrekImages(trek);
 
   /*
    * Reset image when trek changes.

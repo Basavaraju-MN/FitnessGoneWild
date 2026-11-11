@@ -1,12 +1,11 @@
-// Trip photos are kept in the database (table trip_photos), so they survive
-// deploys and restarts: Render's disk is wiped on every deploy, so photos
-// saved there by the admin were lost.
+// Trip photos are kept only in the database (table trip_photos): one row per
+// trip id + position (1..5, 1 = cover). Render wipes its disk on every
+// deploy, so photos are never kept as files of the website.
 //
-// The website still asks for /images/treks/<slug>/<n>.<ext> (any extension):
-//  - photo in the database      -> sent from here
-//  - row with no data (deleted) -> 404, so a photo file in git does not come back
-//  - no row                     -> next(): the photo file in the build, if any
+//   /trip-photo/<trip id>/<position>?v=<version>   one photo
 //
+// The address changes when a photo is replaced, so browsers keep each one
+// for a year. The trip APIs list each trip's photos (photos: [url, ...]).
 // Each photo is read from the database once, then kept on this server's disk
 // (temporary, refilled after a restart). Which photos exist is one small
 // query, kept for 2 minutes and dropped at once when the admin changes a photo.
@@ -17,7 +16,6 @@ const { pool, executeQuery } = require('../db/connection');
 
 const MAX_IMAGES = 5;
 const EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
-const MIME = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
 const CACHE_DIR = path.join(os.tmpdir(), 'fgw-trip-photos');
 const INDEX_FOR = 2 * 60 * 1000;
 
@@ -31,57 +29,50 @@ const SQL = {
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       PRIMARY KEY (trip_id, position)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  // Rows without data were deletes kept by the earlier version: dropped on start-up
+  dropEmpty: 'DELETE FROM trip_photos WHERE data IS NULL',
   index: `
-    SELECT p.trip_id, t.slug, p.position, p.mime, p.data IS NULL AS removed,
-           UNIX_TIMESTAMP(p.updated_at) AS version
-    FROM trip_photos p JOIN trips t ON t.id = p.trip_id`,
+    SELECT p.trip_id, t.slug, p.position, p.mime, UNIX_TIMESTAMP(p.updated_at) AS version
+    FROM trip_photos p JOIN trips t ON t.id = p.trip_id
+    WHERE p.data IS NOT NULL AND p.position BETWEEN 1 AND ${MAX_IMAGES}
+    ORDER BY p.trip_id, p.position`,
   getData: 'SELECT data FROM trip_photos WHERE trip_id = ? AND position = ?',
   save: `
     INSERT INTO trip_photos (trip_id, position, mime, data) VALUES (?, ?, ?, ?)
     ON DUPLICATE KEY UPDATE mime = VALUES(mime), data = VALUES(data), updated_at = CURRENT_TIMESTAMP`,
-  // Keeps the row, without the photo: marks it deleted
-  remove: `
-    INSERT INTO trip_photos (trip_id, position, mime, data) VALUES (?, ?, NULL, NULL)
-    ON DUPLICATE KEY UPDATE mime = NULL, data = NULL, updated_at = CURRENT_TIMESTAMP`,
-  trips: 'SELECT id, slug FROM trips',
+  remove: 'DELETE FROM trip_photos WHERE trip_id = ? AND position = ?',
 };
 
 /* ---------------- Which photos exist ---------------- */
 
-// slug (lower case) -> Map(number -> { tripId, mime, removed, version })
+// { byTrip: Map(tripId -> [{ position, mime, version }]), bySlug: Map(slug -> tripId) }
 let index = null;
 let indexAt = 0;
 let indexRun = null;
+const EMPTY = { byTrip: new Map(), bySlug: new Map() };
 
 async function loadIndex() {
   if (index && Date.now() - indexAt < INDEX_FOR) return index;
   if (!indexRun) {
     indexRun = executeQuery(SQL.index)
       .then((rows) => {
-        const next = new Map();
+        const next = { byTrip: new Map(), bySlug: new Map() };
         for (const row of rows) {
-          const key = String(row.slug).toLowerCase();
-          if (!next.has(key)) next.set(key, new Map());
-          next.get(key).set(Number(row.position), {
-            tripId: row.trip_id,
-            mime: row.mime,
-            removed: Boolean(Number(row.removed)),
-            version: Number(row.version),
-          });
+          const tripId = Number(row.trip_id);
+          if (!next.byTrip.has(tripId)) next.byTrip.set(tripId, []);
+          next.byTrip.get(tripId).push({ position: Number(row.position), mime: row.mime, version: Number(row.version) });
+          next.bySlug.set(String(row.slug).toLowerCase(), tripId);
         }
         index = next;
         indexAt = Date.now();
         return index;
       })
       .catch((error) => {
-        if (error?.code === 'ER_NO_SUCH_TABLE') {
-          index = new Map();
-          indexAt = Date.now();
-          return index;
+        if (error?.code !== 'ER_NO_SUCH_TABLE') {
+          // Database down: keep using the last list (if any)
+          console.error('Trip photos list failed:', error?.code || error?.message || error);
         }
-        // Database down: keep using the last list (if any)
-        console.error('Trip photos list failed:', error?.code || error?.message || error);
-        return index;
+        return index || EMPTY;
       })
       .finally(() => { indexRun = null; });
   }
@@ -93,19 +84,38 @@ function forget() {
   indexAt = 0;
 }
 
-const photosOf = async (slug) => (await loadIndex())?.get(String(slug).toLowerCase()) || new Map();
+const urlFor = (tripId, photo) => `/trip-photo/${tripId}/${photo.position}?v=${photo.version}`;
+
+/** The trip's photos in order: [{ position, file, url }] */
+async function listPhotos(tripId) {
+  const photos = (await loadIndex()).byTrip.get(Number(tripId)) || [];
+  return photos.map((photo) => ({
+    position: photo.position,
+    file: `${photo.position}.${EXT[photo.mime] || 'jpg'}`,
+    url: urlFor(tripId, photo),
+  }));
+}
+
+/** Adds photos: [url, ...] (cover first) to each trip of a list */
+async function withPhotos(trips) {
+  const { byTrip } = await loadIndex();
+  return trips.map((trip) => ({
+    ...trip,
+    photos: (byTrip.get(Number(trip.id)) || []).map((photo) => urlFor(trip.id, photo)),
+  }));
+}
 
 /* ---------------- Sending a photo ---------------- */
 
 const reading = new Map(); // cache file -> promise, so one photo is read once at a time
 
-async function cacheFile(photo, number) {
-  const file = path.join(CACHE_DIR, `${photo.tripId}-${number}-${photo.version}.${EXT[photo.mime] || 'jpg'}`);
+async function cacheFile(tripId, photo) {
+  const file = path.join(CACHE_DIR, `${tripId}-${photo.position}-${photo.version}.${EXT[photo.mime] || 'jpg'}`);
   if (fs.existsSync(file)) return file;
 
   if (!reading.has(file)) {
     reading.set(file, (async () => {
-      const rows = await executeQuery(SQL.getData, [photo.tripId, number]);
+      const rows = await executeQuery(SQL.getData, [tripId, photo.position]);
       const data = rows[0]?.data;
       if (!data) return null;
       fs.mkdirSync(CACHE_DIR, { recursive: true });
@@ -118,81 +128,61 @@ async function cacheFile(photo, number) {
   return reading.get(file);
 }
 
-/** Express handler for GET /images/treks/:slug/:file */
+/** Express handler for GET /trip-photo/:tripId/:position */
 async function tripPhoto(req, res, next) {
-  const match = /^([1-9])\.(jpe?g|png|webp)$/i.exec(String(req.params.file || ''));
-  if (!match || !/^[a-z0-9_-]+$/i.test(String(req.params.slug || ''))) return next();
+  const tripId = Number(req.params.tripId);
+  const position = Number(req.params.position);
+  if (!Number.isInteger(tripId) || tripId < 1 || !Number.isInteger(position) || position < 1 || position > MAX_IMAGES) {
+    return res.status(404).end();
+  }
 
   try {
-    const number = Number(match[1]);
-    const photo = (await photosOf(req.params.slug)).get(number);
-    if (!photo) return next(); // not in the database: the file in the build, if any
-    if (photo.removed) return res.status(404).end();
+    const photo = ((await loadIndex()).byTrip.get(tripId) || []).find((p) => p.position === position);
+    const file = photo && await cacheFile(tripId, photo);
+    if (!file) return res.status(404).end();
 
-    const file = await cacheFile(photo, number);
-    if (!file) return next();
+    // Addresses with the photo's version never change: kept for a year
+    const current = Number(req.query.v) === photo.version;
     return res.sendFile(file, {
-      maxAge: 10 * 60 * 1000,
+      maxAge: current ? 365 * 24 * 60 * 60 * 1000 : 5 * 60 * 1000,
+      immutable: current,
       headers: { 'Content-Type': photo.mime },
     });
   } catch (error) {
-    console.error('Trip photo failed:', error?.code || error?.message || error);
-    return next(); // fall back to the file in the build
+    return next(error);
+  }
+}
+
+/**
+ * Old addresses /images/treks/<slug>/<n>.<ext> (shared links, search engines):
+ * sent on to the photo's new address.
+ */
+async function oldTripPhoto(req, res, next) {
+  const match = /^([1-9])\.(jpe?g|png|webp)$/i.exec(String(req.params.file || ''));
+  if (!match) return next();
+  try {
+    const { byTrip, bySlug } = await loadIndex();
+    const tripId = bySlug.get(String(req.params.slug || '').toLowerCase());
+    const photo = tripId && (byTrip.get(tripId) || []).find((p) => p.position === Number(match[1]));
+    if (!photo) return res.status(404).end();
+    return res.redirect(301, urlFor(tripId, photo));
+  } catch (error) {
+    return next(error);
   }
 }
 
 /* ---------------- For the admin ---------------- */
 
-const urlFor = (slug, number, ext, version) =>
-  `/images/treks/${encodeURIComponent(slug)}/${number}.${ext}${version ? `?v=${version}` : ''}`;
-
-// Photo file of the website build / source for <slug>/<n>, if any
-function fileFor(dirs, slug, number) {
-  for (const dir of dirs) {
-    for (const ext of Object.keys(MIME)) {
-      const file = path.join(dir, 'images', 'treks', slug, `${number}.${ext}`);
-      if (fs.existsSync(file)) return { file, ext };
-    }
-  }
-  return null;
-}
-
-/**
- * [{ number, file, url }] for 1..5, as the website shows them: the database
- * first, else a photo file in git (dirs = client public / dist folders).
- */
-async function listPhotos(trip, dirs = []) {
-  const slug = trip.slug;
-  if (!/^[a-z0-9_-]+$/i.test(String(slug || ''))) return [];
-  const photos = await photosOf(slug);
-  const images = [];
-
-  for (let number = 1; number <= MAX_IMAGES; number += 1) {
-    const photo = photos.get(number);
-    if (photo?.removed) continue;
-    if (photo) {
-      const ext = EXT[photo.mime] || 'jpg';
-      images.push({ number, file: `${number}.${ext}`, url: urlFor(slug, number, ext, photo.version) });
-      continue;
-    }
-    const found = fileFor(dirs, slug, number);
-    if (found) {
-      const { mtimeMs } = fs.statSync(found.file);
-      images.push({ number, file: `${number}.${found.ext}`, url: urlFor(slug, number, found.ext, Math.round(mtimeMs)) });
-    }
-  }
-  return images;
-}
-
-async function savePhoto(tripId, number, mime, buffer) {
+async function savePhoto(tripId, position, mime, buffer) {
+  // Prepared statement: the photo is sent as it is (a plain query sends it
+  // as hex text, twice the size, which can pass the database's packet limit)
+  const save = () => pool.promise().execute(SQL.save, [tripId, position, mime, buffer]);
   try {
-    // Prepared statement: the photo is sent as it is (a plain query sends it
-    // as hex text, twice the size, which can pass the database's packet limit)
-    await pool.promise().execute(SQL.save, [tripId, number, mime, buffer]);
+    await save();
   } catch (error) {
     if (error?.code === 'ER_NO_SUCH_TABLE') {
       await ensureTable();
-      await pool.promise().execute(SQL.save, [tripId, number, mime, buffer]);
+      await save();
     } else if (error?.code === 'ER_NET_PACKET_TOO_LARGE') {
       const tooBig = new Error('The database does not accept a photo this large. Please use a smaller photo (under 4 MB).');
       tooBig.status = 400;
@@ -205,9 +195,9 @@ async function savePhoto(tripId, number, mime, buffer) {
   }
 }
 
-async function deletePhoto(tripId, number) {
+async function deletePhoto(tripId, position) {
   try {
-    await executeQuery(SQL.remove, [tripId, number]);
+    await executeQuery(SQL.remove, [tripId, position]);
   } finally {
     forget();
   }
@@ -219,42 +209,21 @@ async function ensureTable() {
   await executeQuery(SQL.createTable);
 }
 
-/**
- * Creates the table, then copies photo files from the build (the ones in git)
- * into the database for every photo the database does not have yet. Runs when
- * the server starts; after the first time it only does two small queries.
- */
-async function movePhotoFilesToDb(clientDist) {
+/** Creates the table if needed and drops deletes kept by the earlier version */
+async function prepareTripPhotos() {
   await ensureTable();
+  await executeQuery(SQL.dropEmpty);
   forget();
-  const photos = (await loadIndex()) || new Map();
-  let moved = 0;
-
-  for (const trip of await executeQuery(SQL.trips)) {
-    if (!/^[a-z0-9_-]+$/i.test(String(trip.slug || ''))) continue;
-    const known = photos.get(String(trip.slug).toLowerCase()) || new Map();
-    for (let number = 1; number <= MAX_IMAGES; number += 1) {
-      if (known.has(number)) continue; // in the database, or deleted from the admin
-      const found = fileFor([clientDist], trip.slug, number);
-      if (!found) continue;
-      try {
-        await savePhoto(trip.id, number, MIME[found.ext], fs.readFileSync(found.file));
-        moved += 1;
-      } catch (error) {
-        console.error(`Trip photo ${trip.slug}/${number}: not moved:`, error?.code || error?.message || error);
-      }
-    }
-  }
-  if (moved) console.log(`Trip photos moved into the database: ${moved}`);
 }
 
 module.exports = {
   MAX_IMAGES,
-  EXT,
   tripPhoto,
+  oldTripPhoto,
   listPhotos,
+  withPhotos,
   savePhoto,
   deletePhoto,
   forget,
-  movePhotoFilesToDb,
+  prepareTripPhotos,
 };

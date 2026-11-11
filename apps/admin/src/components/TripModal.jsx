@@ -104,7 +104,7 @@ function DropZone({ accept, onFile, className = '', children }) {
  * Centered pop-up to add or edit a trip, in 4 steps. Everything is saved
  * together when you press Save:
  *   details, inclusions/exclusions, pickup points -> database
- *   photos   -> database (trip_photos), shown at images/treks/<slug>/1.jpg … 5.jpg (1 = cover)
+ *   photos   -> database (trip_photos, by trip id + position), shown at /trip-photo/<id>/<position> (1 = cover)
  * Brochures have their own screen (Brochures).
  */
 export default function TripModal({ tripId, categories, onClose, onSaved }) {

@@ -9,10 +9,10 @@ const {
   SITE_NAME, esc, plain, siteUrl, jsonLd, buildPage, shareTags, business, fromPrice, rupees, isTrek, tripPath,
 } = require('./seo');
 
-// The trip's first photo: from the database, else the file in the build
-async function coverPath(clientDist, trek) {
+// The trip's first photo (from the database)
+async function coverPath(trek) {
   try {
-    const [cover] = await listPhotos(trek, [clientDist]);
+    const [cover] = await listPhotos(trek.id);
     if (cover) return cover.url;
   } catch (error) {
     console.error('Trip cover photo failed:', error?.message || error);
@@ -56,7 +56,7 @@ function trekPage(clientDist) {
       const word = isTrek(trek) ? 'trek' : 'trip';
       const title = `${trek.name} | ${SITE_NAME}`;
       const description = (plain(trek.blurb).replace(/\n/g, ' ') || `${trek.duration_label || ''} ${word} from Bangalore with ${SITE_NAME}`).slice(0, 200);
-      const image = `${base}${await coverPath(clientDist, trek)}`;
+      const image = `${base}${await coverPath(trek)}`;
       const url = `${base}${pagePath}`;
       const price = fromPrice(trek);
       const [dates, biz] = await Promise.all([

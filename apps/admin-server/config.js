@@ -18,7 +18,7 @@ module.exports = {
   isProduction,
 
   paths: {
-    // Source photos (kept in the repo) and the built site that is served
+    // The website source and its build (trip photos are in the database)
     clientPublic: path.join(appsDir, 'client', 'public'),
     clientDist: path.join(appsDir, 'client', 'dist'),
     brochures: path.join(appsDir, 'server', 'brochures'),

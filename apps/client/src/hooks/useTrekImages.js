@@ -1,95 +1,26 @@
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
+import { API_BASE_URL } from '../api/treks';
 
-// Trek photos live in their own folder:
-//   public/images/treks/<slug>/1.jpg ... 5.jpg
-// .jpeg, .png and .webp also work (1.png, 2.webp, ...).
-const MAX_IMAGES = 5;
-
-const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp'];
-
-export const getTrekImagePath = (slug, number = 1, extension = 'jpg') =>
-  `/images/treks/${encodeURIComponent(slug)}/${number}.${extension}`;
-
+// Trek photos are kept in the database (admin → Packages & Trips). Every
+// trip from the API carries its photos in order, cover first:
+//   trek.photos = ['/trip-photo/<trip id>/1?v=…', '/trip-photo/<trip id>/2?v=…', …]
 export const FALLBACK_IMAGE = '/images/hero1.jpg';
 
-// One check per slug, shared by every card and the details page.
-const imageCache = new Map();
-
-// Resolves true only when the file is a real image. Asks for the headers
-// only (HEAD), so photos are not downloaded just to check they exist.
-// A missing file served as index.html by the SPA fallback also counts as missing.
-const imageExists = (src) =>
-  fetch(src, { method: 'HEAD' })
-    .then((response) =>
-      response.ok &&
-      (response.headers.get('content-type') || '').startsWith('image/')
-    )
-    .catch(() => false);
-
-// Path of image <number> in whichever format exists, or null.
-// .jpg is tried first, so the usual case needs one request.
-const findImage = async (slug, number) => {
-  for (const extension of IMAGE_EXTENSIONS) {
-    const src = getTrekImagePath(slug, number, extension);
-    if (await imageExists(src)) return src;
-  }
-  return null;
-};
-
-const loadTrekImages = (slug) => {
-  if (!imageCache.has(slug)) {
-    const numbers = Array.from({ length: MAX_IMAGES }, (_, index) => index + 1);
-
-    imageCache.set(
-      slug,
-      Promise.all(numbers.map((number) => findImage(slug, number))).then(
-        (results) => {
-          const found = results.filter(Boolean);
-          return found.length > 0 ? found : [FALLBACK_IMAGE];
-        }
-      )
-    );
-  }
-
-  return imageCache.get(slug);
-};
+// The server that sends the photos: this site in production; the API
+// server (http://localhost:4000) while developing
+const PHOTO_ORIGIN = API_BASE_URL.replace(/\/api$/, '');
 
 /**
- * Returns only the images that exist for a trek, in order 1 to 5.
- * Until the check finishes it returns just the first image.
- * Pass enabled = false to delay the check (e.g. card not on screen).
+ * The trek's photos (addresses ready for <img src>), or the fallback
+ * image when the trek has none yet.
  */
-export default function useTrekImages(slug, enabled = true) {
-  const [images, setImages] = useState(() =>
-    slug ? [getTrekImagePath(slug)] : [FALLBACK_IMAGE]
-  );
+export default function useTrekImages(trek) {
+  const photos = trek?.photos;
 
-  useEffect(() => {
-    if (!slug) {
-      setImages([FALLBACK_IMAGE]);
-      return undefined;
-    }
-
-    setImages([getTrekImagePath(slug)]);
-  }, [slug]);
-
-  useEffect(() => {
-    if (!slug || !enabled) {
-      return undefined;
-    }
-
-    let cancelled = false;
-
-    loadTrekImages(slug).then((found) => {
-      if (!cancelled) {
-        setImages(found);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [slug, enabled]);
-
-  return images;
+  return useMemo(() => {
+    const list = Array.isArray(photos) ? photos.filter(Boolean) : [];
+    return list.length > 0
+      ? list.map((src) => (src.startsWith('/') ? `${PHOTO_ORIGIN}${src}` : src))
+      : [FALLBACK_IMAGE];
+  }, [photos]);
 }
