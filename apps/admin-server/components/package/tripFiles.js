@@ -1,10 +1,8 @@
-// Trip photos 1..5 (1 = cover), kept in the database (table trip_photos,
-// see apps/server/src/utils/tripPhoto.js). Not on the server's disk: Render
-// wipes it on every deploy. The website still shows them at
-// /images/treks/<slug>/1.jpg … 5.jpg, and photo files in git
-// (apps/client/public/images/treks/<slug>/) are copied in when the server starts.
+// Trip photos 1..5 (1 = cover), kept only in the database (table trip_photos,
+// by trip id + position; see apps/server/src/utils/tripPhoto.js). Never on
+// the server's disk: Render wipes it on every deploy. The website shows them
+// at /trip-photo/<trip id>/<position>.
 // Brochures are on Hostinger (see the Brochures screen and ftpBrochure.js).
-const { paths } = require('../../config');
 const { badRequest } = require('../../utils/http');
 const tripPhoto = require('../../../server/src/utils/tripPhoto');
 
@@ -18,7 +16,7 @@ function decodeDataUrl(dataUrl) {
   return { mime: match[1], buffer: Buffer.from(match[2], 'base64') };
 }
 
-function checkNumber(number) {
+function checkPosition(number) {
   const n = Number(number);
   if (!Number.isInteger(n) || n < 1 || n > tripPhoto.MAX_IMAGES) {
     throw badRequest(`Photo number must be 1 to ${tripPhoto.MAX_IMAGES}`);
@@ -26,16 +24,19 @@ function checkNumber(number) {
   return n;
 }
 
-// [{ number, file, url }] for 1..5, in order (url changes when the photo does)
-const listImages = (trip) => tripPhoto.listPhotos(trip, [paths.clientPublic, paths.clientDist]);
+// [{ number, file, url }] in order (url changes when the photo does)
+async function listImages(trip) {
+  const photos = await tripPhoto.listPhotos(trip.id);
+  return photos.map(({ position, file, url }) => ({ number: position, file, url }));
+}
 
 async function saveImage(trip, number, dataUrl) {
-  const n = checkNumber(number);
+  const position = checkPosition(number);
   const { mime, buffer } = decodeDataUrl(dataUrl);
   if (!IMAGE_TYPES[mime]) throw badRequest('Photos must be JPG, PNG or WebP');
   if (buffer.length > MAX_IMAGE_BYTES) throw badRequest('Photo is too large (max 8 MB)');
   try {
-    await tripPhoto.savePhoto(trip.id, n, mime, buffer);
+    await tripPhoto.savePhoto(trip.id, position, mime, buffer);
   } catch (error) {
     if (error.status === 400) throw badRequest(error.message);
     throw error;
@@ -43,11 +44,11 @@ async function saveImage(trip, number, dataUrl) {
 }
 
 async function deleteImage(trip, number) {
-  await tripPhoto.deletePhoto(trip.id, checkNumber(number));
+  await tripPhoto.deletePhoto(trip.id, checkPosition(number));
 }
 
 // Photos belong to the trip id, so a new slug needs no move: only the
-// website's list of photos is read again
+// list of old /images/treks/<slug>/ addresses is read again
 function slugChanged() {
   tripPhoto.forget();
 }

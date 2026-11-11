@@ -101,8 +101,8 @@ export default function BookingModal({
   const [weekends, setWeekends] = useState([]);
   const [datesLoading, setDatesLoading] = useState(true);
 
-  // First trek photo in whichever format exists (jpg/png/webp)
-  const [trekImage] = useTrekImages(trek?.slug);
+  // The trek's cover photo
+  const [trekImage] = useTrekImages(trek);
 
   const [step, setStep] = useState(1);
 
