@@ -38,7 +38,8 @@ const daysFrom = (label) => Math.max(1, parseInt(String(label || '').match(/\d+/
 const emptyPickup = (cityId = '') => ({ name: '', address: '', city_id: cityId });
 const emptyPriceOption = () => ({ label: '', price: '' });
 
-// Shrinks a photo to PHOTO_MAX_WIDTH wide JPEG (quality 80) so the website stays fast
+// Shrinks a photo to PHOTO_MAX_WIDTH wide WebP (about 30% lighter than JPEG,
+// same look) so the website stays fast; JPEG if the browser cannot make WebP
 function resizePhoto(file) {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -48,9 +49,12 @@ function resizePhoto(file) {
       const canvas = document.createElement('canvas');
       canvas.width = Math.round(img.width * scale);
       canvas.height = Math.round(img.height * scale);
-      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      const context = canvas.getContext('2d');
+      context.imageSmoothingQuality = 'high';
+      context.drawImage(img, 0, 0, canvas.width, canvas.height);
       URL.revokeObjectURL(url);
-      resolve(canvas.toDataURL('image/jpeg', 0.8));
+      const webp = canvas.toDataURL('image/webp', 0.78);
+      resolve(webp.startsWith('data:image/webp') ? webp : canvas.toDataURL('image/jpeg', 0.8));
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
