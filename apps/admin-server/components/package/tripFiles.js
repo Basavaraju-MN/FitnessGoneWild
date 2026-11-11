@@ -1,34 +1,15 @@
-// Trip photos on disk — the same folders the website reads:
-//   apps/client/public/images/treks/<slug>/1.jpg … 5.jpg
-//   (also copied into apps/client/dist so the running site shows them at once)
+// Trip photos 1..5 (1 = cover), kept in the database (table trip_photos,
+// see apps/server/src/utils/tripPhoto.js). Not on the server's disk: Render
+// wipes it on every deploy. The website still shows them at
+// /images/treks/<slug>/1.jpg … 5.jpg, and photo files in git
+// (apps/client/public/images/treks/<slug>/) are copied in when the server starts.
 // Brochures are on Hostinger (see the Brochures screen and ftpBrochure.js).
-const fs = require('fs');
-const fsp = require('fs/promises');
-const path = require('path');
-
 const { paths } = require('../../config');
 const { badRequest } = require('../../utils/http');
+const tripPhoto = require('../../../server/src/utils/tripPhoto');
 
-const MAX_IMAGES = 5;
-const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp'];
 const IMAGE_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
-
-// Slugs are folder names; anything else could point outside the folder
-function checkSlug(slug) {
-  if (!/^[a-z0-9_-]+$/i.test(String(slug || ''))) {
-    throw badRequest('This trip has no valid slug, so its files cannot be saved');
-  }
-  return slug;
-}
-
-const exists = (p) => fs.existsSync(p);
-
-// Source folder first; the built site's folder only when the site has been built
-const imageDirs = (slug) => [
-  path.join(paths.clientPublic, 'images', 'treks', checkSlug(slug)),
-  ...(exists(paths.clientDist) ? [path.join(paths.clientDist, 'images', 'treks', slug)] : []),
-];
 
 // "data:image/png;base64,AAAA" -> { mime, buffer }
 function decodeDataUrl(dataUrl) {
@@ -37,84 +18,43 @@ function decodeDataUrl(dataUrl) {
   return { mime: match[1], buffer: Buffer.from(match[2], 'base64') };
 }
 
-/* ---------------- Photos ---------------- */
+function checkNumber(number) {
+  const n = Number(number);
+  if (!Number.isInteger(n) || n < 1 || n > tripPhoto.MAX_IMAGES) {
+    throw badRequest(`Photo number must be 1 to ${tripPhoto.MAX_IMAGES}`);
+  }
+  return n;
+}
 
 // [{ number, file, url }] for 1..5, in order (url changes when the photo does)
-async function listImages(slug) {
-  if (!/^[a-z0-9_-]+$/i.test(String(slug || ''))) return [];
+const listImages = (trip) => tripPhoto.listPhotos(trip, [paths.clientPublic, paths.clientDist]);
 
-  const dir = path.join(paths.clientPublic, 'images', 'treks', slug);
-  if (!exists(dir)) return [];
-
-  const files = await fsp.readdir(dir);
-  const images = [];
-
-  for (let number = 1; number <= MAX_IMAGES; number += 1) {
-    const file = IMAGE_EXTENSIONS.map((ext) => `${number}.${ext}`).find((name) => files.includes(name));
-    if (!file) continue;
-
-    const { mtimeMs } = await fsp.stat(path.join(dir, file));
-    images.push({
-      number,
-      file,
-      url: `/images/treks/${encodeURIComponent(slug)}/${file}?v=${Math.round(mtimeMs)}`,
-    });
-  }
-
-  return images;
-}
-
-async function removeImageFiles(dir, number) {
-  for (const ext of IMAGE_EXTENSIONS) {
-    await fsp.rm(path.join(dir, `${number}.${ext}`), { force: true });
-  }
-}
-
-async function saveImage(slug, number, dataUrl) {
-  const n = Number(number);
-  if (!Number.isInteger(n) || n < 1 || n > MAX_IMAGES) throw badRequest(`Photo number must be 1 to ${MAX_IMAGES}`);
-
+async function saveImage(trip, number, dataUrl) {
+  const n = checkNumber(number);
   const { mime, buffer } = decodeDataUrl(dataUrl);
-  const ext = IMAGE_TYPES[mime];
-  if (!ext) throw badRequest('Photos must be JPG, PNG or WebP');
+  if (!IMAGE_TYPES[mime]) throw badRequest('Photos must be JPG, PNG or WebP');
   if (buffer.length > MAX_IMAGE_BYTES) throw badRequest('Photo is too large (max 8 MB)');
-
-  for (const dir of imageDirs(slug)) {
-    await fsp.mkdir(dir, { recursive: true });
-    await removeImageFiles(dir, n); // replaces 1.png when a new 1.jpg arrives
-    await fsp.writeFile(path.join(dir, `${n}.${ext}`), buffer);
+  try {
+    await tripPhoto.savePhoto(trip.id, n, mime, buffer);
+  } catch (error) {
+    if (error.status === 400) throw badRequest(error.message);
+    throw error;
   }
 }
 
-async function deleteImage(slug, number) {
-  for (const dir of imageDirs(slug)) {
-    if (exists(dir)) await removeImageFiles(dir, Number(number));
-  }
+async function deleteImage(trip, number) {
+  await tripPhoto.deletePhoto(trip.id, checkNumber(number));
 }
 
-/* ---------------- Whole folders ---------------- */
-
-const tripFolders = (slug) => [
-  path.join(paths.clientPublic, 'images', 'treks', slug),
-  path.join(paths.clientDist, 'images', 'treks', slug),
-];
-
-// Slug changed: move its photo folders along
-async function renameFolders(oldSlug, newSlug) {
-  if (!oldSlug || oldSlug === newSlug) return;
-  checkSlug(oldSlug);
-  checkSlug(newSlug);
-
-  const from = tripFolders(oldSlug);
-  const to = tripFolders(newSlug);
-  for (let i = 0; i < from.length; i += 1) {
-    if (exists(from[i]) && !exists(to[i])) await fsp.rename(from[i], to[i]);
-  }
+// Photos belong to the trip id, so a new slug needs no move: only the
+// website's list of photos is read again
+function slugChanged() {
+  tripPhoto.forget();
 }
 
 module.exports = {
   listImages,
   saveImage,
   deleteImage,
-  renameFolders,
+  slugChanged,
 };

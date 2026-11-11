@@ -14,6 +14,7 @@ const { cachePublicApi, clearOnAdminChange } = require('./utils/apiCache');
 const { trekPage } = require('./utils/trekShare');
 const { robotsTxt, sitemapXml, homePage, otherPage } = require('./utils/seo');
 const { heroPhoto, moveHeroPhotosToDb } = require('./utils/heroPhoto');
+const { tripPhoto, movePhotoFilesToDb } = require('./utils/tripPhoto');
 const { clientOrigins } = require('./config/config');
 const { checkDatabaseConnection } = require('./db/connection');
 const { db } = require('./config/database');
@@ -341,6 +342,9 @@ app.get('/invoice-print.js', (_req, res) => {
 });
 // Home page hero photos, kept in the database (Website Hero screen)
 app.get('/hero-photo/:id', heroPhoto);
+// Trip photos, kept in the database (admin → Packages & Trips); photos not
+// in the database fall through to the files of the build
+app.get('/images/treks/:slug/:file', tripPhoto);
 
 app.get('/invoice/:token', invoicePage);
 app.get('/invoice/:token/pdf', invoicePdfPage);
@@ -402,6 +406,10 @@ app.listen(
     // Hero photos still in website files: move them into the database once
     moveHeroPhotosToDb(CLIENT_DIST_PATH)
       .catch((error) => console.error('Moving hero photos failed:', error?.message || error));
+
+    // Trip photos: create their table, and copy photo files from git into it once
+    movePhotoFilesToDb(CLIENT_DIST_PATH)
+      .catch((error) => console.error('Moving trip photos failed:', error?.message || error));
 
     // Copy the Hostinger brochures to this server in the background
     setTimeout(() => {

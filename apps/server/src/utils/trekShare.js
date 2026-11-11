@@ -3,19 +3,19 @@
 // or a search engine would only ever see the home page. For these addresses
 // the server puts the trip's own title, description, photo, structured data
 // (price, dates) and text into index.html before sending it.
-const fs = require('fs');
-const path = require('path');
 const dbops = require('../db/dbops');
+const { listPhotos } = require('./tripPhoto');
 const {
   SITE_NAME, esc, plain, siteUrl, jsonLd, buildPage, shareTags, business, fromPrice, rupees, isTrek, tripPath,
 } = require('./seo');
 
-// First trek photo that exists: public/images/treks/<slug>/1.jpg (or png/webp)
-function coverPath(clientDist, slug) {
-  for (const ext of ['jpg', 'jpeg', 'png', 'webp']) {
-    if (fs.existsSync(path.join(clientDist, 'images', 'treks', slug, `1.${ext}`))) {
-      return `/images/treks/${encodeURIComponent(slug)}/1.${ext}`;
-    }
+// The trip's first photo: from the database, else the file in the build
+async function coverPath(clientDist, trek) {
+  try {
+    const [cover] = await listPhotos(trek, [clientDist]);
+    if (cover) return cover.url;
+  } catch (error) {
+    console.error('Trip cover photo failed:', error?.message || error);
   }
   return '/images/hero1.jpg';
 }
@@ -56,7 +56,7 @@ function trekPage(clientDist) {
       const word = isTrek(trek) ? 'trek' : 'trip';
       const title = `${trek.name} | ${SITE_NAME}`;
       const description = (plain(trek.blurb).replace(/\n/g, ' ') || `${trek.duration_label || ''} ${word} from Bangalore with ${SITE_NAME}`).slice(0, 200);
-      const image = `${base}${coverPath(clientDist, trek.slug)}`;
+      const image = `${base}${await coverPath(clientDist, trek)}`;
       const url = `${base}${pagePath}`;
       const price = fromPrice(trek);
       const [dates, biz] = await Promise.all([

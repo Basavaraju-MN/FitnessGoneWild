@@ -1,6 +1,6 @@
 // Packages & Trips screen (the treks shown on the website).
 // Called by controller/controller.js; reads and writes through db/dbops.js.
-// Photos are files on disk (see tripFiles.js). Brochures are on Hostinger
+// Photos are in the database (see tripFiles.js). Brochures are on Hostinger
 // and have their own screen (Brochures), so this screen never waits for FTP.
 const dbops = require('../../db/dbops');
 const tripFiles = require('./tripFiles');
@@ -248,7 +248,7 @@ async function getTrips() {
 
   return Promise.all(
     trips.map(async (trip) => {
-      const images = await tripFiles.listImages(trip.slug);
+      const images = await tripFiles.listImages(trip);
       return {
         ...trip,
         price_options: options.filter((o) => o.trip_id === trip.id),
@@ -263,7 +263,7 @@ async function getTrips() {
 async function getTrip(id) {
   const trip = await findTrip(id);
   const [images, lists, pickups, terms, options] = await Promise.all([
-    tripFiles.listImages(trip.slug),
+    tripFiles.listImages(trip),
     dbops.getTripInclusions(trip.id),
     dbops.getTripPickupPoints(trip.id),
     dbops.getTripTerms(trip.id),
@@ -319,9 +319,9 @@ async function updateTrip(admin, id, body) {
   await savePriceOptions(id, priceOptions);
   if (hasTerms) await dbops.saveTripTerms(id, terms.sections, terms.highlights);
 
-  // New slug: its photo and brochure folders move with it
+  // New slug: the website reads its photos under the new address
   if (data.slug && data.slug !== trip.slug) {
-    await tripFiles.renameFolders(trip.slug, data.slug);
+    tripFiles.slugChanged();
   }
 
   await logActivity(admin, 'update', 'trip', id, [...Object.keys(data), ...(hasLists ? ['inclusions'] : []), ...(hasTerms ? ['terms'] : [])].join(', '));
@@ -332,16 +332,16 @@ async function updateTrip(admin, id, body) {
 
 async function uploadTripImage(admin, id, { number, dataUrl }) {
   const trip = await findTrip(id);
-  await tripFiles.saveImage(trip.slug, number, dataUrl);
+  await tripFiles.saveImage(trip, number, dataUrl);
   await logActivity(admin, 'upload_photo', 'trip', trip.id, `photo ${number}`);
-  return { images: await tripFiles.listImages(trip.slug) };
+  return { images: await tripFiles.listImages(trip) };
 }
 
 async function deleteTripImage(admin, id, number) {
   const trip = await findTrip(id);
-  await tripFiles.deleteImage(trip.slug, number);
+  await tripFiles.deleteImage(trip, number);
   await logActivity(admin, 'delete_photo', 'trip', trip.id, `photo ${number}`);
-  return { images: await tripFiles.listImages(trip.slug) };
+  return { images: await tripFiles.listImages(trip) };
 }
 
 /* ---------------- Brochures screen (Hostinger, over FTP) ---------------- */
