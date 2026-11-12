@@ -1,0 +1,264 @@
+/* About page (/about). Uses the home page's own parts from global.css
+   (section / section-alt, section headings, why-card, stats, cta); only
+   what the home page does not have is here. */
+
+/* Content of a white full-width section, kept to the page width */
+.about-inner {
+  max-width: var(--max);
+  margin: 0 auto;
+}
+
+/* ---------- Banner ---------- */
+.about-banner {
+  position: relative;
+  min-height: 400px;
+  display: flex;
+  align-items: flex-end;
+  background-size: cover;
+  background-position: center;
+}
+.about-banner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(9, 46, 40, .2) 0%, rgba(9, 46, 40, .82) 100%);
+}
+.about-banner-inner {
+  position: relative;
+  width: 100%;
+  max-width: 1320px;
+  margin: auto;
+  padding: 0 28px 56px;
+  color: #fff;
+}
+.about-banner h1 {
+  font-family: var(--display);
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  line-height: 1.02;
+  text-transform: uppercase;
+  max-width: 780px;
+}
+.about-banner-sub {
+  margin-top: 12px;
+  font-size: 1.05rem;
+  color: #e5f0e9;
+}
+
+/* Heading used on the left (story, founder) */
+.about-title {
+  font-family: var(--display);
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.05;
+  color: var(--forest);
+  text-transform: uppercase;
+}
+.about-role {
+  margin-top: 4px;
+  color: var(--amber);
+  font-weight: 700;
+  font-size: .9rem;
+}
+
+/* ---------- Our story ---------- */
+.about-story {
+  display: grid;
+  grid-template-columns: minmax(240px, 340px) minmax(0, 1fr);
+  gap: 56px;
+  align-items: start;
+}
+.about-story-side {
+  position: sticky;
+  top: 120px;
+}
+.about-story-photo {
+  width: 100%;
+  margin-top: 26px;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+.about-story-text {
+  color: var(--ink-soft);
+  line-height: 1.75;
+}
+.about-story-text > p:first-child {
+  font-size: 1.1rem;
+  color: var(--ink);
+}
+.about-story-text strong,
+.about-story-text b {
+  color: var(--forest);
+}
+.about-story-text h2,
+.about-story-text h3,
+.about-story-text h4 {
+  color: var(--forest);
+  margin: 1.3em 0 .5em;
+  line-height: 1.2;
+}
+.about-story-text ul,
+.about-story-text ol {
+  margin: 0 0 .9em 1.3em;
+}
+.about-story-text a {
+  color: var(--forest);
+  font-weight: 700;
+  border-bottom: 2px solid var(--amber);
+}
+.about-inner > .stats {
+  margin-top: 56px;
+}
+
+/* ---------- Founder ---------- */
+.about-founder {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 56px;
+  align-items: center;
+}
+.about-founder.no-photo {
+  grid-template-columns: 1fr;
+  max-width: 860px;
+}
+.about-founder-photo {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+.about-note {
+  margin: 20px 0;
+  padding-left: 18px;
+  border-left: 3px solid var(--amber);
+  font-size: 1.05rem;
+  font-style: italic;
+  color: var(--ink);
+}
+.about-note p {
+  margin: 0 0 .7em;
+}
+.about-note > :last-child {
+  margin-bottom: 0;
+}
+.about-credentials {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.about-credentials li {
+  background: var(--amber-soft);
+  color: var(--forest);
+  font-size: .8rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: var(--pill);
+}
+.about-link {
+  color: var(--forest);
+  font-weight: 700;
+  border-bottom: 2px solid var(--amber);
+}
+
+/* ---------- Team: medium round photo, centred ---------- */
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 24px;
+}
+.team-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--amber);
+  border-radius: var(--radius-lg);
+  padding: 30px 22px 26px;
+  text-align: center;
+  transition: .22s ease;
+}
+.team-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow);
+}
+/* Face kept in view; thin orange ring around the photo */
+.team-photo {
+  width: 160px;
+  height: 160px;
+  margin: 0 auto 18px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center 20%;
+  border: 4px solid var(--paper);
+  box-shadow: 0 0 0 2px var(--amber-soft), var(--shadow);
+}
+.team-initials {
+  display: grid;
+  place-items: center;
+  background: var(--forest);
+  color: #fff;
+  font-family: var(--display);
+  font-size: 3rem;
+}
+.team-body {
+  padding: 0;
+}
+.team-card h3 {
+  color: var(--forest);
+  font-family: var(--display);
+  font-size: 1.45rem;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+.team-intro {
+  margin-top: 10px;
+  color: var(--ink-soft);
+  font-size: .92rem;
+  line-height: 1.6;
+}
+.team-fact {
+  margin-top: 12px;
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--moss);
+}
+
+/* Contact block: no line of text under the heading here */
+.about-page .cta h2 {
+  margin-bottom: 28px;
+}
+
+/* ---------- Loading ---------- */
+.about-loading {
+  min-height: 60vh;
+  display: grid;
+  place-items: center;
+  color: var(--ink-soft);
+}
+.about-loading a {
+  color: var(--forest);
+  font-weight: 700;
+  border-bottom: 2px solid var(--amber);
+}
+
+/* ---------- Tablet ---------- */
+@media (max-width: 980px) {
+  .about-story,
+  .about-founder { grid-template-columns: 1fr; gap: 32px; }
+  .about-story-side { position: static; }
+  .about-story-photo { aspect-ratio: 16 / 9; }
+  .about-founder-photo { max-width: 340px; }
+}
+
+/* ---------- Phone ---------- */
+@media (max-width: 560px) {
+  .about-banner { min-height: 330px; }
+  .about-banner-inner { padding: 0 16px 40px; }
+  .team-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .team-card { padding: 20px 12px; }
+  .team-photo { width: 110px; height: 110px; }
+  .team-initials { font-size: 2.2rem; }
+  .team-card h3 { font-size: 1.2rem; }
+  .team-intro { font-size: .84rem; }
+}

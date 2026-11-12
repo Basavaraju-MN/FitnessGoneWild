@@ -12,7 +12,8 @@ dotenv.config({
 const trekRoutes = require('./routes/routes');
 const { cachePublicApi, clearOnAdminChange } = require('./utils/apiCache');
 const { trekPage } = require('./utils/trekShare');
-const { robotsTxt, sitemapXml, homePage, otherPage } = require('./utils/seo');
+const { robotsTxt, sitemapXml, homePage, aboutPage, otherPage } = require('./utils/seo');
+const { aboutPhoto, ensureTables: prepareAboutPage } = require('./components/about/aboutPage');
 const { heroPhoto, moveHeroPhotosToDb } = require('./utils/heroPhoto');
 const { tripPhoto, oldTripPhoto, prepareTripPhotos } = require('./utils/tripPhoto');
 const { clientOrigins } = require('./config/config');
@@ -346,6 +347,8 @@ app.get('/hero-photo/:id', heroPhoto);
 // (admin → Packages & Trips); old /images/treks/<slug>/ addresses move there
 app.get('/trip-photo/:tripId/:position', tripPhoto);
 app.get('/images/treks/:slug/:file', oldTripPhoto);
+// About page photos (admin → About Page), kept in the database
+app.get('/about-photo/:slot', aboutPhoto);
 
 app.get('/invoice/:token', invoicePage);
 app.get('/invoice/:token/pdf', invoicePdfPage);
@@ -362,6 +365,7 @@ app.get(['/treks/:slug', '/trips/:slug'], trekPage(CLIENT_DIST_PATH));
 app.get('/robots.txt', robotsTxt);
 app.get('/sitemap.xml', sitemapXml);
 app.get('/', homePage(CLIENT_DIST_PATH));
+app.get('/about', aboutPage(CLIENT_DIST_PATH));
 
 app.use(express.static(CLIENT_DIST_PATH, { setHeaders: keepFiles(CLIENT_DIST_PATH) }));
 
@@ -411,6 +415,10 @@ app.listen(
     // Trip photos: make sure their table is there
     prepareTripPhotos()
       .catch((error) => console.error('Trip photos table check failed:', error?.message || error));
+
+    // About page: make sure its tables are there
+    prepareAboutPage()
+      .catch((error) => console.error('About page tables check failed:', error?.message || error));
 
     // Copy the Hostinger brochures to this server in the background
     setTimeout(() => {

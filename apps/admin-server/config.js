@@ -68,6 +68,7 @@ module.exports = {
     reviews: ['admin'],
     activity: ['admin'],
     hero: ['admin'],
+    about: ['admin'],
     users: ['admin'],
     settings: ['admin'],
   },

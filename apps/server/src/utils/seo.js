@@ -152,6 +152,7 @@ async function sitemapXml(req, res, next) {
       const trips = await publishedTrips();
       const urls = [
         `  <url><loc>${esc(base)}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>`,
+        `  <url><loc>${esc(base)}/about</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>`,
         ...trips.map((t) => `  <url><loc>${esc(base + tripPath(t))}</loc>${t.updated ? `<lastmod>${t.updated}</lastmod>` : ''}<changefreq>weekly</changefreq><priority>0.8</priority></url>`),
       ];
       sitemapKept = {
@@ -216,7 +217,45 @@ function homePage(clientDist) {
 /* ---------------- Pages that are not real pages ---------------- */
 // Addresses the website has, but which only show a "coming soon" page or are
 // part of paying: shown normally, kept out of search results
-const NOINDEX_PATHS = ['/treks', '/about', '/reviews', '/faq', '/contact', '/payment', '/payment-result'];
+const NOINDEX_PATHS = ['/treks', '/reviews', '/faq', '/contact', '/payment', '/payment-result'];
+
+/* ---------------- About page ---------------- */
+// /about with its own title, description, preview photo and text for
+// crawlers, all from what the admin saved (About Page screen)
+function aboutPage(clientDist) {
+  return async (req, res, next) => {
+    try {
+      const base = siteUrl(req);
+      const { content, photos, team } = await require('../components/about/aboutPage').getAbout();
+      const title = `About us | ${SITE_NAME}`;
+      const description = [content.banner.subtitle, plain(content.story.text).split('\n')[0]]
+        .filter(Boolean).join(' ').slice(0, 200);
+      const url = `${base}/about`;
+      const image = `${base}${photos.banner || '/images/hero1.jpg'}`;
+      const founder = content.founder.show && content.founder.name ? content.founder : null;
+      const body = `<main class="seo-text">
+  <p><a href="/">${esc(SITE_NAME)}</a></p>
+  <h1>${esc(content.banner.title)}</h1>
+  <p>${esc(content.banner.subtitle)}</p>
+  <h2>${esc(content.story.title)}</h2>
+  ${plain(content.story.text).split('\n').filter(Boolean).map((p) => `<p>${esc(p)}</p>`).join('\n  ')}
+  ${founder ? `<h2>${esc(founder.name)} · ${esc(founder.role)}</h2>\n  <p>${esc(founder.note)}</p>` : ''}
+  ${team.length ? `<h2>${esc(content.team.title)}</h2><ul>${team.map((m) => `<li>${esc(m.name)}${m.role ? ` · ${esc(m.role)}` : ''}</li>`).join('')}</ul>` : ''}
+</main>`;
+      res.set('Cache-Control', 'no-cache');
+      return res.type('html').send(buildPage(clientDist, { title, description, head: shareTags({ title, description, image, url }), body }));
+    } catch (error) {
+      // Database down: the page still opens (the website loads the texts itself)
+      console.error('About page tags failed:', error?.message || error);
+      try {
+        res.set('Cache-Control', 'no-cache');
+        return res.type('html').send(buildPage(clientDist, { title: `About us | ${SITE_NAME}` }));
+      } catch (pageError) {
+        return next(pageError);
+      }
+    }
+  };
+}
 
 /**
  * The website for any other address: known ones as usual (noindex where
@@ -255,5 +294,6 @@ module.exports = {
   robotsTxt,
   sitemapXml,
   homePage,
+  aboutPage,
   otherPage,
 };

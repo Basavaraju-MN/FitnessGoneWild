@@ -812,3 +812,28 @@ exports.getBrochures = async (req, res, next) => {
     return next(error);
   }
 };
+
+/* =====================================================================
+   ABOUT PAGE
+   ===================================================================== */
+
+const aboutManager = require('../components/about/aboutManager');
+
+// Every About Page action answers with the whole page (texts, photos, team)
+const aboutAction = (run, message) => async (req, res, next) => {
+  try {
+    const data = await run(req);
+    return res.status(200).json({ success: true, message, data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.getAbout = aboutAction(() => aboutManager.getAbout(), 'About page fetched successfully');
+exports.saveAbout = aboutAction((req) => aboutManager.saveContent(req.admin, req.body || {}), 'About page saved');
+exports.saveAboutPhoto = aboutAction((req) => aboutManager.savePagePhoto(req.admin, req.params.slot, req.body || {}), 'Photo saved');
+exports.deleteAboutPhoto = aboutAction((req) => aboutManager.deletePagePhoto(req.admin, req.params.slot), 'Photo removed');
+exports.createAboutMember = aboutAction((req) => aboutManager.createMember(req.admin, req.body || {}), 'Team member added');
+exports.updateAboutMember = aboutAction((req) => aboutManager.updateMember(req.admin, idParam(req), req.body || {}), 'Team member saved');
+exports.deleteAboutMember = aboutAction((req) => aboutManager.deleteMember(req.admin, idParam(req)), 'Team member removed');
+exports.reorderAboutTeam = aboutAction((req) => aboutManager.reorderTeam(req.admin, req.body?.ids || []), 'Order saved');

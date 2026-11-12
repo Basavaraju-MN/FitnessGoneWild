@@ -27,6 +27,7 @@ const SCREENS = [
   { module: 'reviews', label: 'Reviews', group: 'Customer Management' },
   { module: 'brochures', label: 'Brochures', group: 'Marketing & Content' },
   { module: 'hero', label: 'Website Hero', group: 'Marketing & Content' },
+  { module: 'about', label: 'About Page', group: 'Marketing & Content' },
   { module: 'reports', label: 'Reports & Exports', group: 'Reports & Analytics' },
   { module: 'activity', label: 'Activity Log', group: 'System Settings' },
   { module: 'users', label: 'Users & Roles', group: 'System Settings' },

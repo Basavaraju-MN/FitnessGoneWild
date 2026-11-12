@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  BookOpen, CalendarDays, ChartColumn, History, Image as ImageIcon, LayoutDashboard,
+  BookOpen, CalendarDays, ChartColumn, History, Image as ImageIcon, Info, LayoutDashboard,
   Map as MapIcon, MapPin, MessagesSquare, Mountain, Settings as SettingsIcon,
   ShieldCheck, Star, Ticket, TicketPercent, Users as UsersIcon, UsersRound, Wallet,
 } from 'lucide-react';
@@ -29,6 +29,7 @@ import Payments from './pages/Payments';
 import Reviews from './pages/Reviews';
 import Activity from './pages/Activity';
 import WebsiteHero from './pages/WebsiteHero';
+import AboutPage from './pages/AboutPage';
 import Reports from './pages/Reports';
 import Guides from './pages/Guides';
 import PickupPoints from './pages/PickupPoints';
@@ -62,6 +63,7 @@ const PAGES = [
   { id: 'reviews', label: 'Reviews', icon: Star, component: Reviews, group: 'Customer Management' },
   { id: 'brochures', label: 'Brochures', icon: BookOpen, component: Brochures, group: 'Marketing & Content' },
   { id: 'hero', label: 'Website Hero', icon: ImageIcon, component: WebsiteHero, group: 'Marketing & Content' },
+  { id: 'about', label: 'About Page', icon: Info, component: AboutPage, group: 'Marketing & Content' },
   { id: 'reports', label: 'Reports & Exports', icon: ChartColumn, component: Reports, group: 'Reports & Analytics' },
   { id: 'activity', label: 'Activity Log', icon: History, component: Activity, group: 'System Settings' },
   { id: 'users', label: 'Users & Roles', icon: ShieldCheck, component: Users, group: 'System Settings' },

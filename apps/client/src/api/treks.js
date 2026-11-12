@@ -217,6 +217,11 @@ export async function getHero() {
   return result.data;
 }
 
+// About page: texts, photos, founder and team — edited in the admin
+export async function getAbout(options) {
+  return getWithRetry('/about', options);
+}
+
 // Regions and departure cities for the "Departing from" picker and region
 // filter. Empty lists when the server does not have them yet.
 export async function getSiteFilters(options) {

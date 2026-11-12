@@ -118,6 +118,16 @@ router.put('/hero/timing', can('hero'), controller.saveHeroTiming);
 router.put('/hero/:id', can('hero'), controller.updateHero);
 router.delete('/hero/:id', can('hero'), controller.deleteHero);
 
+// About page (website /about): texts, page photos, team
+router.get('/about', can('about'), controller.getAbout);
+router.put('/about', can('about'), controller.saveAbout);
+router.put('/about/photos/:slot', can('about'), controller.saveAboutPhoto);
+router.delete('/about/photos/:slot', can('about'), controller.deleteAboutPhoto);
+router.post('/about/team', can('about'), controller.createAboutMember);
+router.put('/about/team/order', can('about'), controller.reorderAboutTeam);
+router.put('/about/team/:id', can('about'), controller.updateAboutMember);
+router.delete('/about/team/:id', can('about'), controller.deleteAboutMember);
+
 router.get('/settings', can('settings'), controller.getSettings);
 router.put('/settings', can('settings'), controller.updateSettings);
 
