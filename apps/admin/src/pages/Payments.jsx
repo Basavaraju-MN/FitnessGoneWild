@@ -182,7 +182,13 @@ export default function Payments() {
             { key: 'customer_name', label: 'Customer', render: (r) => <><b>{r.customer_name || '—'}</b><br /><span className="muted">{r.customer_phone}</span></>, csv: (r) => r.customer_name },
             { key: 'trip_name', label: 'Trip' },
             { key: 'amount', label: 'Amount', render: (r) => money(r.amount) },
-            { key: 'payment_type', label: 'Type', render: (r) => label(r.payment_type || 'full'), csv: (r) => label(r.payment_type || 'full') },
+            {
+              key: 'payment_type', label: 'Type',
+              render: (r) => (r.payment_type === 'balance'
+                ? <>Balance<div className="muted">by {r.collected_by_name || 'guide'}</div></>
+                : label(r.payment_type || 'full')),
+              csv: (r) => (r.payment_type === 'balance' ? `Balance (by ${r.collected_by_name || 'guide'})` : label(r.payment_type || 'full')),
+            },
             { key: 'payment_method', label: 'Method', render: (r) => label(r.payment_method) || '—' },
             { key: 'created_at', label: 'Date', render: (r) => dateTime(r.created_at) },
             { key: 'status', label: 'Status', render: (r) => <Pill value={r.status} /> },

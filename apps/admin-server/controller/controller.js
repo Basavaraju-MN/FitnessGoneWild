@@ -20,6 +20,8 @@ const activityManager = require('../components/activity/activityManager');
 const refundManager = require('../components/refund/refundManager');
 const heroManager = require('../components/hero/heroManager');
 const couponManager = require('../components/coupon/couponManager');
+const trekLeadManager = require('../components/trekLead/trekLeadManager');
+const expenseManager = require('../components/trekLead/expenseManager');
 
 // Session cookie: the admin is on the same site as its API
 // (thefitnessgonewild.in/admin and /api/admin; localhost ports locally)
@@ -103,6 +105,56 @@ exports.getNotifications = async (req, res, next) => {
     return next(error);
   }
 };
+
+/* ---------- Trek Lead portal (guides with a login; read-only, own trips only) ---------- */
+
+const leadAction = (work, message) => async (req, res, next) => {
+  try {
+    const data = await work(req);
+    return res.status(200).json({ success: true, message, data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.getLeadDashboard = leadAction((req) => trekLeadManager.dashboard(req.admin), 'Dashboard fetched successfully');
+exports.getLeadTrips = leadAction((req) => trekLeadManager.myTrips(req.admin), 'Trips fetched successfully');
+exports.getLeadTrip = leadAction((req) => trekLeadManager.myTrip(req.admin, req.params.id), 'Trip fetched successfully');
+exports.getLeadCustomers = leadAction((req) => trekLeadManager.myCustomers(req.admin), 'Customers fetched successfully');
+exports.getLeadBooking = leadAction((req) => trekLeadManager.myBooking(req.admin, req.params.id), 'Booking fetched successfully');
+exports.collectLeadBalance = leadAction((req) => trekLeadManager.collectBalance(req.admin, req.params.id, req.body || {}), 'Payment page created');
+exports.recordLeadCash = leadAction((req) => trekLeadManager.recordCash(req.admin, req.params.id, req.body || {}), 'Cash payment recorded');
+
+// Trip expenses (guide)
+exports.getLeadExpenses = leadAction((req) => expenseManager.tripExpenses(req.admin, req.params.id), 'Expenses fetched');
+exports.addLeadExpense = leadAction((req) => expenseManager.addExpense(req.admin, req.params.id, req.body || {}), 'Expense added');
+exports.updateLeadExpense = leadAction((req) => expenseManager.updateExpense(req.admin, req.params.id, req.body || {}), 'Expense updated');
+exports.deleteLeadExpense = leadAction((req) => expenseManager.deleteExpense(req.admin, req.params.id), 'Expense deleted');
+exports.getLeadExpenseReceipt = (req, res, next) => expenseManager.myReceipt(req.admin, res, req.params.id).catch(next);
+
+// Trip expenses (office, Trip Coordination)
+exports.getDepartureExpenses = leadAction((req) => expenseManager.departureExpenses(req.params.id), 'Expenses fetched');
+// B2B (customers exchanged with other vendors)
+const b2bManager = require('../components/b2b/b2bManager');
+exports.getTripB2B = leadAction((req) => b2bManager.tripB2B(req.params.id), 'B2B fetched');
+exports.addB2BInbound = leadAction((req) => b2bManager.addInbound(req.admin, req.params.id, req.body || {}), 'Customer added from the vendor');
+exports.transferBookingB2B = leadAction((req) => b2bManager.transferOut(req.admin, req.params.id, req.body || {}), 'Transferred to the vendor');
+exports.addB2BSettlement = leadAction((req) => b2bManager.addSettlement(req.admin, req.params.id, req.body || {}), 'Settlement recorded');
+exports.getB2BSettlements = leadAction((req) => b2bManager.getSettlements(req.params.id), 'Settlements fetched');
+exports.getB2BVendors = leadAction(() => b2bManager.getVendors(), 'Vendors fetched');
+exports.createB2BVendor = leadAction((req) => b2bManager.createVendor(req.admin, req.body || {}), 'Vendor added');
+exports.updateB2BVendor = leadAction((req) => b2bManager.updateVendor(req.admin, req.params.id, req.body || {}), 'Vendor updated');
+exports.getB2BRecords = leadAction(() => b2bManager.allRecords(), 'B2B records fetched');
+exports.getB2BStatement = leadAction((req) => b2bManager.vendorStatement(req.params.id), 'Statement fetched');
+exports.settleB2BVendor = leadAction((req) => b2bManager.settleVendor(req.admin, req.params.id, req.body || {}), 'Settled with the vendor');
+
+exports.getDepartureReport = leadAction((req) => expenseManager.tripReport(req.params.id), 'Trip report fetched');
+exports.reviewExpense = leadAction((req) => expenseManager.reviewExpense(req.admin, req.params.id, req.body || {}), 'Expense updated');
+exports.addOfficeExpense = leadAction((req) => expenseManager.addOfficeExpense(req.admin, req.params.id, req.body || {}), 'Expense added');
+exports.updateOfficeExpense = leadAction((req) => expenseManager.updateOfficeExpense(req.admin, req.params.id, req.body || {}), 'Expense updated');
+exports.deleteOfficeExpense = leadAction((req) => expenseManager.deleteOfficeExpense(req.admin, req.params.id), 'Expense deleted');
+exports.getExpenseReceipt = (req, res, next) => expenseManager.officeReceipt(res, req.params.id).catch(next);
+exports.getLeadCollection = leadAction((req) => trekLeadManager.collectionStatus(req.admin, req.params.orderId), 'Payment status fetched');
 
 /* =====================================================================
    PACKAGES & TRIPS
@@ -812,3 +864,28 @@ exports.getBrochures = async (req, res, next) => {
     return next(error);
   }
 };
+
+/* =====================================================================
+   ABOUT PAGE
+   ===================================================================== */
+
+const aboutManager = require('../components/about/aboutManager');
+
+// Every About Page action answers with the whole page (texts, photos, team)
+const aboutAction = (run, message) => async (req, res, next) => {
+  try {
+    const data = await run(req);
+    return res.status(200).json({ success: true, message, data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.getAbout = aboutAction(() => aboutManager.getAbout(), 'About page fetched successfully');
+exports.saveAbout = aboutAction((req) => aboutManager.saveContent(req.admin, req.body || {}), 'About page saved');
+exports.saveAboutPhoto = aboutAction((req) => aboutManager.savePagePhoto(req.admin, req.params.slot, req.body || {}), 'Photo saved');
+exports.deleteAboutPhoto = aboutAction((req) => aboutManager.deletePagePhoto(req.admin, req.params.slot), 'Photo removed');
+exports.createAboutMember = aboutAction((req) => aboutManager.createMember(req.admin, req.body || {}), 'Team member added');
+exports.updateAboutMember = aboutAction((req) => aboutManager.updateMember(req.admin, idParam(req), req.body || {}), 'Team member saved');
+exports.deleteAboutMember = aboutAction((req) => aboutManager.deleteMember(req.admin, idParam(req)), 'Team member removed');
+exports.reorderAboutTeam = aboutAction((req) => aboutManager.reorderTeam(req.admin, req.body?.ids || []), 'Order saved');

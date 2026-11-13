@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 
 import Home from './pages/Home';
+import About from './pages/About';
 import PaymentOptions from './pages/PaymentOptions';
 import PaymentResult from './pages/PaymentResult';
 import Placeholder from './pages/Placeholder';
@@ -70,7 +71,7 @@ export default function App() {
 
         <Route
           path="/about"
-          element={<Placeholder title="About Us" />}
+          element={<About />}
         />
 
         <Route

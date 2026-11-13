@@ -16,6 +16,7 @@ const CACHED_PATHS = new Set([
   '/trek',
   '/reviews',
   '/hero',
+  '/about',
   '/why-us',
   '/faq',
   '/pickup-points',
@@ -35,9 +36,13 @@ const fresh = (key) => {
   return hit && Date.now() - hit.at < TTL_MS ? hit : null;
 };
 
+// While developing, the admin (localhost:4100) is its own server and cannot
+// clear this cache, so admin changes would show only after 2 minutes: no cache
+const USE_CACHE = process.env.NODE_ENV === 'production';
+
 // Express middleware for app.use('/api', …)
 async function cachePublicApi(req, res, next) {
-  if (req.method !== 'GET' || !CACHED_PATHS.has(req.path)) return next();
+  if (!USE_CACHE || req.method !== 'GET' || !CACHED_PATHS.has(req.path)) return next();
 
   const key = req.originalUrl;
   let hit = fresh(key);

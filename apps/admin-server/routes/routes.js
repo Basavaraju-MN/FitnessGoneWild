@@ -1,12 +1,17 @@
 const express = require('express');
 
 const controller = require('../controller/controller');
-const { requireAuth, requireModule } = require('../middleware/auth');
+const { requireAuth, requireModule, requireTrekLead, requireStaff } = require('../middleware/auth');
 
 const router = express.Router();
 
 // can('bookings') = only roles that may open the Bookings section
 const can = requireModule;
+// Either of two screens is enough (e.g. vendors are used in Trip Coordination too)
+const canAny = (...modules) => (req, res, next) => {
+  const ok = modules.some((m) => require('../components/permission/permissionManager').rolesFor(m).includes(req.admin?.role));
+  return ok ? next() : requireModule(modules[0])(req, res, next);
+};
 
 // Guides and pickup points have their own menus; categories are managed
 // from the Treks & Trips screen
@@ -25,9 +30,27 @@ router.use(requireAuth);
 router.get('/auth/me', controller.me);
 router.post('/auth/change-password', controller.changePassword);
 
-router.get('/lookups', controller.getLookups);
+router.get('/lookups', requireStaff, controller.getLookups);
 router.get('/dashboard', can('dashboard'), controller.getDashboard);
-router.get('/notifications', controller.getNotifications);
+router.get('/notifications', requireStaff, controller.getNotifications);
+
+// Trek Lead portal (guides with a login): read-only, only their own trips
+router.get('/lead/dashboard', requireTrekLead, controller.getLeadDashboard);
+router.get('/lead/trips', requireTrekLead, controller.getLeadTrips);
+router.get('/lead/trips/:id', requireTrekLead, controller.getLeadTrip);
+router.get('/lead/customers', requireTrekLead, controller.getLeadCustomers);
+router.get('/lead/bookings/:id', requireTrekLead, controller.getLeadBooking);
+// Collect balance through PhonePe (QR / link); the payment is verified with PhonePe
+router.post('/lead/bookings/:id/collect', requireTrekLead, controller.collectLeadBalance);
+// Cash the guide received (all or part of the balance)
+router.post('/lead/bookings/:id/cash', requireTrekLead, controller.recordLeadCash);
+// Trip expenses the guide spent (with a bill photo); changeable until reviewed
+router.get('/lead/trips/:id/expenses', requireTrekLead, controller.getLeadExpenses);
+router.post('/lead/trips/:id/expenses', requireTrekLead, controller.addLeadExpense);
+router.put('/lead/expenses/:id', requireTrekLead, controller.updateLeadExpense);
+router.delete('/lead/expenses/:id', requireTrekLead, controller.deleteLeadExpense);
+router.get('/lead/expenses/:id/receipt', requireTrekLead, controller.getLeadExpenseReceipt);
+router.get('/lead/collections/:orderId', requireTrekLead, controller.getLeadCollection);
 
 router.get('/trips', can('packages'), controller.getTrips);
 // Terms & policies: treks to copy from, and one trek's sections
@@ -48,6 +71,30 @@ router.get('/departures', can('coordination'), controller.getDepartures);
 router.get('/departures/:id', can('coordination'), controller.getDeparture);
 router.post('/departures', can('coordination'), controller.createDeparture);
 router.put('/departures/:id', can('coordination'), controller.updateDeparture);
+// Expenses guides added for a trip: review (approve / reject) and bill photos
+router.get('/departures/:id/expenses', can('coordination'), controller.getDepartureExpenses);
+
+// B2B: customers exchanged with other vendors. Inside a trip (Trip Coordination)…
+router.get('/departures/:id/b2b', can('coordination'), controller.getTripB2B);
+router.post('/departures/:id/b2b/inbound', can('coordination'), controller.addB2BInbound);
+router.post('/bookings/:id/transfer', can('coordination'), controller.transferBookingB2B);
+router.post('/b2b/records/:id/settlements', canAny('coordination', 'b2b'), controller.addB2BSettlement);
+router.get('/b2b/records/:id/settlements', canAny('coordination', 'b2b'), controller.getB2BSettlements);
+// …vendors (picked in Trip Coordination, managed on the B2B Vendors screen)
+router.get('/b2b/vendors', canAny('coordination', 'b2b'), controller.getB2BVendors);
+router.post('/b2b/vendors', canAny('coordination', 'b2b'), controller.createB2BVendor);
+router.put('/b2b/vendors/:id', can('b2b'), controller.updateB2BVendor);
+router.get('/b2b/records', can('b2b'), controller.getB2BRecords);
+// One vendor: statement, and settling everything open with them at once
+router.get('/b2b/vendors/:id/statement', can('b2b'), controller.getB2BStatement);
+router.post('/b2b/vendors/:id/settle', can('b2b'), controller.settleB2BVendor);
+// Excel trip report: every payment received, every expense, profit / loss
+router.get('/departures/:id/report', can('coordination'), controller.getDepartureReport);
+router.post('/departures/:id/expenses', can('coordination'), controller.addOfficeExpense);
+router.put('/expenses/:id', can('coordination'), controller.updateOfficeExpense);
+router.delete('/expenses/:id', can('coordination'), controller.deleteOfficeExpense);
+router.patch('/expenses/:id', can('coordination'), controller.reviewExpense);
+router.get('/expenses/:id/receipt', can('coordination'), controller.getExpenseReceipt);
 
 router.get('/bookings', can('bookings'), controller.getBookings);
 router.get('/bookings/:id', can('bookings'), controller.getBooking);
@@ -117,6 +164,16 @@ router.put('/hero/order', can('hero'), controller.reorderHeroes);
 router.put('/hero/timing', can('hero'), controller.saveHeroTiming);
 router.put('/hero/:id', can('hero'), controller.updateHero);
 router.delete('/hero/:id', can('hero'), controller.deleteHero);
+
+// About page (website /about): texts, page photos, team
+router.get('/about', can('about'), controller.getAbout);
+router.put('/about', can('about'), controller.saveAbout);
+router.put('/about/photos/:slot', can('about'), controller.saveAboutPhoto);
+router.delete('/about/photos/:slot', can('about'), controller.deleteAboutPhoto);
+router.post('/about/team', can('about'), controller.createAboutMember);
+router.put('/about/team/order', can('about'), controller.reorderAboutTeam);
+router.put('/about/team/:id', can('about'), controller.updateAboutMember);
+router.delete('/about/team/:id', can('about'), controller.deleteAboutMember);
 
 router.get('/settings', can('settings'), controller.getSettings);
 router.put('/settings', can('settings'), controller.updateSettings);

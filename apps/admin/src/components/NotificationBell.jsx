@@ -12,6 +12,7 @@ const SEEN_KEYS = {
   booking: 'fgw-admin-booking-seen-id',
   brochure: 'fgw-admin-brochure-lead-seen-id',
   interest: 'fgw-admin-interest-seen-id',
+  collection: 'fgw-admin-collection-seen-id',
 };
 
 const readSeen = (type) => {
@@ -52,6 +53,14 @@ const describe = {
     toast: `📄 ${item.name} downloaded the ${item.trip_name || ''} brochure`,
     heading: 'New brochure download',
     notification: `${item.name} · ${item.phone} · ${item.trip_name || ''}`,
+  }),
+  collection: (item) => ({
+    icon: '💰',
+    title: `${item.name} paid ${money(item.amount)}${item.method === 'cash' ? ' in cash' : ' online'}`,
+    detail: `${item.booking_ref} · ${item.trip_name || ''} · ${item.method === 'cash' ? 'Cash' : 'PhonePe'}, collected by ${item.collected_by || 'a guide'}${Number(item.balance_amount) > 0 ? ` · ${money(item.balance_amount)} still due` : ' · fully paid'}`,
+    toast: `💰 Balance received: ${item.name} · ${money(item.amount)}${item.method === 'cash' ? ' (cash)' : ''}`,
+    heading: 'Balance received',
+    notification: `${item.name} · ${money(item.amount)} ${item.method === 'cash' ? 'in cash' : 'via PhonePe'} · ${item.booking_ref}`,
   }),
   interest: (item) => ({
     icon: '⭐',

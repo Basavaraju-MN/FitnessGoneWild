@@ -25,6 +25,9 @@ router.get('/reviews', controller.getReviews);
 
 router.get('/hero', controller.getHero);
 
+// About page: texts, founder and team (edited in the admin)
+router.get('/about', controller.getAbout);
+
 router.get('/why-us', controller.getWhyUs);
 
 router.get('/faq', controller.getFaq);

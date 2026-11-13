@@ -2,6 +2,7 @@
 // Called by controller/controller.js; reads and writes through db/dbops.js.
 const crypto = require('crypto');
 const dbops = require('../../db/dbops');
+const { executeQuery } = require('../../db/connection');
 const tripCode = require('../../../server/src/components/trip/tripCode');
 const { publicSiteUrl } = require('../../config');
 const refundManager = require('../refund/refundManager');
@@ -87,6 +88,15 @@ async function bookingCoupon(code, { tripId, people, tripAmount, gstPercent }) {
 }
 
 // Booking taken by phone / WhatsApp / walk-in
+// People in one booking (the column holds up to 127)
+const MAX_PEOPLE = 99;
+// The same booking (trip, customer, people, amount) saved in the last 3 minutes
+const RECENT_SAME_BOOKING = `
+  SELECT booking_ref FROM bookings
+  WHERE departure_id = ? AND customer_id = ? AND people = ? AND ABS(amount - ?) < 0.01
+    AND status <> 'cancelled' AND booked_at > NOW() - INTERVAL 3 MINUTE
+  ORDER BY id DESC LIMIT 1`;
+
 async function createBooking(admin, body) {
   requireFields(body, ['departure_id', 'name', 'phone']);
   if ((body.trip_amount === undefined || body.trip_amount === '') && (body.amount === undefined || body.amount === '')) {
@@ -107,6 +117,11 @@ async function createBooking(admin, body) {
     : Math.max(0, Number(body.without_transport_people) || 0);
   const people = withTransport + withoutTransport;
   if (people < 1) throw badRequest('Add at least one person');
+  // The database keeps at most 127 per booking (and seats must stay right):
+  // a big number here is almost always the amount typed in the wrong box
+  if (people > MAX_PEOPLE) {
+    throw badRequest(`People: ${MAX_PEOPLE} at most in one booking (you entered ${people}). Did you type the amount in the People box?`);
+  }
 
   // The trip amount is entered without GST; GST (Settings, 5%) is added on
   // top, then a coupon comes off that total.
@@ -133,6 +148,16 @@ async function createBooking(admin, body) {
   const status = BOOKING_STATUSES.includes(body.status) ? body.status : 'confirmed';
   // Not chosen: the person entering the booking sold it
   const soldBy = (await soldByFrom(body.sold_by)) ?? admin.id ?? null;
+
+  // Saved twice? (the first save worked but its answer was lost: a dropped
+  // connection, the server restarting…, and the form was sent again)
+  const existingCustomer = await dbops.getCustomerIdByPhone(String(body.phone).trim());
+  if (existingCustomer) {
+    const [same] = await executeQuery(RECENT_SAME_BOOKING, [departure.id, existingCustomer, people, amount]);
+    if (same) {
+      throw badRequest(`This booking was already saved a moment ago (${same.booking_ref}). Close this and refresh the list; no need to add it again.`);
+    }
+  }
 
   const customerId = await findOrCreateCustomer({
     name: String(body.name).trim(),
@@ -211,6 +236,14 @@ async function updateBooking(admin, id, body) {
   if (!booking) throw notFound('Booking not found');
 
   const data = pick(body, ['status', 'pickup_point_id', 'notes', 'amount']);
+  // A booking given to a B2B vendor stays as it is (its seats and money are
+  // in the B2B record); a booking cannot be marked transferred here either
+  if (booking.status === 'transferred' && (data.status !== undefined && data.status !== 'transferred' || data.amount !== undefined || body.trip_amount !== undefined && body.trip_amount !== '')) {
+    throw badRequest('This booking was transferred to a B2B vendor. Its status and amount cannot be changed.');
+  }
+  if (data.status === 'transferred' && booking.status !== 'transferred') {
+    throw badRequest('Use “Transfer to vendor” in Trip Coordination to transfer a booking');
+  }
   // Sold by: change it, or empty to clear it. Checked only when it changes,
   // so a booking keeps a rep who has since been deactivated.
   if (body.sold_by !== undefined && String(body.sold_by ?? '') !== String(booking.sold_by ?? '')) {

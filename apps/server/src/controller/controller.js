@@ -101,6 +101,16 @@ exports.getFeaturedTrips = async (req, res) => {
   }
 };
 
+exports.getAbout = async (req, res) => {
+  try {
+    const data = await require('../components/about/aboutPage').getAbout();
+    return res.status(200).json({ success: true, message: 'About page fetched successfully', data });
+  } catch (error) {
+    console.error('Error fetching about page:', error?.message || error);
+    return res.status(500).json({ success: false, message: 'Error fetching about page' });
+  }
+};
+
 exports.getHero = async (req, res) => {
   try {
     const result = await component.getHero();

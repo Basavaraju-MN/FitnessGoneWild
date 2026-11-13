@@ -931,3 +931,330 @@ button.avatar:hover { background: var(--cp-brand-blue-90); }
 .ss-list li.ss-none { color: var(--muted); cursor: default; }
 :root[data-theme='dark'] .ss-trigger, :root[data-theme='dark'] .ss-search { background-color: var(--cp-input); color: var(--ink); border-color: #717d96; }
 :root[data-theme='dark'] .ss-panel { box-shadow: 0 14px 34px rgba(0, 0, 0, .45); }
+
+/* ---------- About Page screen ---------- */
+.about-admin { display: grid; gap: 14px; padding-bottom: 30px; }
+.about-card .form { align-content: start; }
+.about-split { display: grid; grid-template-columns: 260px 1fr; gap: 6px; align-items: start; padding-left: 16px; }
+.about-split > .form, .about-card .field { min-width: 0; }
+.about-off { opacity: .5; }
+.about-photo { padding: 14px 0; display: grid; gap: 8px; }
+.about-photo-box { width: 100%; aspect-ratio: 16 / 10; border-radius: 8px; overflow: hidden; background: var(--mist); border: 1px dashed var(--line); display: grid; place-items: center; color: var(--muted); font-size: 12px; }
+.about-photo.round .about-photo-box { aspect-ratio: 4 / 5; }
+.about-photo-box img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.about-photo-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.about-photo small { font-size: 11px; }
+.about-row { display: grid; grid-template-columns: 140px 1fr auto; gap: 8px; margin-bottom: 8px; }
+.about-row.values { grid-template-columns: 70px 180px 1fr auto; }
+.about-team { padding: 0 16px 16px; display: grid; gap: 8px; justify-items: start; }
+.about-team .trip-empty { width: 100%; }
+.about-member { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--cp-card); }
+.about-member.off { opacity: .6; }
+.about-member-text { flex: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-width: 0; }
+.about-member-text .muted { font-size: 12px; }
+.about-member-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.about-avatar { width: 44px; height: 44px; flex: none; border-radius: 50%; overflow: hidden; background: var(--heading); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+.about-avatar.large { width: 110px; height: 110px; font-size: 30px; }
+.about-avatar.large img { object-position: center 20%; }
+.about-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.about-member-photo { display: flex; align-items: center; gap: 16px; }
+.about-member-photo > div:last-child { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.about-member-photo small { flex-basis: 100%; }
+.about-unsaved { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; padding: 10px 14px; border-radius: 8px; background: var(--tint-amber-bg); color: var(--tint-amber); font-weight: 700; font-size: 13px; }
+.about-unsaved span { margin-right: auto; }
+@media (max-width: 950px) {
+  .about-split { grid-template-columns: 1fr; padding: 0 16px; }
+  .about-split .form { padding: 0 0 14px; }
+}
+@media (max-width: 650px) {
+  .about-row, .about-row.values { grid-template-columns: 1fr auto; }
+  .about-row.values input:first-child { grid-column: 1 / -1; }
+  .about-member { flex-wrap: wrap; }
+}
+
+/* ---------- Trek Lead portal ---------- */
+.lead-details { padding: 0 0 14px; }
+.lead-subhead { margin: 6px 0 8px; font-size: 15px; }
+.lead-note { margin-top: 12px; font-size: 13px; }
+.lead-mini { width: 100%; border-collapse: collapse; font-size: 14px; }
+.lead-mini th, .lead-mini td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.lead-mini th { color: var(--muted); font-weight: 600; font-size: 12px; }
+.lead-mini .num { text-align: right; }
+.lead-activity { list-style: none; margin: 0; padding: 0; }
+.lead-activity li { display: grid; grid-template-columns: 12px 1fr auto; gap: 12px; align-items: start; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.lead-activity li:last-child { border-bottom: 0; }
+.lead-activity .muted { font-size: 12px; margin-top: 2px; }
+.lead-dot { width: 10px; height: 10px; margin-top: 6px; border-radius: 50%; background: var(--cp-brand-blue); }
+.lead-dot.payment { background: #2e9d63; }
+.lead-profile { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; align-items: start; }
+.lead-profile .details { grid-template-columns: 1fr 1fr; }
+.lead-profile .modalfoot { position: static; }
+@media (max-width: 700px) {
+  .lead-details { grid-template-columns: 1fr 1fr; }
+  .lead-activity li { grid-template-columns: 12px 1fr; }
+  .lead-activity li > small { grid-column: 2; }
+}
+
+/* Multi-select dropdown (e.g. guides of a trip): chosen items as chips */
+.pick-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.pick-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 10px; border-radius: 999px; background: var(--cp-brand-blue-20); color: var(--cp-on-surface); font-size: 13px; font-weight: 600; }
+.pick-chip button { width: 20px; height: 20px; border: 0; border-radius: 50%; background: transparent; color: inherit; font-size: 15px; line-height: 1; cursor: pointer; }
+.pick-chip button:hover { background: var(--cp-brand-blue-60); }
+
+/* Collect balance (Trek Lead portal, PhonePe) */
+.lead-collect-row { margin: 4px 0 14px; }
+.collect { display: grid; gap: 14px; }
+.collect-amount { display: grid; gap: 2px; padding: 16px; border-radius: 12px; background: var(--cp-surface-lighter-gray); text-align: center; }
+.collect-amount b { font-size: 30px; color: var(--cp-brand-deep); }
+.collect-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.collect-steps { margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.55; }
+.collect-wait { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 10px; background: var(--tint-amber-bg, #fff6e5); font-weight: 600; }
+.collect-spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: collect-spin .8s linear infinite; }
+@keyframes collect-spin { to { transform: rotate(360deg); } }
+.collect-done { display: grid; justify-items: center; gap: 6px; padding: 10px 0 4px; text-align: center; }
+.collect-done > span { display: grid; place-items: center; width: 54px; height: 54px; border-radius: 50%; background: #2e9d63; color: #fff; font-size: 28px; }
+.collect-done p { margin: 0 0 8px; }
+@media (max-width: 560px) { .collect-actions { grid-template-columns: 1fr; } }
+.collect-modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 4px; border-radius: 12px; background: var(--cp-surface-gray); }
+.collect-modes button { padding: 9px 6px; border: 0; border-radius: 9px; background: transparent; color: inherit; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer; }
+.collect-modes button.active { background: var(--cp-card); color: var(--cp-brand-deep); box-shadow: 0 1px 4px rgba(0, 0, 0, .12); }
+.collect-modes button:disabled:not(.active) { opacity: .45; cursor: not-allowed; }
+.collect-cash { display: grid; gap: 10px; }
+.collect-cash .form { padding: 0; }
+.collect-hint { margin: 0; font-size: 12px; }
+.collect-cash-done { margin-top: 4px; color: #1f7a4d; font-weight: 700; font-size: 13px; }
+.collect-online-amount { font-size: 15px; }
+@media (max-width: 560px) { .collect-modes { grid-template-columns: 1fr; } }
+
+/* Trip expenses (guide portal and Trip Coordination) */
+.trip-expenses { margin-top: 12px; }
+.expense-list { list-style: none; margin: 0; padding: 0 14px 10px; }
+.expense { display: grid; grid-template-columns: 56px 1fr auto; gap: 12px; align-items: start; padding: 12px 0; border-top: 1px solid var(--line); }
+.expense.rejected .expense-main { opacity: .65; }
+.expense-thumb { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 10px; overflow: hidden; background: var(--cp-surface-gray); font-size: 24px; }
+.expense-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.expense-main { display: grid; gap: 3px; min-width: 0; }
+.expense-top { display: flex; justify-content: space-between; gap: 10px; }
+.expense-amount { white-space: nowrap; }
+.expense-status { margin-top: 3px; }
+.expense-note { margin-top: 4px; font-style: italic; font-size: 13px; }
+.expense-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.expense-photo { display: flex; gap: 12px; align-items: center; }
+.expense-photo img { width: 96px; height: 96px; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); }
+.expense-photo > div { display: grid; gap: 6px; justify-items: start; }
+@media (max-width: 560px) {
+  .expense { grid-template-columns: 48px 1fr; }
+  .expense-thumb { width: 48px; height: 48px; }
+  .expense-actions { grid-column: 2; flex-direction: row; align-items: center; }
+}
+
+/* Trip profit / loss (Trip Coordination) */
+.trip-profit { display: grid; gap: 10px; padding: 0 14px 6px; }
+.trip-profit-main { display: grid; gap: 2px; padding: 16px; border-radius: 12px; background: var(--cp-surface-lighter-gray); }
+.trip-profit-main b { font-size: 28px; }
+.trip-profit-main span { color: var(--muted); font-size: 13px; }
+.trip-profit-main.profit { background: #e6f5ec; }
+.trip-profit-main.profit b { color: #1f7a4d; }
+.trip-profit-main.loss { background: #fdecea; }
+.trip-profit-main.loss b { color: #b3261e; }
+.trip-profit-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.trip-profit-grid > div { display: grid; gap: 2px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; }
+.trip-profit-grid small, .trip-profit-grid span { color: var(--muted); font-size: 12px; }
+.trip-profit-grid .profit b { color: #1f7a4d; }
+.trip-profit-grid .loss b { color: #b3261e; }
+@media (max-width: 900px) { .trip-profit-grid { grid-template-columns: 1fr 1fr; } }
+[data-theme="dark"] .trip-profit-main.profit { background: rgba(46, 157, 99, .16); }
+[data-theme="dark"] .trip-profit-main.loss { background: rgba(179, 38, 30, .18); }
+
+/* =====================================================================
+   Trip Coordination (redesign): header, coloured metrics, trip list,
+   selected-trip panel, expenses. Light and dark follow the theme tokens.
+   ===================================================================== */
+.coord { --coord-purple: #9b82ed; --coord-amber: #f4b64e; display: flex; flex-direction: column; }
+.coord-top { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+.coord-eyebrow { color: var(--cp-brand-blue); text-transform: uppercase; font-size: 11px; font-weight: 700; letter-spacing: 1.3px; }
+.coord-top h1 { margin: 5px 0; font-family: var(--display); font-size: 26px; font-weight: 700; color: var(--heading); }
+.coord-sub { color: var(--muted); font-size: 12.5px; }
+
+.coord-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 22px; }
+.coord-metric { background: var(--cp-card); border: 1px solid var(--line); border-top: 3px solid var(--cp-brand-blue); border-radius: 11px; padding: 16px; }
+.coord-metric:nth-child(2) { border-top-color: var(--coord-purple); }
+.coord-metric:nth-child(3) { border-top-color: var(--cp-success); }
+.coord-metric:nth-child(4) { border-top-color: var(--coord-amber); }
+.coord-label { color: var(--muted); font-size: 12px; }
+.coord-metric strong { display: block; font-family: var(--display); font-size: 25px; color: var(--heading); margin: 8px 0 4px; }
+.coord-metric small { color: var(--tint-green); font-size: 11px; }
+
+.coord-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.coord-bar h2, .coord-trip-head h2 { margin: 0; font-family: var(--display); font-size: 16px; color: var(--heading); }
+.coord .coord-tabs { display: flex; gap: 7px; border: 0; margin: 0; }
+.coord .coord-tabs button { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--muted); font-weight: 600; font-size: 13px; }
+.coord .coord-tabs button:hover { color: var(--cp-brand-blue); }
+.coord .coord-tabs button.active { background: var(--cp-brand-blue); border-color: var(--cp-brand-blue); color: #fff; }
+.coord-filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.coord .coord-trek { flex-direction: row; align-items: center; gap: 10px; min-width: 300px; }
+
+/* Panels */
+.coord-panel { margin-bottom: 16px; }
+.coord-panel > .card, .coord .trip-expenses { border-radius: 11px; }
+.coord .table th { text-transform: uppercase; font-size: 10.5px; letter-spacing: .5px; color: var(--muted); padding: 12px 12px; }
+.coord .table td { padding: 12px; }
+.coord-id { color: var(--cp-brand-blue); font-weight: 700; font-size: 12px; }
+.coord-row-actions { display: inline-flex; gap: 6px; align-items: center; }
+.coord-pill { display: inline-block; padding: 4px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; background: var(--tint-amber-bg); color: var(--tint-amber); }
+.coord-pill.blue { background: var(--cp-brand-blue-20); color: var(--cp-brand-deep); }
+
+/* Selected trip */
+.coord-trip { background: var(--cp-card); border: 1px solid var(--line); border-radius: 11px; padding: 16px; }
+.coord-trip-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; flex-wrap: wrap; }
+.coord-trip-head h2 { margin: 8px 0 5px; font-size: 19px; }
+.coord-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.coord-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 16px 0; }
+.coord-summary > div { background: var(--cp-surface-lighter-gray); border: 1px solid var(--line); border-radius: 9px; padding: 13px; min-width: 0; }
+.coord-summary span { display: block; color: var(--muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 7px; }
+.coord-summary strong { font-size: 17px; color: var(--heading); overflow-wrap: anywhere; }
+.coord-summary strong.green { color: var(--tint-green); }
+.coord-summary strong.amber { color: var(--tint-amber); }
+.coord-notes { margin: -4px 0 14px; padding: 10px 13px; border-radius: 9px; background: var(--cp-surface-lighter-gray); font-size: 13px; }
+.coord-notes span { color: var(--muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: .5px; margin-right: 6px; }
+.coord-trip > .card { border-radius: 10px; }
+
+/* Trip expenses inside Trip Coordination */
+.coord .trip-expenses { margin-top: 0; border: 1px solid var(--line); }
+.coord .trip-profit { padding: 0 14px; }
+.coord .trip-profit-main { margin-top: 2px; border: 1px solid transparent; }
+.coord .trip-profit-main.profit { border-color: var(--tint-green); background: var(--tint-green-bg); }
+.coord .trip-profit-main.profit b, .coord .trip-profit-main.profit small { color: var(--tint-green); }
+.coord .trip-profit-main.loss { border-color: var(--cp-error); background: var(--tint-red-bg); }
+.coord .trip-profit-main.loss b, .coord .trip-profit-main.loss small { color: var(--cp-error); }
+.coord .trip-profit-grid > div,
+.coord .trip-expenses > .details > div { background: var(--cp-surface-lighter-gray); border: 1px solid var(--line); border-radius: 9px; padding: 12px 13px; }
+.coord .trip-expenses > .details { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; padding: 10px 14px 14px; }
+.coord .trip-expenses > .details small { text-transform: uppercase; font-size: 10.5px; letter-spacing: .5px; }
+.coord .trip-profit-grid small { text-transform: uppercase; font-size: 10.5px; letter-spacing: .5px; }
+
+@media (max-width: 1000px) {
+  .coord-metrics, .coord-summary, .coord .trip-expenses > .details { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 650px) {
+  .coord-metrics { gap: 8px; }
+  .coord-metric { padding: 12px; }
+  .coord-metric strong { font-size: 21px; }
+  .coord .coord-trek { min-width: 0; width: 100%; }
+  .coord-actions { width: 100%; }
+}
+
+/* ---------- The 3 sections of Trip Coordination, each clearly its own block ----------
+   1 Trip List (blue) · 2 Selected trip (purple) · 3 Trip expenses (green)
+   --s = section colour, --sb = its header band */
+.coord-v2 { counter-reset: coord-section; }
+.coord-section { counter-increment: coord-section; --s: #2f6fd0; --sb: #eaf2ff; margin-bottom: 26px; background: var(--cp-card); border: 1px solid var(--line); border-top: 5px solid var(--s); border-radius: 14px; box-shadow: 0 6px 20px rgba(20, 40, 80, .07); overflow: hidden; }
+.coord-section.sec-trip { --s: #7a5bd6; --sb: #f1ecff; }
+.coord-section.sec-exp { --s: #16845d; --sb: #e7f5ef; }
+:root[data-theme="dark"] .coord-section { --s: #6f9ff0; --sb: rgba(70, 129, 219, .14); box-shadow: 0 6px 20px rgba(0, 0, 0, .3); }
+:root[data-theme="dark"] .coord-section.sec-trip { --s: #a48cf5; --sb: rgba(155, 130, 237, .14); }
+:root[data-theme="dark"] .coord-section.sec-exp { --s: #4fc996; --sb: rgba(96, 207, 155, .12); }
+
+/* Header band: number badge, title, text, buttons */
+.coord-section .sec-head,
+.coord-section.sec-exp > .trip-expenses > .cardhead { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; padding: 14px 18px; background: var(--sb); border-bottom: 1px solid var(--line); }
+.coord-section .sec-title { min-width: 0; }
+.coord-section .sec-head h2,
+.coord-section.sec-exp > .trip-expenses > .cardhead h2 { display: flex; align-items: center; gap: 10px; margin: 0; font-family: var(--display); font-size: 17px; color: var(--heading); }
+.coord-section .sec-head h2::before,
+.coord-section.sec-exp > .trip-expenses > .cardhead h2::before { content: counter(coord-section); display: inline-grid; place-items: center; width: 28px; height: 28px; flex-shrink: 0; border-radius: 50%; background: var(--s); color: #fff; font-size: 14px; font-weight: 800; }
+.coord-section .sec-head .coord-sub,
+.coord-section.sec-exp > .trip-expenses > .cardhead p { margin: 4px 0 0 38px; }
+.coord-section .sec-kicker { display: inline-block; margin: 0 0 6px 38px; padding: 3px 10px; border-radius: 999px; background: var(--s); color: #fff; font-size: 10.5px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; }
+.coord-section.sec-trip .sec-head h2 { font-size: 19px; }
+.coord-section.sec-trip .sec-head h2 + .coord-sub { margin-top: 5px; }
+.coord-section .sec-body { padding: 14px 16px 16px; }
+
+/* Inside a section: no second frame around the tables */
+.coord-section .coord-list > .card,
+.coord-section .sec-body > .card { border-radius: 10px; box-shadow: none; }
+.coord-section .coord-filters { margin-bottom: 12px; }
+.coord-section .coord-summary { margin-top: 2px; }
+.coord-section.sec-trip { padding: 0; }
+.coord-section.sec-exp > .trip-expenses { border: 0; border-radius: 0; margin: 0; box-shadow: none; }
+.coord-section.sec-exp .trip-profit { padding-top: 14px; }
+
+/* Section tabs (Upcoming / Completed) take the section colour */
+.coord-section .coord-tabs button { background: var(--cp-card); }
+.coord-section .coord-tabs button.active { background: var(--s); border-color: var(--s); color: #fff; }
+
+/* ---------- B2B (Trip Coordination section 3, B2B Vendors screen) ---------- */
+.coord-section.sec-b2b { --s: #c26a00; --sb: #fff3e0; }
+:root[data-theme="dark"] .coord-section.sec-b2b { --s: #f0a54a; --sb: rgba(240, 165, 74, .13); }
+.b2b-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.b2b-totals, .b2b-counts { display: flex; flex-wrap: wrap; gap: 8px; }
+.b2b-totals span, .b2b-counts span { padding: 6px 11px; border-radius: 999px; background: var(--cp-surface-lighter-gray); font-size: 12.5px; color: var(--muted); }
+.b2b-totals b, .b2b-counts b { color: var(--heading); margin-left: 3px; }
+.b2b-totals .in b, .b2b-counts .in b, .b2b-in { color: var(--tint-green); }
+.b2b-totals .out b, .b2b-counts .out b, .b2b-out { color: var(--tint-amber); }
+.b2b-counts { margin: -4px 0 14px; }
+.b2b-tag { display: inline-block; margin-top: 3px; padding: 2px 8px; border-radius: 999px; background: var(--cp-brand-blue-20); color: var(--cp-brand-deep); font-size: 11px; font-weight: 700; }
+.b2b-calc { display: grid; gap: 3px; padding: 12px 14px; border-radius: 10px; border-left: 4px solid var(--tint-green); background: var(--tint-green-bg); }
+.b2b-calc.out { border-left-color: var(--tint-amber); background: var(--tint-amber-bg); }
+.b2b-calc span, .b2b-calc small { color: var(--muted); font-size: 12.5px; }
+.b2b-calc b { font-size: 17px; color: var(--tint-green); }
+.b2b-calc.out b { color: var(--tint-amber); }
+.b2b-newvendor-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.b2b-newvendor-row input { flex: 1 1 160px; }
+.b2b-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 220px)); gap: 10px; margin-bottom: 12px; }
+@media (max-width: 650px) { .b2b-filters { grid-template-columns: 1fr; } }
+.b2b-make { border-color: #f0a54a; color: #c26a00; }
+:root[data-theme="dark"] .b2b-make { color: #f0a54a; }
+
+/* ---------- B2B Vendors screen ---------- */
+.b2bv-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+.b2bv-sum { display: grid; gap: 4px; padding: 16px 18px; border-radius: 12px; background: var(--cp-card); border: 1px solid var(--line); border-left: 5px solid var(--cp-blue-gray); }
+.b2bv-sum span { color: var(--muted); font-size: 12.5px; font-weight: 600; }
+.b2bv-sum b { font-family: var(--display); font-size: 26px; color: var(--heading); }
+.b2bv-sum small { color: var(--muted); font-size: 12px; }
+.b2bv-sum.in { border-left-color: var(--tint-green); }
+.b2bv-sum.in b { color: var(--tint-green); }
+.b2bv-sum.out { border-left-color: var(--tint-amber); }
+.b2bv-sum.out b { color: var(--tint-amber); }
+.b2bv-sum.strong.in { background: var(--tint-green-bg); }
+.b2bv-sum.strong.out { background: var(--tint-amber-bg); }
+
+.b2bv-search { width: 100%; max-width: 360px; box-sizing: border-box; margin-bottom: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--cp-input); color: var(--ink); }
+.b2bv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.b2bv-card { display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 14px; background: var(--cp-card); border: 1px solid var(--line); border-top: 4px solid var(--cp-blue-gray); box-shadow: 0 4px 14px rgba(20, 40, 80, .06); }
+.b2bv-card.in { border-top-color: var(--tint-green); }
+.b2bv-card.out { border-top-color: var(--tint-amber); }
+.b2bv-card.inactive { opacity: .7; }
+.b2bv-card-top { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+.b2bv-card h3 { margin: 0 0 3px; font-family: var(--display); font-size: 16px; color: var(--heading); }
+.b2bv-card .muted { font-size: 12px; }
+.b2bv-people { display: flex; gap: 8px; flex-wrap: wrap; }
+.b2bv-people span { padding: 5px 10px; border-radius: 999px; background: var(--cp-surface-lighter-gray); font-size: 12px; color: var(--muted); }
+.b2bv-people b { color: var(--heading); }
+.b2bv-money { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.b2bv-money > div { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); }
+.b2bv-money span { display: block; font-size: 11.5px; color: var(--muted); margin-bottom: 3px; }
+.b2bv-money b { font-size: 15px; }
+.b2bv-net { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 11px 13px; border-radius: 10px; background: var(--cp-surface-lighter-gray); }
+.b2bv-net span { font-size: 13px; font-weight: 700; color: var(--heading); }
+.b2bv-net b { font-size: 18px; color: var(--heading); }
+.b2bv-net.in { background: var(--tint-green-bg); }
+.b2bv-net.in span, .b2bv-net.in b { color: var(--tint-green); }
+.b2bv-net.out { background: var(--tint-amber-bg); }
+.b2bv-net.out span, .b2bv-net.out b { color: var(--tint-amber); }
+.b2bv-net small { display: block; color: var(--muted); font-size: 12px; }
+.b2bv-net.big, .form .b2bv-net { flex-direction: column; align-items: flex-start; gap: 2px; padding: 14px 16px; }
+.b2bv-net.big b, .form .b2bv-net b { font-size: 28px; }
+.b2bv-card-actions { display: flex; gap: 8px; margin-top: auto; }
+.b2bv-card-actions .btn:first-child { flex: 1; }
+
+/* Statement */
+.b2bv-statement { display: grid; gap: 10px; }
+.b2bv-statement-head { display: grid; gap: 10px; }
+.b2bv-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.b2bv-actions .btn.disabled { opacity: .5; pointer-events: none; }
+.b2bv-h { margin: 10px 0 0; font-size: 14px; color: var(--heading); display: flex; gap: 8px; align-items: baseline; }
+.b2bv-h span { font-size: 12px; font-weight: 500; color: var(--muted); }
+.b2bv-batches { list-style: none; margin: 0; padding: 0; }
+.b2bv-batches li { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; padding: 9px 0; border-top: 1px solid var(--line); font-size: 13px; }
+@media (max-width: 800px) { .b2bv-summary { grid-template-columns: 1fr; } }

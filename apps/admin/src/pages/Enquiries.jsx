@@ -48,7 +48,7 @@ export default function Enquiries() {
   const stageCount = (stage, notNew) =>
     rows.filter((lead) => statuses.of(lead.status).stage === stage && (!notNew || lead.status !== 'new')).length;
   const sourceCount = (value) => all.filter((lead) => lead.source === value).length;
-  const userOptions = (lookups?.users || []).map((u) => ({ value: u.id, label: u.full_name }));
+  const userOptions = (lookups?.users || []).filter((u) => u.role !== 'trek_lead').map((u) => ({ value: u.id, label: u.full_name }));
 
   return (
     <>

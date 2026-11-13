@@ -13,7 +13,7 @@ const ROLE_INFO = {
 const ICONS = {
   dashboard: '▦', packages: '▣', bookings: '▤', coordination: '⌖', customers: '♙',
   enquiries: '✉', payments: '₹', reviews: '★', reports: '▥', guides: '⛰',
-  'pickup-points': '⚑', regions: '◎', hero: '▭', activity: '☰', users: '♟', settings: '☷',
+  'pickup-points': '⚑', b2b: '⇄', regions: '◎', hero: '▭', about: 'ⓘ', activity: '☰', users: '♟', settings: '☷',
 };
 
 /**

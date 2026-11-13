@@ -48,21 +48,22 @@ export default function Footer() {
             {tripCategories.length > 0 ? (
               tripCategories.map((category) => (
                 <li key={category.id}>
-                  <a href="#trips">{category.name}</a>
+                  <a href="/#trips">{category.name}</a>
                 </li>
               ))
             ) : (
-              <li><a href="#trips">Trips</a></li>
+              <li><a href="/#trips">Trips</a></li>
             )}
           </ul>
         </div>
         <div>
           <h4>Company</h4>
           <ul>
-            <li><a href="#why">Why choose us</a></li>
-            <li><a href="#reviews">Reviews</a></li>
-            <li><a href="#faq">FAQ</a></li>
-            <li><a href="#contact">Contact</a></li>
+            <li><a href="/about">About us</a></li>
+            <li><a href="/#why">Why choose us</a></li>
+            <li><a href="/#reviews">Reviews</a></li>
+            <li><a href="/#faq">FAQ</a></li>
+            <li><a href="/#contact">Contact</a></li>
           </ul>
         </div>
         <div>

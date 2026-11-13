@@ -12,8 +12,10 @@ export const scrollToSection = (id) => {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
+// [section id, label] for home-page sections; [id, label, page] for own pages
 const LINKS = [
   ['top', 'Home'],
+  ['about', 'About', '/about'],
   ['trips', 'Trips'],
   ['featured', 'Featured'],
   ['why', 'Why us'],
@@ -57,11 +59,24 @@ export default function Header({ onNavigate }) {
         </button>
 
         <div className={`nav-links ${open ? 'open' : ''}`}>
-          {LINKS.map(([id, label]) => (
+          {LINKS.map(([id, label, page]) => (page ? (
+            <a
+              key={id}
+              href={page}
+              aria-current={location.pathname === page ? 'page' : undefined}
+              onClick={(event) => {
+                event.preventDefault();
+                setOpen(false);
+                navigate(page);
+              }}
+            >
+              {label}
+            </a>
+          ) : (
             <a key={id} href={`/#${id}`} onClick={(event) => go(event, id)}>
               {label}
             </a>
-          ))}
+          )))}
           <a className="btn btn-sm" href="/#contact" onClick={(event) => go(event, 'contact')}>
             Talk to us
           </a>

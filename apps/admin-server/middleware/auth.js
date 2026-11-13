@@ -32,4 +32,13 @@ const requireModule = (module) => (req, res, next) => {
   return next();
 };
 
-module.exports = { requireAuth, requireModule };
+// Trek Lead portal: only Trek Lead accounts
+const requireTrekLead = (req, res, next) =>
+  next(req.admin?.role === 'trek_lead' ? undefined : new HttpError(403, 'Only for Trek Lead accounts'));
+
+// Shared admin data (dropdown lists, alerts): every role except Trek Leads,
+// who see only their own trips
+const requireStaff = (req, res, next) =>
+  next(req.admin && req.admin.role !== 'trek_lead' ? undefined : new HttpError(403, 'You do not have access to this section'));
+
+module.exports = { requireAuth, requireModule, requireTrekLead, requireStaff };

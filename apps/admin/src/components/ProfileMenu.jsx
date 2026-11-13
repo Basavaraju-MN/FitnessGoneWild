@@ -16,7 +16,7 @@ const LogoutIcon = () => (
   </svg>
 );
 
-const ROLE_NAMES = { admin: 'Admin', sales: 'Sales Team', operations: 'Operations Team' };
+const ROLE_NAMES = { admin: 'Admin', sales: 'Sales Team', operations: 'Operations Team', trek_lead: 'Guide / Trek Lead' };
 
 // "Basavaraju M N" -> "BM", "admin" -> "A"
 const initialsOf = (name) =>

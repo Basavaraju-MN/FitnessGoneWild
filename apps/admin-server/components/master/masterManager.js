@@ -2,6 +2,8 @@
 // lead statuses (Enquiries & Leads → Manage statuses).
 // Called by controller/controller.js; reads and writes through db/dbops.js.
 const dbops = require('../../db/dbops');
+// Guides: their login (Trek Lead portal) is set in the same form
+const trekLead = require('../trekLead/trekLeadManager');
 const {
   badRequest,
   notFound,
@@ -12,7 +14,14 @@ const {
 
 // URL name -> table, editable columns, required columns
 const MASTERS = {
-  guides: { table: 'guides', fields: ['name', 'phone', 'email', 'notes', 'is_active'], required: ['name'] },
+  guides: {
+    table: 'guides',
+    fields: ['name', 'phone', 'email', 'notes', 'is_active'],
+    required: ['name'],
+    // login_username / login_password / login_active come with the form
+    beforeSave: (body, id) => trekLead.checkGuideLogin(body, id),
+    afterSave: (id, body, admin) => trekLead.saveGuideForm(admin, id, body),
+  },
   'pickup-points': {
     table: 'pickup_points',
     fields: ['trip_id', 'city_id', 'name', 'address', 'map_url', 'sort_order', 'is_active'],
@@ -93,17 +102,23 @@ function cleanMaster(master, body) {
 const duplicateError = (error) =>
   error?.code === 'ER_DUP_ENTRY' ? badRequest('A record with the same name/number already exists') : error;
 
-const getMasterList = (type) => dbops.getMasterList(getMaster(type).table);
+async function getMasterList(type) {
+  const master = getMaster(type);
+  if (type === 'guides') await trekLead.ensureSchema(); // login column
+  return dbops.getMasterList(master.table);
+}
 
 async function createMaster(admin, type, body) {
   const master = getMaster(type);
   requireFields(body, master.required);
 
+  if (master.beforeSave) await master.beforeSave(body, null);
+
   try {
     let data = cleanMaster(master, body);
     if (master.beforeCreate) data = master.beforeCreate(data);
     const id = await dbops.createMaster(master.table, data);
-    if (master.afterSave) await master.afterSave(id, body);
+    if (master.afterSave) await master.afterSave(id, body, admin);
     await logActivity(admin, 'create', master.table, id);
     return { id };
   } catch (error) {
@@ -120,10 +135,11 @@ async function updateMaster(admin, type, id, body) {
     data = master.beforeUpdate(data, row);
   }
   if (!Object.keys(data).length && !master.afterSave) throw badRequest('Nothing to update');
+  if (master.beforeSave) await master.beforeSave(body, id);
 
   try {
     if (Object.keys(data).length && !(await dbops.updateMaster(master.table, id, data))) throw notFound();
-    if (master.afterSave) await master.afterSave(id, body);
+    if (master.afterSave) await master.afterSave(id, body, admin);
   } catch (error) {
     throw duplicateError(error);
   }

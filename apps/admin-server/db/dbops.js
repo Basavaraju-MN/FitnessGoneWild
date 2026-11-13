@@ -95,6 +95,7 @@ class Cmds {
       booking: [sqlQueries.notificationBookings, sqlQueries.notificationBookingsLatest],
       brochure: [sqlQueries.notificationBrochures, sqlQueries.notificationBrochuresLatest],
       interest: [sqlQueries.notificationInterests, sqlQueries.notificationInterestsLatest],
+      collection: [sqlQueries.notificationCollections, sqlQueries.notificationCollectionsLatest],
     }[type];
 
     const [items, latest] = await Promise.all([

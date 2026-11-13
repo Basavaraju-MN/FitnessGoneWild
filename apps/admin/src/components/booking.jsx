@@ -23,7 +23,7 @@ const BOOKING_STATUSES = ['confirmed', 'pending', 'completed', 'cancelled'].map(
 // "Sold by": the sales representative who sold a booking (any admin user,
 // sales people first). Admin only: the customer never sees it.
 const salesRepOptions = (lookups) =>
-  [...(lookups?.users || [])]
+  (lookups?.users || []).filter((u) => u.role !== 'trek_lead')
     .sort((a, b) => (a.role === 'sales' ? 0 : 1) - (b.role === 'sales' ? 0 : 1) || String(a.full_name).localeCompare(b.full_name))
     .map((u) => ({ value: u.id, label: `${u.full_name}${u.role ? ` (${label(u.role)})` : ''}` }));
 
@@ -185,14 +185,15 @@ export function NewBookingModal({ departureId, onClose, onSaved }) {
               .filter((p) => p.trip_id === departureOf(values)?.trip_id)
               .map((p) => ({ value: p.id, label: p.address ? `${p.name} – ${p.address}` : p.name })),
         },
-        { name: 'with_transport_people', label: 'People with transport', type: 'number', min: 0, hidden: (values) => optionsOf(values).length > 0 },
-        { name: 'without_transport_people', label: 'People without transport', type: 'number', min: 0, hidden: (values) => optionsOf(values).length > 0 },
+        { name: 'with_transport_people', label: 'People with transport', type: 'number', min: 0, max: 99, hidden: (values) => optionsOf(values).length > 0 },
+        { name: 'without_transport_people', label: 'People without transport', type: 'number', min: 0, max: 99, hidden: (values) => optionsOf(values).length > 0 },
         // A trek with price options: people per option instead
         ...allOptions.map((o) => ({
           name: `ticket_${o.id}`,
           label: `${o.label} (${money(o.price)})`,
           type: 'number',
           min: 0,
+          max: 99,
           hint: 'People',
           hidden: (values) => departureOf(values)?.trip_id !== o.trip_id,
         })),

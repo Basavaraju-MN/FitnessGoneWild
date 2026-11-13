@@ -8,6 +8,7 @@ const { executeQuery } = require('../../db/connection');
 const phonepeComponent = require('./phonepeComponent');
 const paymentDbOps = require('../../db/paymentDbops');
 const bookingDbOps = require('../../db/bookingDbops');
+const balancePayment = require('./balancePayment');
 
 const EVERY_MS = 3 * 60 * 1000;
 
@@ -24,9 +25,17 @@ const queries = {
     SELECT t.merchant_order_id FROM phonepe_transactions t
     WHERE t.status = 'SUCCESS'
       AND t.created_at > NOW() - INTERVAL 3 DAY
+      AND t.merchant_order_id NOT LIKE 'FGWBAL\\_%' -- balance payments have no booking of their own
       AND NOT EXISTS (SELECT 1 FROM bookings b WHERE b.merchant_order_id = t.merchant_order_id)
     ORDER BY t.id LIMIT 20`,
   bookingOf: 'SELECT id, booking_ref FROM bookings WHERE merchant_order_id = ?',
+  // Balances collected by guides: paid, but not yet added to the booking
+  paidBalanceNotAdded: `
+    SELECT * FROM phonepe_transactions
+    WHERE merchant_order_id LIKE 'FGWBAL\\_%' AND status = 'SUCCESS'
+      AND created_at > NOW() - INTERVAL 3 DAY
+      AND JSON_EXTRACT(booking_details, '$.appliedAt') IS NULL
+    ORDER BY id LIMIT 20`,
 };
 
 /**
@@ -67,6 +76,10 @@ async function sweep() {
       } catch (error) {
         console.error(`Payment recovery failed for ${id}:`, error?.message || error);
       }
+    }
+    for (const transaction of await executeQuery(queries.paidBalanceNotAdded)) {
+      await balancePayment.apply(transaction)
+        .catch((error) => console.error(`Balance payment ${transaction.merchant_order_id} failed:`, error?.message || error));
     }
   } catch (error) {
     console.error('Payment recovery sweep failed:', error?.message || error);
