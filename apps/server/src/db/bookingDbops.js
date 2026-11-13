@@ -102,6 +102,12 @@ async function recordBooking(transaction) {
     return null;
   }
 
+  // A guide collecting a balance (FGWBAL_…): add it to that booking instead
+  const balancePayment = require('../components/payment/balancePayment');
+  if (balancePayment.isBalanceOrder(transaction.merchant_order_id)) {
+    return balancePayment.apply(transaction);
+  }
+
   const details = parseBookingDetails(transaction.booking_details);
 
   const tripId = Number(details.trekId) || null;

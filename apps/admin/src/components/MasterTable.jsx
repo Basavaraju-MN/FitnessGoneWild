@@ -12,7 +12,7 @@ export const activeField = { name: 'is_active', label: 'Active', type: 'checkbox
  * categories), stored through /masters/:type.
  * prepare(values) can fill in values before saving (e.g. a slug).
  */
-export default function MasterTable({ type, title, note, singular, fields, columns, prepare, exportName }) {
+export default function MasterTable({ type, title, note, singular, fields, columns, prepare, exportName, addInitial }) {
   const toast = useToast();
   const { reloadLookups } = useAdmin();
   const { data, loading, error, reload } = useApi(`/masters/${type}`);
@@ -42,7 +42,7 @@ export default function MasterTable({ type, title, note, singular, fields, colum
         error={error}
         exportName={exportName || `fgw-${type}.csv`}
         searchPlaceholder={`Search ${title.toLowerCase()}…`}
-        actions={<button className="btn" onClick={() => setEditing({ is_active: 1 })}>＋ Add {singular.toLowerCase()}</button>}
+        actions={<button className="btn" onClick={() => setEditing(addInitial || { is_active: 1 })}>＋ Add {singular.toLowerCase()}</button>}
         columns={[
           ...columns,
           { key: 'is_active', label: 'Status', render: (r) => <Pill value={Number(r.is_active) ? 'active' : 'inactive'} />, csv: (r) => (Number(r.is_active) ? 'Active' : 'Inactive') },

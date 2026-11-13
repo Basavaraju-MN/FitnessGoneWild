@@ -28,7 +28,12 @@ async function send(path, { method, body }) {
       }
       return response;
     } catch (error) {
-      if (attempt >= retries) throw new Error('Cannot reach the server. Check your connection and try again.');
+      if (attempt >= retries) {
+        // A save whose answer was lost may still have been saved
+        throw new Error(method === 'GET'
+          ? 'Cannot reach the server. Check your connection and try again.'
+          : 'No answer from the server. It may already be saved: refresh and check before trying again.');
+      }
       await wait(700 * (attempt + 1));
     }
   }

@@ -9,19 +9,22 @@ const PAID = `${ACTIVE} AND b.amount_paid > 0`;
 
 // Every rupee received on active bookings, with the date it came in:
 // payments recorded in the admin + the online payment made at booking
+// Money received also counts bookings transferred to a B2B vendor: when only
+// some people move, their part of the advance moves to the transferred booking
+const RECEIVED = "b.status IN ('confirmed','completed','transferred')";
 const MONEY_IN = `
   SELECT bp.amount, bp.paid_at AS at
     FROM booking_payments bp JOIN bookings b ON b.id = bp.booking_id
-   WHERE ${ACTIVE}
+   WHERE ${RECEIVED}
   UNION ALL
   SELECT b.amount_paid - COALESCE((SELECT SUM(x.amount) FROM booking_payments x WHERE x.booking_id = b.id), 0),
          COALESCE(b.paid_at, b.booked_at)
     FROM bookings b
-   WHERE ${ACTIVE}
+   WHERE ${RECEIVED}
   UNION ALL
   SELECT -r.amount, COALESCE(r.completed_at, r.created_at)
     FROM booking_refunds r JOIN bookings b ON b.id = r.booking_id
-   WHERE r.state = 'completed' AND ${ACTIVE}`;
+   WHERE r.state = 'completed' AND ${RECEIVED}`;
 
 const sqlqueries = {
   /* ================= AUTH & USERS ================= */
@@ -176,6 +179,24 @@ const sqlqueries = {
     WHERE ti.type = 'interested'
     ORDER BY ti.id DESC
     LIMIT 20`,
+  // Balances collected by guides: through PhonePe (FGWBAL_…) or in cash
+  notificationCollections: `
+    SELECT bp.id, bp.amount, bp.method, bp.paid_at AS at, b.booking_ref, b.balance_amount,
+           c.name, t.name AS trip_name, u.full_name AS collected_by
+    FROM booking_payments bp
+    JOIN bookings b ON b.id = bp.booking_id
+    JOIN customers c ON c.id = b.customer_id
+    LEFT JOIN trips t ON t.id = b.trip_id
+    LEFT JOIN admin_users u ON u.id = bp.received_by
+    WHERE (bp.method = 'phonepe' AND bp.reference LIKE 'FGWBAL\_%')
+       OR (bp.method = 'cash' AND u.role = 'trek_lead')
+    ORDER BY bp.id DESC
+    LIMIT 20`,
+  notificationCollectionsLatest: `
+    SELECT COALESCE(MAX(bp.id), 0) AS id FROM booking_payments bp
+    LEFT JOIN admin_users u ON u.id = bp.received_by
+    WHERE (bp.method = 'phonepe' AND bp.reference LIKE 'FGWBAL\_%')
+       OR (bp.method = 'cash' AND u.role = 'trek_lead')`,
   notificationInterestsLatest: "SELECT COALESCE(MAX(id), 0) AS id FROM trip_interests WHERE type = 'interested'",
 
   /* ================= LOOKUPS (dropdowns) ================= */
@@ -183,7 +204,7 @@ const sqlqueries = {
   lookupCategories: 'SELECT id, name FROM categories ORDER BY sort_order, id',
   lookupRegions: 'SELECT id, slug, name, is_active FROM regions ORDER BY sort_order, id',
   lookupDepartureCities: 'SELECT id, name, state, is_active FROM departure_cities ORDER BY sort_order, id',
-  lookupGuides: 'SELECT id, name, phone FROM guides WHERE is_active = 1 ORDER BY name',
+  lookupGuides: 'SELECT id, name, phone, admin_user_id IS NOT NULL AS has_login FROM guides WHERE is_active = 1 ORDER BY name',
   lookupPickupPoints: 'SELECT id, trip_id, city_id, name, address FROM pickup_points WHERE is_active = 1 ORDER BY sort_order, name',
   lookupPickupPointsNoCity: 'SELECT id, trip_id, name, address FROM pickup_points WHERE is_active = 1 ORDER BY sort_order, name',
   lookupUsers: 'SELECT id, full_name, role FROM admin_users WHERE is_active = 1 ORDER BY full_name',
@@ -246,6 +267,10 @@ const sqlqueries = {
            d.start_date, d.end_date, d.departure_type, d.seats_total, d.seats_booked,
            d.status, d.trip_status, d.notes,
            d.guide_id, g.name AS guide_name, g.phone AS guide_phone,
+           (SELECT GROUP_CONCAT(dg.guide_id ORDER BY dg.guide_id = d.guide_id DESC, gg.name) FROM departure_guides dg
+              JOIN guides gg ON gg.id = dg.guide_id WHERE dg.departure_id = d.id) AS guide_ids,
+           (SELECT GROUP_CONCAT(gg.name ORDER BY dg.guide_id = d.guide_id DESC, gg.name SEPARATOR ', ') FROM departure_guides dg
+              JOIN guides gg ON gg.id = dg.guide_id WHERE dg.departure_id = d.id) AS guide_names,
            COALESCE(SUM(CASE WHEN ${ACTIVE} THEN b.people END), 0) AS people,
            COALESCE(SUM(CASE WHEN ${ACTIVE} THEN 1 END), 0) AS bookings,
            COALESCE(SUM(CASE WHEN ${ACTIVE} THEN b.amount END), 0) AS total_amount,
@@ -264,11 +289,13 @@ const sqlqueries = {
            b.with_transport_people, b.without_transport_people, b.travel_mode,
            b.amount, b.amount_paid, b.balance_amount, b.payment_type, b.notes,
            c.id AS customer_id, c.name AS customer_name, c.phone AS customer_phone, c.email AS customer_email,
-           p.name AS pickup_name, p.address AS pickup_address
+           p.name AS pickup_name, p.address AS pickup_address,
+           (SELECT v.name FROM b2b_transfers x JOIN b2b_vendors v ON v.id = x.vendor_id
+             WHERE x.booking_id = b.id AND x.direction = 'inbound' LIMIT 1) AS inbound_vendor
     FROM bookings b
     JOIN customers c ON c.id = b.customer_id
     LEFT JOIN pickup_points p ON p.id = b.pickup_point_id
-    WHERE b.departure_id = ?
+    WHERE b.departure_id = ? AND b.status <> 'transferred'
     ORDER BY b.status = 'cancelled', p.sort_order, c.name`,
   findDeparture: 'SELECT id FROM departures WHERE trip_id = ? AND start_date = ? AND end_date = ? AND departure_type = ?',
   tripCodeTaken: 'SELECT id FROM departures WHERE trip_code = ? AND id <> ?',
@@ -476,9 +503,15 @@ const sqlqueries = {
            COALESCE(c.name, JSON_UNQUOTE(JSON_EXTRACT(pt.booking_details, '$.customerName'))) AS customer_name,
            COALESCE(c.phone, JSON_UNQUOTE(JSON_EXTRACT(pt.booking_details, '$.customerPhone'))) AS customer_phone,
            JSON_UNQUOTE(JSON_EXTRACT(pt.booking_details, '$.trekName')) AS trip_name,
-           JSON_UNQUOTE(JSON_EXTRACT(pt.booking_details, '$.paymentType')) AS payment_type
+           JSON_UNQUOTE(JSON_EXTRACT(pt.booking_details, '$.paymentType')) AS payment_type,
+           (SELECT u.full_name FROM admin_users u
+             WHERE u.id = JSON_EXTRACT(pt.booking_details, '$.collectedBy')) AS collected_by_name
     FROM phonepe_transactions pt
-    LEFT JOIN bookings b ON b.merchant_order_id = pt.merchant_order_id
+    -- Website bookings: the booking made by this order. Balances collected by
+    -- a guide (FGWBAL_…): the booking they were paid for.
+    LEFT JOIN bookings b ON b.id = IF(pt.merchant_order_id LIKE 'FGWBAL\\_%',
+      JSON_EXTRACT(pt.booking_details, '$.bookingId'),
+      (SELECT x.id FROM bookings x WHERE x.merchant_order_id = pt.merchant_order_id LIMIT 1))
     LEFT JOIN customers c ON c.id = b.customer_id
     ORDER BY pt.created_at DESC
     LIMIT 5000`,
@@ -494,6 +527,7 @@ const sqlqueries = {
     LEFT JOIN customers c ON c.id = b.customer_id
     LEFT JOIN trips t ON t.id = b.trip_id
     LEFT JOIN admin_users a ON a.id = bp.received_by
+    WHERE NOT (bp.method = 'phonepe' AND bp.reference LIKE 'FGWBAL\\_%')
     ORDER BY bp.paid_at DESC
     LIMIT 5000`,
   getOnlinePaymentStats: `
@@ -508,7 +542,11 @@ const sqlqueries = {
   /* ================= MASTER DATA ================= */
   // ?? is a table name; the allowed tables are listed in the component
   masterList: {
-    guides: 'SELECT * FROM guides ORDER BY is_active DESC, name',
+    // With the guide's login (Trek Lead portal), if they have one
+    guides: `
+      SELECT g.*, u.username AS login_username, u.is_active AS login_active, u.last_login_at
+      FROM guides g LEFT JOIN admin_users u ON u.id = g.admin_user_id
+      ORDER BY g.is_active DESC, g.name`,
     pickup_points: `
       SELECT p.*, t.name AS trip_name, c.name AS city_name
       FROM pickup_points p

@@ -14,12 +14,16 @@ const {
   ROLES,
   checkPassword,
 } = require('../common/rules');
+// Guide logins (role trek_lead) belong to the Guides screen, not here
+const GUIDE_ROLE = 'trek_lead';
+const guidesOnly = () => badRequest('Guide logins are managed on the Guides screen');
 
-const getUsers = () => dbops.getAdminUsers();
+const getUsers = async () => (await dbops.getAdminUsers()).filter((u) => u.role !== GUIDE_ROLE);
 
 async function createUser(admin, body) {
   requireFields(body, ['username', 'full_name', 'email', 'role', 'password']);
   if (!ROLES.includes(body.role)) throw badRequest('Unknown role');
+  if (body.role === GUIDE_ROLE) throw guidesOnly();
   checkPassword(body.password);
 
   try {
@@ -43,6 +47,7 @@ async function updateUser(admin, id, body) {
   const data = pick(body, ['full_name', 'email', 'role', 'is_active']);
 
   if (data.role !== undefined && !ROLES.includes(data.role)) throw badRequest('Unknown role');
+  if (data.role === GUIDE_ROLE || (await dbops.getAdminById(id))?.role === GUIDE_ROLE) throw guidesOnly();
   if (data.is_active !== undefined) data.is_active = data.is_active ? 1 : 0;
 
   // An admin cannot lock themselves out
@@ -66,6 +71,7 @@ async function resetUserPassword(admin, id, { password }) {
   checkPassword(password);
   const user = await dbops.getAdminUserBasic(id);
   if (!user) throw notFound('User not found');
+  if ((await dbops.getAdminById(id))?.role === GUIDE_ROLE) throw guidesOnly();
 
   await dbops.updateAdminPassword(user.id, await bcrypt.hash(String(password), 10));
   await logActivity(admin, 'reset_password', 'admin_user', user.id, user.username);

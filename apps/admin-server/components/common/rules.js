@@ -1,7 +1,8 @@
 // Rules used by several screens.
 const { badRequest } = require('../../utils/http');
 
-const ROLES = ['admin', 'sales', 'operations'];
+// trek_lead: sees only the trips assigned to them (components/trekLead)
+const ROLES = ['admin', 'sales', 'operations', 'trek_lead'];
 const PAYMENT_METHODS = ['cash', 'upi', 'bank_transfer', 'card', 'phonepe', 'other'];
 const BOOKING_STATUSES = ['pending', 'confirmed', 'cancelled', 'completed'];
 const ENQUIRY_SOURCES = ['website', 'brochure', 'whatsapp', 'phone', 'instagram', 'walkin'];

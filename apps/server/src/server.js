@@ -353,6 +353,11 @@ app.get('/about-photo/:slot', aboutPhoto);
 app.get('/invoice/:token', invoicePage);
 app.get('/invoice/:token/pdf', invoicePdfPage);
 
+// Where PhonePe sends a customer after paying a balance a guide collected
+app.get('/balance-paid', require('./components/payment/balancePayment').returnPage);
+// …and its script that takes the guide back to the trip portal
+app.get('/balance-paid.js', require('./components/payment/balancePayment').returnScript);
+
 // Public website data is cached for 2 minutes (fewer database connections)
 app.use('/api', cachePublicApi, trekRoutes);
 

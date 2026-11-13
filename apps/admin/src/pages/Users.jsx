@@ -14,7 +14,7 @@ const ROLES = [
   { value: 'sales', label: 'Sales Team' },
   { value: 'operations', label: 'Operations Team' },
 ];
-const roleName = (role) => ({ admin: 'Admin', sales: 'Sales Team', operations: 'Operations Team' }[role] || role);
+const roleName = (role) => ({ admin: 'Admin', sales: 'Sales Team', operations: 'Operations Team', trek_lead: 'Trek Lead' }[role] || role);
 
 export default function Users() {
   const toast = useToast();
@@ -85,7 +85,7 @@ export default function Users() {
             { name: 'full_name', label: 'Full name', required: true },
             { name: 'username', label: 'Username', required: true },
             { name: 'email', label: 'Email', type: 'email', required: true },
-            { name: 'role', label: 'Role', type: 'select', required: true, options: ROLES },
+            { name: 'role', label: 'Role', type: 'select', required: true, options: ROLES, hint: 'Guides get their login on the Guides screen.' },
             { name: 'password', label: 'Password', type: 'password', required: true, full: true, hint: 'At least 8 characters. Share it with the person privately.' },
           ]}
           onClose={() => setForm(null)}

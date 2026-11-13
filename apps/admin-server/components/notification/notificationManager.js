@@ -9,6 +9,7 @@ const NOTIFICATION_FEEDS = {
   booking: 'bookings', // feed: module needed to see it
   brochure: 'enquiries',
   interest: 'enquiries',
+  collection: 'payments', // a guide collected a balance through PhonePe
 };
 
 async function getNotifications(admin) {

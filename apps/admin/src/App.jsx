@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  BookOpen, CalendarDays, ChartColumn, History, Image as ImageIcon, Info, LayoutDashboard,
+  BookOpen, CalendarDays, Handshake, LogOut, ChartColumn, History, Image as ImageIcon, Info, LayoutDashboard,
   Map as MapIcon, MapPin, MessagesSquare, Mountain, Settings as SettingsIcon,
-  ShieldCheck, Star, Ticket, TicketPercent, Users as UsersIcon, UsersRound, Wallet,
+  ShieldCheck, Star, Ticket, TicketPercent, UserRound, Users as UsersIcon, UsersRound, Wallet,
 } from 'lucide-react';
 import { LOGO_URL } from './assets';
 
@@ -36,6 +36,8 @@ import PickupPoints from './pages/PickupPoints';
 import Users from './pages/Users';
 import Settings from './pages/Settings';
 import Regions from './pages/Regions';
+import B2BVendors from './pages/B2BVendors';
+import { LeadBalances, LeadCustomers, LeadDashboard, LeadProfile, LeadTrips } from './pages/TrekLead';
 
 // Sidebar sections, in menu order
 const GROUPS = [
@@ -55,6 +57,7 @@ const PAGES = [
   { id: 'pickup-points', label: 'Pickup Points', icon: MapPin, component: PickupPoints, group: 'Trip Management' },
   { id: 'regions', label: 'Regions & Cities', icon: MapIcon, component: Regions, group: 'Trip Management' },
   { id: 'guides', label: 'Guides', icon: UsersRound, component: Guides, group: 'Trip Management' },
+  { id: 'b2b', label: 'B2B Vendors', icon: Handshake, component: B2BVendors, group: 'Trip Management' },
   { id: 'bookings', label: 'Bookings', icon: Ticket, component: Bookings, group: 'Bookings & Revenue' },
   { id: 'payments', label: 'Payments', icon: Wallet, component: Payments, group: 'Bookings & Revenue' },
   { id: 'coupons', label: 'Coupons', icon: TicketPercent, component: Coupons, group: 'Bookings & Revenue' },
@@ -68,6 +71,16 @@ const PAGES = [
   { id: 'activity', label: 'Activity Log', icon: History, component: Activity, group: 'System Settings' },
   { id: 'users', label: 'Users & Roles', icon: ShieldCheck, component: Users, group: 'System Settings' },
   { id: 'settings', label: 'Settings', icon: SettingsIcon, component: Settings, group: 'System Settings' },
+];
+
+// Trek Lead accounts: their own menu (only their assigned trips)
+const LEAD_GROUPS = ['My Work', 'Account'];
+const LEAD_PAGES = [
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, component: LeadDashboard, group: 'My Work' },
+  { id: 'my-trips', label: 'My Assigned Trips', icon: CalendarDays, component: LeadTrips, group: 'My Work' },
+  { id: 'my-customers', label: 'Customers', icon: UsersIcon, component: LeadCustomers, group: 'My Work' },
+  { id: 'balances', label: 'Payment Balances', icon: Wallet, component: LeadBalances, group: 'My Work' },
+  { id: 'profile', label: 'Profile', icon: UserRound, component: LeadProfile, group: 'Account' },
 ];
 
 export default function App() {
@@ -119,9 +132,12 @@ export default function App() {
     }
   }, [toast]);
 
+  const isLead = user?.role === 'trek_lead';
+
+  // Dropdown lists for the admin screens (Trek Leads do not use them)
   useEffect(() => {
-    if (user) reloadLookups();
-  }, [user, reloadLookups]);
+    if (user && !isLead) reloadLookups();
+  }, [user, isLead, reloadLookups]);
 
   const go = useCallback((id) => {
     if (window.location.pathname !== pagePath(id)) window.history.pushState(null, '', pagePath(id));
@@ -131,9 +147,10 @@ export default function App() {
   }, []);
 
   const allowedPages = useMemo(
-    () => PAGES.filter((p) => user?.modules?.includes(p.id)),
+    () => (user?.role === 'trek_lead' ? LEAD_PAGES : PAGES).filter((p) => user?.modules?.includes(p.id)),
     [user]
   );
+  const groups = isLead ? LEAD_GROUPS : GROUPS;
 
   // Address bar shows the page actually on screen
   useEffect(() => {
@@ -166,11 +183,11 @@ export default function App() {
             <span className="brand-logo">
               <img src={LOGO_URL} alt="The Fitness Gone Wild" />
             </span>
-            <small>Admin workspace</small>
+            <small>{isLead ? 'Trek Lead workspace' : 'Admin workspace'}</small>
           </div>
 
           <nav className="nav">
-            {GROUPS.map((group) => {
+            {groups.map((group) => {
               const items = allowedPages.filter((p) => p.group === group);
               if (!items.length) return null;
               return (
@@ -193,6 +210,14 @@ export default function App() {
                 </div>
               );
             })}
+            {isLead && (
+              <div className="navgroup">
+                <button type="button" onClick={logout}>
+                  <LogOut size={17} strokeWidth={1.8} aria-hidden="true" />
+                  <span>Log out</span>
+                </button>
+              </div>
+            )}
           </nav>
         </aside>
 
@@ -202,7 +227,7 @@ export default function App() {
             <div className="top-title">{current?.label}</div>
             <div className="top-user">
               <ThemeToggle theme={theme} onChange={changeTheme} />
-              <NotificationBell />
+              {!isLead && <NotificationBell />}
               <ProfileMenu
                 user={user}
                 onChangePassword={() => setChangingPassword(true)}

@@ -14,6 +14,7 @@ const {
 const {
   modulesForRole,
 } = require('../common/rules');
+const { LEAD_PAGES } = require('../trekLead/trekLeadManager');
 
 // What the browser is told about the logged-in admin
 const publicUser = (admin) => ({
@@ -22,7 +23,8 @@ const publicUser = (admin) => ({
   fullName: admin.full_name,
   email: admin.email,
   role: admin.role,
-  modules: modulesForRole(admin.role),
+  // Trek Leads: their own screens (My trips, customers, balances)
+  modules: admin.role === 'trek_lead' ? LEAD_PAGES : modulesForRole(admin.role),
 });
 
 // Returns { user, token } or throws 401

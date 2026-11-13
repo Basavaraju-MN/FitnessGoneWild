@@ -158,6 +158,40 @@ export function Field({ field, value, values, onChange }) {
     );
   }
 
+  // Several choices from a dropdown: chosen ones show as chips (× removes);
+  // value = list of option values (also accepts "1,2,3")
+  if (field.type === 'multiselect') {
+    const picked = (Array.isArray(value) ? value : String(value ?? '').split(','))
+      .map(String).filter(Boolean);
+    const byValue = new Map((options || []).map((o) => [String(o.value), o]));
+    const rest = (options || []).filter((o) => !picked.includes(String(o.value)));
+    return (
+      <div className={`field ${field.full ? 'full' : ''}`}>
+        <label htmlFor={common.id}>{field.label}{field.required ? ' *' : ''}</label>
+        {picked.length > 0 && (
+          <div className="pick-chips">
+            {picked.map((key) => (
+              <span key={key} className="pick-chip">
+                {byValue.get(key)?.label || `#${key}`}
+                <button type="button" aria-label={`Remove ${byValue.get(key)?.label || key}`} onClick={() => onChange(picked.filter((v) => v !== key))}>×</button>
+              </span>
+            ))}
+          </div>
+        )}
+        <SearchSelect
+          id={common.id}
+          value=""
+          searchable
+          placeholder={rest.length ? (picked.length ? (field.addPlaceholder || 'Add another…') : (field.placeholder || 'Choose…')) : 'All chosen'}
+          disabled={!rest.length}
+          options={rest}
+          onChange={(chosen) => chosen && onChange([...picked, String(chosen)])}
+        />
+        {hint && <small>{hint}</small>}
+      </div>
+    );
+  }
+
   let input;
   if (field.type === 'select') {
     // A dropdown with a search box (long lists: treks, dates, people…)
@@ -194,6 +228,7 @@ export function Field({ field, value, values, onChange }) {
       <input
         type={field.type || 'text'}
         min={field.min}
+        max={field.max}
         step={field.step}
         placeholder={field.placeholder}
         {...common}
@@ -249,7 +284,7 @@ const PILL_TONES = {
   // red
   cancelled: 'red', failed: 'red', unpaid: 'red', not_contacted: 'red', full: 'red', 'sold out': 'red', not_interested: 'red', inactive: 'red',
   // blue
-  new: 'blue', ongoing: 'blue', custom: 'blue', replied: 'blue', sent: 'blue', delivered: '', read: '', sending: 'pending',
+  new: 'blue', ongoing: 'blue', transferred: 'blue', custom: 'blue', replied: 'blue', sent: 'blue', delivered: '', read: '', sending: 'pending',
   // grey
   closed: 'grey', archived: 'grey', refunded: 'grey', scheduled: 'grey', hidden: 'grey',
 };

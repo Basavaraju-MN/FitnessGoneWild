@@ -69,6 +69,7 @@ module.exports = {
     activity: ['admin'],
     hero: ['admin'],
     about: ['admin'],
+    b2b: ['admin'],
     users: ['admin'],
     settings: ['admin'],
   },

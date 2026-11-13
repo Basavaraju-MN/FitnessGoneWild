@@ -4,6 +4,7 @@ const cookieParser = require('cookie-parser');
 const routes = require('./routes/routes');
 const reviewManager = require('./components/review/reviewManager');
 const refundManager = require('./components/refund/refundManager');
+const { ensureSchema: prepareTrekLeads } = require('./components/trekLead/trekLeadSchema');
 const { HttpError } = require('./utils/http');
 
 /**
@@ -24,6 +25,10 @@ function createAdminRouter() {
   reviewManager.startAutoSync();
   // Checks pending PhonePe refunds until they complete or fail
   refundManager.startRefundChecks();
+  // Trek Lead role and the trip ↔ lead table (once per start; retried on first use)
+  prepareTrekLeads().catch((error) => console.error('Trek lead tables:', error?.message || error));
+  // B2B vendor tables and the 'transferred' booking status
+  require('./components/b2b/b2bManager').ensureSchema().catch((error) => console.error('B2B tables:', error?.message || error));
 
   router.use((req, res) => {
     res.status(404).json({ success: false, message: 'Admin API endpoint not found' });

@@ -2,6 +2,10 @@
 // Called by controller/controller.js; reads and writes through db/dbops.js.
 const dbops = require('../../db/dbops');
 const tripCode = require('../../../server/src/components/trip/tripCode');
+// The guides of a trip (table departure_guides; they can log in to see it)
+const trekLead = require('../trekLead/trekLeadManager');
+// B2B tables (inbound vendor shown on each customer)
+const b2b = require('../b2b/b2bManager');
 const {
   badRequest,
   notFound,
@@ -13,7 +17,7 @@ const {
 
 const DEPARTURE_FIELDS = [
   'trip_id', 'start_date', 'end_date', 'departure_type', 'seats_total',
-  'status', 'guide_id', 'trip_status',
+  'status', 'trip_status', // guides: guide_ids, see trekLead
   'price_override', 'notes', 'trip_code',
 ];
 
@@ -61,11 +65,14 @@ function cleanDeparture(body) {
 
 // Trips that already had bookings get their code the first time the list loads
 async function getDepartures({ when, tripId }) {
+  await trekLead.ensureSchema();
   await tripCode.fillMissingTripCodes().catch((error) => console.error('Trip codes:', error?.message || error));
   return dbops.getDepartures({ when: when || 'upcoming', tripId });
 }
 
 async function getDeparture(id) {
+  await trekLead.ensureSchema();
+  await b2b.ensureSchema();
   const departure = await dbops.getDepartureById(id);
   if (!departure) throw notFound('Trip coordination not found');
 
@@ -88,21 +95,27 @@ async function createDeparture(admin, body) {
     throw badRequest(`Trip code ${data.trip_code} is already used by another trip`);
   }
 
+  const guideIds = trekLead.parseGuideIds(body.guide_ids);
   const id = await dbops.createDeparture(data);
   await logActivity(admin, 'create', 'departure', id, `${data.start_date} → ${data.end_date}`);
+  if (guideIds?.length) await trekLead.setTripGuides(admin, id, guideIds);
   return { id };
 }
 
 async function updateDeparture(admin, id, body) {
   const data = cleanDeparture(body);
-  if (!Object.keys(data).length) throw badRequest('Nothing to update');
+  const guideIds = trekLead.parseGuideIds(body.guide_ids); // undefined = not changed
+  if (!Object.keys(data).length && guideIds === undefined) throw badRequest('Nothing to update');
   if (data.trip_code && (await dbops.isTripCodeTaken(data.trip_code, id))) {
     throw badRequest(`Trip code ${data.trip_code} is already used by another trip`);
   }
 
-  if (!(await dbops.updateDeparture(id, data))) throw notFound('Trip coordination not found');
-
-  await logActivity(admin, 'update', 'departure', id, Object.keys(data).join(', '));
+  if (!(await dbops.getDepartureForBooking(id))) throw notFound('Trip coordination not found');
+  if (Object.keys(data).length) {
+    await dbops.updateDeparture(id, data);
+    await logActivity(admin, 'update', 'departure', id, Object.keys(data).join(', '));
+  }
+  await trekLead.setTripGuides(admin, id, guideIds);
   return { id };
 }
 

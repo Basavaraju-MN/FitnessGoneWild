@@ -1,6 +1,7 @@
 // Small lists used by dropdowns across the admin.
 // Called by controller/controller.js; reads and writes through db/dbops.js.
 const dbops = require('../../db/dbops');
+const { ensureSchema } = require('../trekLead/trekLeadSchema');
 const { couponLabel } = require('../../../server/src/components/coupon/couponRules');
 
 // Active coupons for the New booking form (empty before coupons.sql has run)
@@ -26,6 +27,7 @@ async function activeCoupons() {
 }
 
 const getLookups = async () => {
+  await ensureSchema(); // guides.admin_user_id (has_login)
   const [lookups, coupons] = await Promise.all([dbops.getLookups(), activeCoupons()]);
   return { ...lookups, coupons };
 };

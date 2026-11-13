@@ -19,6 +19,7 @@ const SCREENS = [
   { module: 'pickup-points', label: 'Pickup Points', group: 'Trip Management' },
   { module: 'regions', label: 'Regions & Cities', group: 'Trip Management' },
   { module: 'guides', label: 'Guides', group: 'Trip Management' },
+  { module: 'b2b', label: 'B2B Vendors', group: 'Trip Management' },
   { module: 'bookings', label: 'Bookings', group: 'Bookings & Revenue' },
   { module: 'payments', label: 'Payments & Refunds', group: 'Bookings & Revenue' },
   { module: 'coupons', label: 'Coupons', group: 'Bookings & Revenue' },
@@ -76,8 +77,9 @@ function ensureLoaded() {
 
 const rolesFor = (module) => [...(grants.get(module) || [])];
 
+// Trek Leads never get admin screens: they have their own portal (trekLead)
 const modulesForRole = (role) =>
-  role === 'admin' ? [...MODULES] : MODULES.filter((m) => grants.get(m)?.has(role));
+  role === 'trek_lead' ? [] : role === 'admin' ? [...MODULES] : MODULES.filter((m) => grants.get(m)?.has(role));
 
 /* ---------- Users & Roles → Role permissions ---------- */
 
