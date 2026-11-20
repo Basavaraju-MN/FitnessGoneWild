@@ -328,6 +328,7 @@ const sqlqueries = {
            b.pickup_point_id, p.name AS pickup_name,
            b.sold_by, s.full_name AS sold_by_name,
            b.coupon_id, b.coupon_code, b.discount_amount
+           /*traffic*/, b.traffic_source, b.traffic_campaign
     FROM bookings b
     JOIN customers c ON c.id = b.customer_id
     LEFT JOIN trips t ON t.id = b.trip_id
@@ -484,6 +485,7 @@ const sqlqueries = {
     SELECT e.id, e.name, e.phone, e.email, e.trip_id, t.name AS trip_name,
            e.people, e.note, e.status, e.source, e.assigned_to,
            a.full_name AS assigned_name, e.received_at, e.updated_at
+           /*traffic*/, e.traffic_source, e.traffic_campaign
     FROM enquiries e
     LEFT JOIN trips t ON t.id = e.trip_id
     LEFT JOIN admin_users a ON a.id = e.assigned_to

@@ -4,6 +4,7 @@ import SectionHeader from '../common/SectionHeader';
 import CityPicker, { RegionPicker } from '../common/CityPicker';
 import TrekCard from './TrekCard';
 import { usePlaces } from '../../context/PlacesContext';
+import { trackContact } from '../../utils/metaPixel';
 import '../../styles/places.css';
 
 import {
@@ -281,6 +282,7 @@ export default function TrekCategories({ onTrekSelect }) {
   const nothingAnywhere = filtering && tabs.every((category) => tabCount(category.id) === 0);
 
   const notifyMe = () => {
+    trackContact('whatsapp_notify');
     const what = region ? `${region.name} trips` : 'treks';
     const from = city ? ` from ${city.name}` : '';
     const message = `Hi, please let me know when ${what}${from} open for booking.`;

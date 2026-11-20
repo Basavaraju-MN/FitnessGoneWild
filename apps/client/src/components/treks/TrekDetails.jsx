@@ -18,11 +18,19 @@ import {
   tripPath,
 } from '../../utils/tripPricing';
 import { API_BASE_URL, getDownloadFileName, getTripTerms } from '../../api/treks';
+import { trackBrochureLead, trackViewTrip } from '../../utils/metaPixel';
+import { getTrafficSource } from '../../utils/trafficSource';
 
 export default function TrekDetails({ trek, onBack }) {
   const [currentImage, setCurrentImage] = useState(0);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [activeTab, setActiveTab] = useState('itinerary');
+
+  // Meta: someone viewed this trip
+  useEffect(() => {
+    if (trek?.id) trackViewTrip(trek, getDisplayPrice(trek));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trek?.id]);
 
   // Share this trip's own link (/treks/<slug> or /trips/<slug>)
   const [shareNote, setShareNote] = useState('');
@@ -254,6 +262,7 @@ export default function TrekDetails({ trek, onBack }) {
             trip_id: trek.id,
             name: trimmedName,
             phone: trimmedMobile,
+            ...getTrafficSource(),
           }),
         }
       );
@@ -306,6 +315,7 @@ export default function TrekDetails({ trek, onBack }) {
       window.URL.revokeObjectURL(downloadUrl);
 
       setShowBrochureModal(false);
+      trackBrochureLead(trek);
       setName('');
       setMobile('');
       setBrochureError('');

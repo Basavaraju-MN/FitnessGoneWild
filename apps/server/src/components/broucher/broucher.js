@@ -1,13 +1,14 @@
 const dbops = require('../../db/dbops');
 const ftpBrochure = require('./ftpBrochure');
 const { sendBrochureDownloadAlert } = require('../../utils/mail');
+const { cleanTrafficSource } = require('../../utils/trafficSource');
 
 // Brochure PDFs are kept only on Hostinger (File Manager → public_html/public/brochures),
 // one folder per trek named by its slug, read over FTP:
 //   public/brochures/kudremukh/Kudremukha trek.pdf   or   public/brochures/kudremukh.pdf
 // Nothing is stored on the website server or in the database.
 
-async function getBrochure({ trip_id, name, phone, email = null, city = null }) {
+async function getBrochure({ trip_id, name, phone, email = null, city = null, traffic_source = null, traffic_campaign = null }) {
     if (!trip_id) {
         return {
             success: false,
@@ -69,7 +70,11 @@ async function getBrochure({ trip_id, name, phone, email = null, city = null }) 
     // They become a customer only when they book (bookingDbops.recordBooking).
     try {
         const customerId = await dbops.findCustomerIdByPhone(phone);
-        await dbops.createBrochureLead({ customer_id: customerId, trip_id, name, phone, email });
+        const came = cleanTrafficSource(traffic_source, traffic_campaign);
+        await dbops.createBrochureLead({
+            customer_id: customerId, trip_id, name, phone, email,
+            traffic_source: came.source, traffic_campaign: came.campaign,
+        });
     } catch (error) {
         file.stream.destroy(); // not sent: close the FTP download
         return {

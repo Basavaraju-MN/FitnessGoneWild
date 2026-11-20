@@ -22,6 +22,8 @@ const queries = {
   // merchant_order_id is UNIQUE, so the same payment is booked only once
   createBooking: `INSERT INTO bookings (booking_ref, departure_id, customer_id, trip_id, pickup_point_id, people, with_transport_people, without_transport_people, travel_mode, trek_start_date, trek_end_date, trip_days, is_custom_trip, amount, amount_paid, advance_amount, balance_amount, payment_type, status, payment_status, merchant_order_id, payment_transaction_id, phonepe_order_id, payment_method, paid_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', ?, ?, ?, ?, ?, NOW())`,
   getBookingRef: `SELECT booking_ref FROM bookings WHERE id = ?`,
+  // Where the customer came from (Instagram ad, Google, ...): traffic_source.sql
+  setBookingTrafficSource: `UPDATE bookings SET traffic_source = ?, traffic_campaign = ? WHERE id = ?`,
   // Readable reference from the row id, e.g. TFGW-2026-0042. Given once (the
   // TMP- ref is still there): it marks the booking as finished.
   setBookingRef: `UPDATE bookings SET booking_ref = CONCAT('TFGW-', YEAR(booked_at), '-', LPAD(id, 4, '0')) WHERE id = ? AND booking_ref LIKE 'TMP-%'`,
@@ -197,6 +199,15 @@ async function recordBooking(transaction) {
       if (saved.affectedRows) await executeQuery(queries.addCouponUse, [details.couponId]);
     } catch (error) {
       console.error(`Saving coupon ${details.couponCode} on booking ${bookingId} failed${error?.code === 'ER_BAD_FIELD_ERROR' ? ' (run coupons.sql on the database)' : ''}:`, error?.message || error);
+    }
+  }
+
+  // Where the customer came from: "Came from" in the admin
+  if (details.trafficSource || details.trafficCampaign) {
+    try {
+      await executeQuery(queries.setBookingTrafficSource, [details.trafficSource || null, details.trafficCampaign || null, bookingId]);
+    } catch (error) {
+      console.error(`Saving booking source on booking ${bookingId} failed${error?.code === 'ER_BAD_FIELD_ERROR' ? ' (run admin-server/sql/traffic_source.sql on the database)' : ''}:`, error?.message || error);
     }
   }
 

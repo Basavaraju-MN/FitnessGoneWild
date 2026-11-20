@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { getFeaturedTrips, saveTripInterest } from '../../api/treks';
+import { trackContact } from '../../utils/metaPixel';
 import SectionHeader from '../common/SectionHeader';
 import RichText from '../common/RichText';
 import FadeImage from '../common/FadeImage';
@@ -144,6 +145,7 @@ export default function FeaturedTrips({ onTrekSelect }) {
     event.stopPropagation();
 
     try {
+      trackContact('whatsapp', trip);
       await saveTripInterest(trip.id, 'enquiry');
       setEnquiryCounts((previous) => ({
         ...previous,

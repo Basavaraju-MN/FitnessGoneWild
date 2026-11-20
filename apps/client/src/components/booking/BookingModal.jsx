@@ -8,6 +8,7 @@ import RichText from '../common/RichText';
 import { usePlaces } from '../../context/PlacesContext';
 import { getDisplayPrice, getPriceOptions, includesTransport, isWithTransportOnly, tripWord } from '../../utils/tripPricing';
 import useTrekImages from '../../hooks/useTrekImages';
+import { trackStartBooking } from '../../utils/metaPixel';
 
 const GST_RATE = 0.05;
 
@@ -108,6 +109,12 @@ export default function BookingModal({
 
   const [selectedWeekend, setSelectedWeekend] =
     useState(null);
+
+  // Meta: someone started booking this trip
+  useEffect(() => {
+    if (trek?.id) trackStartBooking(trek);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trek?.id]);
 
   useEffect(() => {
     if (!trek?.id) return undefined;

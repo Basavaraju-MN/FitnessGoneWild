@@ -4,6 +4,8 @@ import RichText from '../common/RichText';
 import FadeImage from '../common/FadeImage';
 import BookingModal from '../booking/BookingModal';
 import { API_BASE_URL, getDownloadFileName } from '../../api/treks';
+import { trackBrochureLead, trackContact } from '../../utils/metaPixel';
+import { getTrafficSource } from '../../utils/trafficSource';
 import useTrekImages, { FALLBACK_IMAGE } from '../../hooks/useTrekImages';
 import { MapPin } from 'lucide-react';
 import { fromLabel, usePlaces } from '../../context/PlacesContext';
@@ -153,6 +155,7 @@ export default function TrekCard({ trek, onClick }) {
   };
 
   const handleWhatsApp = () => {
+    trackContact('whatsapp', trek);
     const message =
       `Hi, I am interested in booking ${trek.name}.`;
 
@@ -237,6 +240,7 @@ export default function TrekCard({ trek, onClick }) {
             phone: trimmedMobile,
             email: null,
             city: null,
+            ...getTrafficSource(),
           }),
         }
       );
@@ -299,6 +303,7 @@ export default function TrekCard({ trek, onClick }) {
        * Close modal after successful download.
        */
       setShowBrochureModal(false);
+      trackBrochureLead(trek);
       setName('');
       setMobile('');
       setBrochureError('');

@@ -190,6 +190,7 @@ const sqlqueries = {
   updateDownloadCount: `UPDATE brochures SET download_count = download_count + 1 WHERE trip_id = ?`,
   // Brochure download = a lead in Enquiries & Leads (admin portal)
   createBrochureLead: `INSERT INTO enquiries (customer_id, trip_id, name, phone, email, people, status, source) VALUES (?, ?, ?, ?, ?, 1, 'new', 'brochure')`,
+  setLeadTrafficSource: 'UPDATE enquiries SET traffic_source = ?, traffic_campaign = ? WHERE id = ?',
   // Someone who already booked before: link the lead to them
   findCustomerIdByPhone: `SELECT id FROM customers WHERE phone = ? ORDER BY id DESC LIMIT 1`,
   countTripInterested: `SELECT COUNT(*) AS total FROM trip_interests WHERE trip_id = ? AND type = 'interested'`,

@@ -14,6 +14,7 @@ import {
   useSearchParams,
 } from 'react-router-dom';
 
+import { trackPurchase } from '../utils/metaPixel';
 import '../styles/payment.css';
 
 const configuredApiBaseUrl =
@@ -106,6 +107,15 @@ export default function PaymentResult() {
             status: 'SUCCESS',
             error: '',
           });
+
+          // Meta: a confirmed sale (sent once per order)
+          let paidBooking = {};
+          try {
+            paidBooking = JSON.parse(sessionStorage.getItem('pendingBooking') || '{}') || {};
+          } catch {
+            // Booking details unavailable; still record the sale
+          }
+          trackPurchase(merchantOrderId, paidBooking);
 
           // Payment is verified by the backend.
           // Now request the receipt from the backend.
