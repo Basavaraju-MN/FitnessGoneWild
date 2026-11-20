@@ -1,9 +1,11 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
+import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
 
 import Home from './pages/Home';
 import About from './pages/About';
 import PaymentOptions from './pages/PaymentOptions';
 import PaymentResult from './pages/PaymentResult';
+import { trackContact } from './utils/metaPixel';
 import Placeholder from './pages/Placeholder';
 import { PlacesProvider } from './context/PlacesContext';
 
@@ -49,10 +51,43 @@ function FloatingSocialDock() {
   );
 }
 
+// The Meta Pixel in index.html sends a PageView on the first load. This app
+// changes pages without reloading, so send one on every later route change.
+function MetaPixelPageViews() {
+  const { pathname, search } = useLocation();
+  const isFirstLoad = useRef(true);
+
+  useEffect(() => {
+    if (isFirstLoad.current) {
+      isFirstLoad.current = false;
+      return;
+    }
+    if (typeof window.fbq === 'function') {
+      window.fbq('track', 'PageView');
+    }
+  }, [pathname, search]);
+
+  // Any WhatsApp or phone link to us counts as a Contact
+  useEffect(() => {
+    const onClick = (event) => {
+      const link = event.target.closest?.('a[href]');
+      if (!link) return;
+      const href = link.getAttribute('href') || '';
+      if (href.includes('wa.me/918762350551')) trackContact('whatsapp');
+      else if (href.startsWith('tel:')) trackContact('phone');
+    };
+    document.addEventListener('click', onClick, true);
+    return () => document.removeEventListener('click', onClick, true);
+  }, []);
+
+  return null;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
      <PlacesProvider>
+      <MetaPixelPageViews />
       <FloatingSocialDock />
       <Routes>
 

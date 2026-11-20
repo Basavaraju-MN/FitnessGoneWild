@@ -6,6 +6,7 @@ import DataTable from '../components/DataTable';
 import { PageHead, Pill, Stats } from '../components/ui';
 import { BookingDetailModal, NewBookingModal, PaymentModal, SoldBySelect } from '../components/booking';
 import { RowMenu, useInvoiceActions } from '../components/invoiceActions';
+import { cameFromColumn } from '../components/CameFrom';
 
 // onSoldBy: reload after "Sold by" is changed in the list
 export const bookingColumns = (open, collect, invoice, onSoldBy) => [
@@ -28,6 +29,8 @@ export const bookingColumns = (open, collect, invoice, onSoldBy) => [
   { key: 'payment_status', label: 'Payment', render: (r) => <Pill value={r.payment_status} /> },
   { key: 'status', label: 'Status', render: (r) => <Pill value={r.status} /> },
   { key: 'booked_at', label: 'Booked on', render: (r) => dateTime(r.booked_at) },
+  // Where a website booking came from (Instagram ad, Google, ...)
+  cameFromColumn,
   // Sales representative (admin only): chosen right here in the list
   {
     key: 'sold_by_name', label: 'Sold by',

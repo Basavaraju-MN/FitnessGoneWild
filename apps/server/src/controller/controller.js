@@ -7,6 +7,7 @@ const phonepeComponent = require('../components/payment/phonepeComponent');
 const component = require('../components/trekDetails');
 const brochureComponent = require('../components/broucher/broucher')
 const couponComponent = require('../components/coupon/coupon');
+const { cleanTrafficSource } = require('../utils/trafficSource');
 
 // "Customise dates" on the booking pop-up: off for now. Set to true to allow
 // customised trips again (and SHOW_CUSTOM_DATES in BookingModal.jsx).
@@ -291,7 +292,7 @@ exports.createTripInterest = async (req, res) => {
 };
 
 exports.downloadBroucher = async (req, res) => {
-  const { trip_id, name, phone, email, city } = req.body;
+  const { trip_id, name, phone, email, city, traffic_source, traffic_campaign } = req.body;
   try {
     const result = await brochureComponent.getBrochure({
       trip_id,
@@ -299,6 +300,8 @@ exports.downloadBroucher = async (req, res) => {
       phone,
       email,
       city,
+      traffic_source,
+      traffic_campaign,
     });
 
     if (!result.success) {
@@ -377,6 +380,9 @@ exports.createPhonePePayment = async (req, res) => {
       couponCode,
       // Trek with price options: [{ id, people }]
       ticketOptions,
+      // Where the visitor came from (Instagram ad, Google, ...)
+      traffic_source,
+      traffic_campaign,
     } = req.body;
 
     // Validate payment amount
@@ -484,6 +490,10 @@ exports.createPhonePePayment = async (req, res) => {
 
         user_id,
         preferred_payment_method,
+
+        // Saved on the booking: "Came from" in the admin
+        trafficSource: cleanTrafficSource(traffic_source).source,
+        trafficCampaign: cleanTrafficSource(null, traffic_campaign).campaign,
       },
     });
 

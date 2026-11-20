@@ -3,6 +3,9 @@ const sqlQueries = require('./sqlqueries');
 
 const first = (rows) => rows[0] || null;
 
+// A list query without its "Came from" columns (before traffic_source.sql has run)
+const withoutTraffic = (sql) => sql.replace(/\/\*traffic\*\/[^\n]*/, '');
+
 // A table that is not there yet (its .sql file has not run) reads as empty
 const orNone = (error) => {
   if (['ER_NO_SUCH_TABLE', 'ER_BAD_FIELD_ERROR'].includes(error?.code)) return [];
@@ -340,9 +343,15 @@ class Cmds {
 
   // Bookings list query; before booking_sold_by.sql / coupons.sql have run
   // (no sold_by / coupon columns yet) the list still loads, without them
+  // (and before traffic_source.sql: without "Came from")
   async queryBookings(conditions, suffix, params) {
     try {
       return await executeQuery(`${withWhere(sqlQueries.bookingsBase, conditions)}${suffix}`, params);
+    } catch (error) {
+      if (error?.code !== 'ER_BAD_FIELD_ERROR') throw error;
+    }
+    try {
+      return await executeQuery(`${withWhere(withoutTraffic(sqlQueries.bookingsBase), conditions)}${suffix}`, params);
     } catch (error) {
       if (error?.code !== 'ER_BAD_FIELD_ERROR') throw error;
       return executeQuery(`${withWhere(sqlQueries.bookingsBaseOld, conditions)}${suffix}`, params);
@@ -545,7 +554,13 @@ class Cmds {
 
   /* ================= ENQUIRIES ================= */
   async getEnquiries() {
-    return executeQuery(sqlQueries.getEnquiries);
+    try {
+      return await executeQuery(sqlQueries.getEnquiries);
+    } catch (error) {
+      // Before traffic_source.sql has run: the list without "Came from"
+      if (error?.code !== 'ER_BAD_FIELD_ERROR') throw error;
+      return executeQuery(withoutTraffic(sqlQueries.getEnquiries));
+    }
   }
 
   async createEnquiry(data) {

@@ -8,6 +8,7 @@ import DataTable from '../components/DataTable';
 import { FormModal, PageHead, Stats, useToast } from '../components/ui';
 import { LeadStatusSelect, ManageLeadStatuses, useLeadStatuses } from '../components/LeadStatus';
 import SearchSelect from '../components/SearchSelect';
+import { cameFromColumn } from '../components/CameFrom';
 
 // First WhatsApp message, depending on how the lead reached us
 const firstMessage = (lead) =>
@@ -25,6 +26,8 @@ export default function Enquiries() {
   const { lookups } = useAdmin();
   const { data, loading, error, reload } = useApi('/enquiries');
   const [source, setSource] = useState('all');
+  // "Came from" filter: Instagram ad, Facebook ad, Google search, ...
+  const [cameFrom, setCameFrom] = useState('all');
   const [form, setForm] = useState(null); // null | 'new' | lead (note edit)
   const [managing, setManaging] = useState(false);
   const statuses = useLeadStatuses();
@@ -41,8 +44,14 @@ export default function Enquiries() {
 
   const all = data || [];
   const rows = useMemo(
-    () => (source === 'all' ? all : all.filter((lead) => lead.source === source)),
-    [all, source]
+    () => all.filter((lead) =>
+      (source === 'all' || lead.source === source)
+      && (cameFrom === 'all' || (lead.traffic_source || '') === cameFrom)),
+    [all, source, cameFrom]
+  );
+  const cameFromOptions = useMemo(
+    () => [...new Set(all.map((lead) => lead.traffic_source).filter(Boolean))].sort(),
+    [all]
   );
 
   const stageCount = (stage, notNew) =>
@@ -101,6 +110,14 @@ export default function Enquiries() {
         error={error}
         exportName={`fgw-leads${source === 'all' ? '' : `-${source}`}.csv`}
         searchPlaceholder="Search leads…"
+        actions={cameFromOptions.length > 0 && (
+          <select value={cameFrom} onChange={(e) => setCameFrom(e.target.value)} aria-label="Came from">
+            <option value="all">Came from: all</option>
+            {cameFromOptions.map((value) => (
+              <option key={value} value={value}>{value}</option>
+            ))}
+          </select>
+        )}
         initialSort={{ key: 'received_at', dir: 'desc' }}
         emptyText="No leads here yet."
         columns={[
@@ -117,6 +134,7 @@ export default function Enquiries() {
               </span>
             ),
           },
+          cameFromColumn,
           { key: 'trip_name', label: 'Trip', render: (r) => r.trip_name || <span className="muted">General</span> },
           { key: 'people', label: 'People' },
           { key: 'received_at', label: 'Received', render: (r) => dateTime(r.received_at) },

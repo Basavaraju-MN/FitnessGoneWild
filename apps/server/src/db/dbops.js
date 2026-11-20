@@ -186,8 +186,18 @@ class Cmds {
   }
 
   // Lead in the admin portal's Enquiries & Leads (source: brochure)
-  async createBrochureLead({ customer_id, trip_id, name, phone, email = null }) {
-    await executeQuery(sqlQueries.createBrochureLead, [customer_id || null, trip_id, name, phone, email || null]);
+  async createBrochureLead({ customer_id, trip_id, name, phone, email = null, traffic_source = null, traffic_campaign = null }) {
+    const result = await executeQuery(sqlQueries.createBrochureLead, [customer_id || null, trip_id, name, phone, email || null]);
+
+    // Where they came from (Instagram ad, Google, ...): never stops the lead
+    if (result?.insertId && (traffic_source || traffic_campaign)) {
+      try {
+        await executeQuery(sqlQueries.setLeadTrafficSource, [traffic_source, traffic_campaign, result.insertId]);
+      } catch (error) {
+        const hint = error?.code === 'ER_BAD_FIELD_ERROR' ? ' (run admin-server/sql/traffic_source.sql on the database)' : '';
+        console.error(`Saving lead source failed${hint}:`, error?.message || error);
+      }
+    }
   }
 
   async findCustomerIdByPhone(phone) {

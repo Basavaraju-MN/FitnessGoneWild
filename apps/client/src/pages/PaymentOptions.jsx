@@ -1,6 +1,8 @@
 import { CreditCard, QrCode, ShieldCheck, Smartphone, ArrowLeft } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useMemo, useState } from 'react';
+import { trackPaymentStart } from '../utils/metaPixel';
+import { getTrafficSource } from '../utils/trafficSource';
 import '../styles/payment.css';
 
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, '');
@@ -207,6 +209,7 @@ export function PaymentMethodChooser({ booking, onBack }) {
 
     setError('');
     setIsStartingPayment(true);
+    trackPaymentStart(booking);
 
     try {
       const response = await fetch(`${API_BASE_URL}/create-payment`, {
@@ -271,6 +274,9 @@ export function PaymentMethodChooser({ booking, onBack }) {
           paymentType: booking?.paymentType || 'full',
           tripTotal: Number(booking?.tripTotal || total),
           balanceDue: Number(booking?.balanceDue || 0),
+
+          // Where the visitor came from (Instagram ad, Google, ...) for the admin
+          ...getTrafficSource(),
         }),
       });
 
