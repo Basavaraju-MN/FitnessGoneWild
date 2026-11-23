@@ -77,7 +77,8 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
-  "script-src 'self'",
+  // + Meta Pixel (public/meta-pixel.js loads Facebook's fbevents.js)
+  "script-src 'self' https://connect.facebook.net",
   "object-src 'none'",
   "base-uri 'self'",
   "frame-ancestors 'none'",
@@ -85,7 +86,7 @@ const CONTENT_SECURITY_POLICY = [
   "font-src 'self' data: https://fonts.gstatic.com",
   // Trek photos, Unsplash heroes, Google review photos, uploads being previewed
   "img-src 'self' data: blob: https:",
-  "connect-src 'self'",
+  "connect-src 'self' https://connect.facebook.net https://www.facebook.com",
   "frame-src 'self' blob:",
   "worker-src 'self' blob:",
   "form-action 'self'",

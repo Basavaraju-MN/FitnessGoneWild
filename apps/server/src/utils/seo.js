@@ -29,6 +29,11 @@ const queries = {
           ORDER BY is_featured DESC, featured_order, name`,
   settings: "SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('business_name','contact_phone','contact_email','business_address')",
   faq: 'SELECT question, answer FROM faq ORDER BY id',
+  // The first hero the website shows (same order and rule as Hero.jsx)
+  firstHero: `SELECT image_path FROM hero_slides
+              WHERE is_active = 1 AND image_path IS NOT NULL AND image_path <> ''
+                AND headline_line1 IS NOT NULL AND headline_line1 <> ''
+              ORDER BY sort_order, id LIMIT 1`,
 };
 
 const esc = (text) => String(text ?? '')
@@ -177,13 +182,18 @@ function homePage(clientDist) {
       const base = siteUrl(req);
       indexHtml(clientDist); // a new build: forget the kept home page
       if (Date.now() - homeKept.at > KEEP_MS || homeKept.base !== base) {
-        const [trips, faq, biz] = await Promise.all([
+        const [trips, faq, biz, hero] = await Promise.all([
           publishedTrips(),
           executeQuery(queries.faq).catch(() => []),
           business(base),
+          executeQuery(queries.firstHero).catch(() => []),
         ]);
+        // The hero photo is the biggest thing on the page: the browser starts
+        // downloading it now, not only after the script and /api/hero have loaded
+        const heroPhoto = hero?.[0]?.image_path;
         const url = `${base}/`;
         const head = [
+          ...(heroPhoto ? [`<link rel="preload" as="image" href="${esc(heroPhoto)}" fetchpriority="high" />`] : []),
           ...shareTags({ title: HOME_TITLE, description: HOME_DESCRIPTION, image: `${base}/images/hero1.jpg`, url }),
           jsonLd({
             '@context': 'https://schema.org',

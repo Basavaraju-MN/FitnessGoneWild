@@ -13,6 +13,7 @@
 const crypto = require('crypto');
 const path = require('path');
 const { executeQuery } = require('../../db/connection');
+const { recordWhatsAppLead } = require('./whatsappLeads');
 
 // The admin can run on its own locally: WHATSAPP_* live in apps/server/.env
 require('dotenv').config({ path: path.join(__dirname, '../../../.env'), quiet: true });
@@ -115,7 +116,7 @@ async function sendInvoiceDocument({ bookingId, invoiceId, phone, pdf, fileName,
 
 const messagesForBooking = (bookingId) => executeQuery(queries.forBooking, [bookingId]);
 
-/* ---------- Webhook: delivery status from WhatsApp ---------- */
+/* ---------- Webhook: delivery status, and customers' messages (leads) ---------- */
 
 // GET: Meta checks the webhook once when you set it up
 function verifyWebhook(req, res) {
@@ -147,6 +148,11 @@ async function receiveWebhook(req, res) {
           if (!['sent', 'delivered', 'read', 'failed'].includes(s.status)) continue;
           const error = s.errors?.[0] ? `${s.errors[0].title || ''} ${s.errors[0].error_data?.details || ''}`.trim().slice(0, 500) : null;
           await executeQuery(queries.byWaId, [s.status, error, s.id]);
+        }
+        // Messages from customers (e.g. from a "Send WhatsApp message" ad): leads
+        for (const message of change.value?.messages || []) {
+          await recordWhatsAppLead(message, change.value.contacts || [])
+            .catch((error) => console.error('WhatsApp lead failed:', error?.message || error));
         }
       }
     }
