@@ -446,3 +446,6 @@
 .card-blurb p { margin: 0; display: inline; }
 .card-blurb p + p::before { content: ' '; }
 .card-blurb a { color: inherit; }
+
+/* Short brochure label: phones only (see the phone card rules above) */
+.brochure-short{display:none}

@@ -5,6 +5,7 @@ import SectionHeader from '../components/common/SectionHeader';
 import RichText from '../components/common/RichText';
 import { getAbout } from '../api/treks';
 import '../styles/about.css';
+import { sized, widthFor } from '../utils/photoSize';
 
 // About page (/about): our story, the founder, the team and what we stand
 // for. Everything (texts and photos) is edited in the admin → About Page.
@@ -62,7 +63,7 @@ export default function About() {
 
       <main className="about-page">
         {/* 1. Banner */}
-        <section className="about-banner" style={{ backgroundImage: `url('${photos.banner || FALLBACK_BANNER}')` }}>
+        <section className="about-banner" style={{ backgroundImage: `url('${sized(photos.banner, widthFor()) || FALLBACK_BANNER}')` }}>
           <div className="about-banner-inner">
             {banner.eyebrow && <p className="eyebrow">{banner.eyebrow}</p>}
             <h1>{banner.title}</h1>
@@ -77,7 +78,7 @@ export default function About() {
               <div className="about-story-side">
                 {story.eyebrow && <p className="eyebrow">{story.eyebrow}</p>}
                 {story.title && <h2 className="about-title">{story.title}</h2>}
-                {photos.story && <img className="about-story-photo" src={photos.story} alt="" loading="lazy" />}
+                {photos.story && <img className="about-story-photo" src={sized(photos.story, widthFor(640))} alt="" loading="lazy" />}
               </div>
               <RichText html={story.text} className="about-story-text" />
             </div>
@@ -94,7 +95,7 @@ export default function About() {
         {showFounder && (
           <section className="section">
             <div className={`about-founder ${photos.founder ? '' : 'no-photo'}`}>
-              {photos.founder && <img className="about-founder-photo" src={photos.founder} alt={founder.name} loading="lazy" />}
+              {photos.founder && <img className="about-founder-photo" src={sized(photos.founder, widthFor(400))} alt={founder.name} loading="lazy" />}
               <div>
                 {founder.eyebrow && <p className="eyebrow">{founder.eyebrow}</p>}
                 <h2 className="about-title">{founder.name}</h2>
@@ -122,7 +123,7 @@ export default function About() {
                 {team.map((member) => (
                   <article className="team-card" key={member.id}>
                     {member.photo
-                      ? <img className="team-photo" src={member.photo} alt={member.name} loading="lazy" />
+                      ? <img className="team-photo" src={sized(member.photo, 480)} alt={member.name} loading="lazy" />
                       : <div className="team-photo team-initials" aria-hidden="true">{initials(member.name)}</div>}
                     <div className="team-body">
                       <h3>{member.name}</h3>
