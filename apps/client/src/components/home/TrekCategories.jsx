@@ -253,7 +253,8 @@ export default function TrekCategories({ onTrekSelect }) {
   // Treks for the chosen city / region, and how many each tab has
   const shownTreks = searching ? searchResults : treks.filter((trek) => matches(trek));
   const tabCount = (categoryId) =>
-    countTreks((t) => !t.is_featured && t.category_id === categoryId);
+    // Featured trips count only when they are also shown in their category
+    countTreks((t) => (!Number(t.is_featured) || Number(t.featured_in_category) === 1) && t.category_id === categoryId);
   const filtering = hasPlaces && Boolean(city || region);
 
   // Tabs: a region can be set to show only some categories (in its order);

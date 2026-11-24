@@ -83,6 +83,7 @@ const getSiteFilters = async () => {
                 id: p.row.trip_id,
                 category_id: p.row.category_id,
                 is_featured: Number(p.row.is_featured) === 1,
+                featured_in_category: Number(p.row.featured_in_category) === 1,
                 region_id: p.region?.id || null,
                 city_ids: p.departure_cities.map((c) => c.id),
             })),

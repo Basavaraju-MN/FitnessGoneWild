@@ -192,7 +192,10 @@ export default function TrekDetails({ trek, onBack }) {
   /* BOOK NOW */
   /* ============================= */
 
+  // Book Now: every trip, except a featured trip shown only in Featured trips
+  // (admin: "Also show in its category" not ticked); those are booked by enquiry
   const isFeatured = Number(trek.is_featured) === 1;
+  const canBook = !isFeatured || Number(trek.featured_in_category) === 1;
 
   const handleBookNow = () => {
     setShowBookingModal(true);
@@ -775,8 +778,8 @@ export default function TrekDetails({ trek, onBack }) {
             WhatsApp
           </button>
 
-          {/* No Book Now for featured trips (is_featured = 1) */}
-          {!isFeatured && (
+          {/* No Book Now for "Featured only" trips (see canBook) */}
+          {canBook && (
             <button
               type="button"
               className="trek-action-book"

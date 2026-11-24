@@ -29,6 +29,8 @@ function createAdminRouter() {
   prepareTrekLeads().catch((error) => console.error('Trek lead tables:', error?.message || error));
   // B2B vendor tables and the 'transferred' booking status
   require('./components/b2b/b2bManager').ensureSchema().catch((error) => console.error('B2B tables:', error?.message || error));
+  // Featured trips: "Also show in its category" setting
+  require('./components/package/featuredSchema').ensureSchema().catch((error) => console.error('Featured trips column:', error?.message || error));
 
   router.use((req, res) => {
     res.status(404).json({ success: false, message: 'Admin API endpoint not found' });

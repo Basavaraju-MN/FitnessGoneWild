@@ -13,6 +13,20 @@ const {
   logActivity,
 } = require('../../utils/http');
 const { cleanRichText, plainText } = require('./richText');
+const featuredSchema = require('./featuredSchema');
+
+// "Also show in its category" is saved only once its column exists, so a
+// trip can always be saved (the column is added when the server starts)
+async function withFeaturedColumn(data) {
+  if (data.featured_in_category === undefined) return data;
+  try {
+    await featuredSchema.ensureSchema();
+  } catch (error) {
+    console.error('Featured trips column missing, setting not saved:', error?.message || error);
+    delete data.featured_in_category;
+  }
+  return data;
+}
 
 const BLURB_MAX = 300; // characters of text in the short description
 
@@ -20,7 +34,7 @@ const TRIP_FIELDS = [
   'slug', 'name', 'category_id', 'region_id', 'blurb', 'description', 'itinerary',
   'duration_label', 'duration_days', 'difficulty', 'distance_label',
   'price', 'without_transport_price', 'with_transport_price', 'price_note',
-  'badge_text', 'badge_style', 'is_featured', 'featured_label',
+  'badge_text', 'badge_style', 'is_featured', 'featured_in_category', 'featured_label',
   'featured_order', 'status',
 ];
 
@@ -35,6 +49,7 @@ function cleanTrip(body) {
   }
 
   if (data.is_featured !== undefined) data.is_featured = data.is_featured ? 1 : 0;
+  if (data.featured_in_category !== undefined) data.featured_in_category = Number(data.featured_in_category) ? 1 : 0;
   if (data.region_id !== undefined) data.region_id = Number(data.region_id) || null;
 
   // Rich text from the editor: cleaned HTML (formatting kept)
@@ -281,7 +296,7 @@ async function getTrip(id) {
 
 async function createTrip(admin, body) {
   requireFields(body, ['slug', 'name', 'category_id', 'region_id', 'blurb', 'duration_label', 'price']);
-  const data = cleanTrip(body);
+  const data = await withFeaturedColumn(cleanTrip(body));
   const pickups = checkPickupPoints(body.pickup_points);
   const priceOptions = checkPriceOptions(body.price_options);
   const terms = checkTerms(body);
@@ -299,7 +314,7 @@ async function createTrip(admin, body) {
 
 async function updateTrip(admin, id, body) {
   const trip = await findTrip(id);
-  const data = cleanTrip(body);
+  const data = await withFeaturedColumn(cleanTrip(body));
   const pickups = checkPickupPoints(body.pickup_points);
   const priceOptions = checkPriceOptions(body.price_options);
   const terms = checkTerms(body);
