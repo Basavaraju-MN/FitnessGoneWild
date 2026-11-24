@@ -60,3 +60,81 @@
 .thumb img.fade-top{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .7s ease;pointer-events:none}
 .thumb img.fade-top.is-ready{opacity:1}
 @media (prefers-reduced-motion:reduce){.hero-photo{transition:none}.hero-photo.is-ready{animation:none}.hero-slide{transform:none;transition:none}.thumb img.fade-top{transition:none}}
+
+/* =====================================================================
+   PHONES (most visitors): a layout of its own
+   ===================================================================== */
+
+/* ---------- Photos shown full ----------
+   The photo box takes the shape of the trip's cover photo (--ratio, set when
+   it loads; kept between 4:5 and 16:9), so the cover fills it completely.
+   Other photos of the trip fit inside (contain); if their shape differs, the
+   sides are filled with a soft, blurred copy of the same photo (--photo). */
+@media (max-width:620px){
+  .trek-card .thumb,.featured-slide .trip-thumb{aspect-ratio:var(--ratio,4/3);overflow:hidden;background:#1E5147;isolation:isolate}
+  .trek-card .thumb::before,.featured-slide .trip-thumb::before{content:'';position:absolute;inset:-24px;z-index:0;background:var(--photo) center/cover no-repeat;filter:blur(18px) brightness(.82);transform:scale(1.08)}
+  .trek-card .thumb img,.featured-slide .trip-thumb img{position:relative;z-index:1;width:100%;height:100%;object-fit:contain}
+  .trek-card .thumb img.fade-top,.featured-slide .trip-thumb img.fade-top{position:absolute;inset:0;object-fit:contain}
+  .trek-card .thumb .tag,.trek-card .trek-slider-btn,.trek-card .trek-slider-dots,.featured-slide .trek-slider-dots{z-index:3}
+}
+@media (max-width:768px){
+  section.trek-details-gallery{height:auto;aspect-ratio:var(--ratio,4/3);isolation:isolate;background:#1E5147}
+  section.trek-details-gallery::before{content:'';position:absolute;inset:-24px;z-index:0;background:var(--photo) center/cover no-repeat;filter:blur(18px) brightness(.82);transform:scale(1.08)}
+  section.trek-details-gallery .trek-details-image{position:relative;z-index:1;object-fit:contain}
+  section.trek-details-gallery .details-slider-button,section.trek-details-gallery .details-image-dots{z-index:3}
+}
+
+/* ---------- Hero: shorter, photo visible ----------
+   Shade from top to bottom (the desktop one darkens from the left, which on a
+   phone covered the whole photo); smaller text; the two buttons side by side;
+   the four numbers in one row; arrows beside the dots. */
+@media (max-width:640px){
+  .hero{min-height:0}
+  .hero-shade{background:linear-gradient(180deg,rgba(4,30,23,.35) 0%,rgba(4,30,23,.55) 45%,rgba(4,30,23,.9) 100%)}
+  .hero-photo{background-position:center}
+  .hero-inner{padding:48px 18px 68px}
+  .hero .eyebrow{font-size:.62rem;letter-spacing:.14em;margin-bottom:8px}
+  .hero h1{font-size:2.3rem;text-shadow:0 2px 14px rgba(0,0,0,.35)}
+  .hero-sub{font-size:.95rem;line-height:1.5;margin:12px 0 22px;text-shadow:0 1px 8px rgba(0,0,0,.45)}
+  .hero-actions{flex-direction:row;flex-wrap:nowrap;align-items:stretch;gap:10px}
+  .hero-actions>a{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:12px 10px;font-size:.84rem;line-height:1.2}
+  .hero-facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:26px;padding-top:16px}
+  .hero-facts li{min-width:0}
+  .hero-facts strong{font-size:1.3rem}
+  .hero-facts span{display:block;font-size:.56rem;letter-spacing:.04em;line-height:1.3}
+  /* arrows: inline styles in Hero.jsx, hence !important */
+  .hero .hero-arrow{top:auto !important;bottom:14px;transform:none !important;width:30px !important;height:30px !important;font-size:20px !important}
+  .hero .hero-arrow-prev{left:calc(50% - 88px) !important}
+  .hero .hero-arrow-next{right:calc(50% - 88px) !important}
+}
+
+/* ---------- Trip cards: compact on phones ----------
+   A shorter card: photo at most 3:2, one line of description, the info chips
+   in one line, the brochure button beside the price, smaller buttons. */
+@media (max-width:620px){
+  .trek-card .card-body{display:grid;grid-template-columns:1fr auto;align-items:center;column-gap:10px;
+    grid-template-areas:'region region' 'title title' 'blurb blurb' 'info info' 'price brochure' 'actions actions'}
+  .trek-card .card-region{grid-area:region}
+  .trek-card .card-body>h3{grid-area:title}
+  .trek-card .card-blurb{grid-area:blurb}
+  .trek-card .info{grid-area:info;flex-wrap:nowrap;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,#000 85%,transparent);mask-image:linear-gradient(90deg,#000 85%,transparent)}
+  .trek-card .info span{flex:0 0 auto;white-space:nowrap}
+  .trek-card .price-row{grid-area:price;margin:0;padding:0;border-top:0}
+  .trek-card .brochure-btn{grid-area:brochure;width:auto;margin:0 !important;padding:7px 12px !important;font-size:.76rem !important;white-space:nowrap}
+  .trek-card .brochure-word{display:none}
+  .trek-card .brochure-short{display:inline}
+  .trek-card .card-actions{grid-area:actions}
+  #trips .content-grid,.content-grid{gap:18px}
+  .trek-card{border-radius:18px}
+  .trek-card .card-body{padding:12px 14px 14px}
+  .trek-card .card-region{font-size:.62rem;letter-spacing:.12em}
+  .trek-card .card-body h3{font-size:1.18rem;line-height:1.1;margin-top:1px}
+  .trek-card .card-blurb{font-size:.82rem;line-height:1.45;margin-top:3px;-webkit-line-clamp:1}
+  .trek-card .info{gap:5px;margin:8px 0 10px}
+  .trek-card .info span{font-size:.7rem;padding:3px 9px}
+  .trek-card .price-row{padding-top:11px}
+  .trek-card .price strong{font-size:1.18rem}
+  .trek-card .price small{font-size:.72rem}
+  .trek-card .card-actions{gap:8px;margin-top:10px}
+  .trek-card .card-actions button{padding:9px 8px;font-size:.82rem;border-radius:10px}
+}

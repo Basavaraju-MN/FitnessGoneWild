@@ -4,6 +4,7 @@ import SectionHeader from '../common/SectionHeader';
 import RichText from '../common/RichText';
 import FadeImage from '../common/FadeImage';
 import useTrekImages, { FALLBACK_IMAGE } from '../../hooks/useTrekImages';
+import usePhotoRatio from '../../hooks/usePhotoRatio';
 import '../../styles/trekcard.css';
 import { getDisplayPrice, showsDifficulty } from '../../utils/tripPricing';
 import { fromLabel, usePlaces } from '../../context/PlacesContext';
@@ -24,7 +25,8 @@ const formatPrice = (price) => {
 // The photos change by themselves only while the mouse is over the trip
 // (moving), so visitors do not download every photo of every trip.
 function FeaturedTripImage({ trip, name, moving }) {
-  const images = useTrekImages(trip);
+  const images = useTrekImages(trip, 600);
+  const ratio = usePhotoRatio(images[0], true, 1); // cover photo shape (phones), at most square
   const [currentImage, setCurrentImage] = useState(0);
 
   useEffect(() => {
@@ -44,7 +46,7 @@ function FeaturedTripImage({ trip, name, moving }) {
   }, [images.length, currentImage, moving]);
 
   return (
-    <div className="thumb trip-thumb">
+    <div className="thumb trip-thumb" style={{ '--photo': `url("${images[currentImage] ?? images[0]}")`, '--ratio': ratio || undefined }}>
       <FadeImage
         src={images[currentImage] ?? images[0]}
         alt={name}

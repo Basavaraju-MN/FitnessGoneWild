@@ -262,3 +262,9 @@
   .team-card h3 { font-size: 1.2rem; }
   .team-intro { font-size: .84rem; }
 }
+
+/* ---------- Phones and tablets: the story photo is shown whole ---------- */
+@media (max-width: 980px) {
+  .about-story-photo,
+  .about-founder-photo { aspect-ratio: auto; height: auto; max-height: 560px; object-fit: contain; background: transparent; }
+}

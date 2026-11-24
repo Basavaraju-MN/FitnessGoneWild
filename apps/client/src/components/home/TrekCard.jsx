@@ -5,6 +5,7 @@ import FadeImage from '../common/FadeImage';
 import BookingModal from '../booking/BookingModal';
 import { API_BASE_URL, getDownloadFileName } from '../../api/treks';
 import useTrekImages, { FALLBACK_IMAGE } from '../../hooks/useTrekImages';
+import usePhotoRatio from '../../hooks/usePhotoRatio';
 import { MapPin } from 'lucide-react';
 import { fromLabel, usePlaces } from '../../context/PlacesContext';
 import {
@@ -64,7 +65,11 @@ export default function TrekCard({ trek, onClick }) {
 
 
   // The trek's photos, in order (cover first)
-  const images = useTrekImages(trek);
+  // Cards are at most ~420px wide: a smaller, compressed copy of each photo
+  const images = useTrekImages(trek, 420);
+  // Cover photo shape for the photo box on phones (read once the card is near
+  // the screen); never taller than 3:2, so the card stays short on a phone
+  const ratio = usePhotoRatio(images[0], isVisible, 1.5);
 
   /*
    * Reset image when trek changes.
@@ -347,7 +352,8 @@ export default function TrekCard({ trek, onClick }) {
         {/* IMAGE SLIDESHOW */}
         {/* ========================= */}
 
-        <div className="thumb">
+        {/* --photo: blurred fill behind the whole photo on phones (CSS) */}
+        <div className="thumb" style={{ '--photo': `url("${images[currentImage] ?? images[0]}")`, '--ratio': ratio || undefined }}>
           <FadeImage
             src={images[currentImage] ?? images[0]}
             alt={trek.name}
@@ -497,7 +503,8 @@ export default function TrekCard({ trek, onClick }) {
               handleBrochure();
             }}
           >
-            ↓ Download brochure
+            {/* Phones show just "↓ Brochure" (beside the price) */}
+            ↓ <span className="brochure-word">Download brochure</span><span className="brochure-short">Brochure</span>
           </button>
         </div>
       </article>

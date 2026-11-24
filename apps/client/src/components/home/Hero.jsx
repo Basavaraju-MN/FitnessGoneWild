@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { getHero } from '../../api/treks';
+import { sized, widthFor } from '../../utils/photoSize';
 
 // Shown until the admin's heroes load (and if they cannot load).
 // Each hero (slide) has its own photo, texts, buttons and stats.
@@ -55,7 +56,7 @@ export default function Hero() {
         if (cancelled) return;
         const heroes = (data?.heroes || [])
           .filter((h) => h.image_path && h.headline_line1)
-          .map((h) => ({ ...h, image: h.image_path, facts: Array.isArray(h.facts) ? h.facts : [] }));
+          .map((h) => ({ ...h, image: sized(h.image_path, widthFor()), facts: Array.isArray(h.facts) ? h.facts : [] }));
         setHeroSlides(heroes.length ? heroes : defaultSlides());
         setCurrentSlide(0);
         if (data?.slide_seconds) setSeconds(Number(data.slide_seconds));
@@ -191,6 +192,7 @@ export default function Hero() {
         type="button"
         onClick={handlePrevious}
         aria-label="Previous image"
+        className="hero-arrow hero-arrow-prev"
         style={{
           position: 'absolute',
           left: '20px',
@@ -218,6 +220,7 @@ export default function Hero() {
         type="button"
         onClick={handleNext}
         aria-label="Next image"
+        className="hero-arrow hero-arrow-next"
         style={{
           position: 'absolute',
           right: '20px',
