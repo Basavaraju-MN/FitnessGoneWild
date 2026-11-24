@@ -4,19 +4,42 @@
 // address changes when a photo is replaced, so browsers keep it for a year.
 const dbops = require('../db/dbops');
 
-const kept = new Map(); // "<id>:<version>" -> { mime, data }
-const MAX_KEPT = 30; // a few heroes, each about 0.2–0.5 MB
+const kept = new Map(); // "<id>:<version>:<width>" -> { mime, data }
+const MAX_KEPT = 30; // a few heroes, each about 0.1–0.5 MB
+
+// ?w=960 (phones) or ?w=1600 (computers): the photo made that wide (never
+// wider than it is) as WebP, so a phone does not download a computer-size
+// photo. Hero.jsx and the home page's preload (seo.js) ask for the same addresses.
+const WIDTHS = [960, 1600];
+let sharp = null;
+try { sharp = require('sharp'); } catch { console.warn('sharp is not installed: hero photos are sent at full size'); }
+
+async function sized(photo, width) {
+  if (!sharp || !WIDTHS.includes(width)) return photo;
+  try {
+    const data = await sharp(photo.data).rotate()
+      .resize({ width, withoutEnlargement: true })
+      .webp({ quality: 72 })
+      .toBuffer();
+    return data.length < photo.data.length ? { mime: 'image/webp', data } : photo;
+  } catch (error) {
+    console.error('Hero photo resize failed:', error?.message || error);
+    return photo;
+  }
+}
 
 async function heroPhoto(req, res, next) {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id < 1) return next();
 
-  const key = `${id}:${req.query.v || ''}`;
+  const width = WIDTHS.includes(Number(req.query.w)) ? Number(req.query.w) : 0;
+  const key = `${id}:${req.query.v || ''}:${width}`;
   try {
     let photo = kept.get(key);
     if (!photo) {
       photo = await dbops.getHeroPhoto(id);
       if (!photo) return res.status(404).end();
+      photo = await sized(photo, width);
       if (kept.size >= MAX_KEPT) kept.delete(kept.keys().next().value);
       kept.set(key, photo);
     }

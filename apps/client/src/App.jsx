@@ -1,10 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { lazy, Suspense, useEffect, useRef } from 'react';
 import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
 
 import Home from './pages/Home';
-import About from './pages/About';
-import PaymentOptions from './pages/PaymentOptions';
-import PaymentResult from './pages/PaymentResult';
+// Loaded only when visited, so the home page starts faster
+const About = lazy(() => import('./pages/About'));
+const PaymentOptions = lazy(() => import('./pages/PaymentOptions'));
+const PaymentResult = lazy(() => import('./pages/PaymentResult'));
 import { trackContact } from './utils/metaPixel';
 import Placeholder from './pages/Placeholder';
 import { PlacesProvider } from './context/PlacesContext';
@@ -89,6 +90,7 @@ export default function App() {
      <PlacesProvider>
       <MetaPixelPageViews />
       <FloatingSocialDock />
+      <Suspense fallback={null}>
       <Routes>
 
         {/* Client website */}
@@ -135,6 +137,7 @@ export default function App() {
         />
 
       </Routes>
+      </Suspense>
      </PlacesProvider>
     </BrowserRouter>
   );

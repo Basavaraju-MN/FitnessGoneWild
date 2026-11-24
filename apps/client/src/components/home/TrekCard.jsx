@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, lazy, Suspense } from 'react';
 import '../../styles/trekcard.css'
 import RichText from '../common/RichText';
 import FadeImage from '../common/FadeImage';
-import BookingModal from '../booking/BookingModal';
+// Loaded when a visitor opens it, so the home page starts faster
+const BookingModal = lazy(() => import('../booking/BookingModal'));
 import { API_BASE_URL, getDownloadFileName } from '../../api/treks';
 import { trackBrochureLead, trackContact } from '../../utils/metaPixel';
 import { getTrafficSource } from '../../utils/trafficSource';
@@ -625,7 +626,9 @@ export default function TrekCard({ trek, onClick }) {
       )}
 
       {showBooking && (
+        <Suspense fallback={null}>
         <BookingModal trek={trek} onClose={() => setShowBooking(false)} />
+        </Suspense>
       )}
     </>
   );

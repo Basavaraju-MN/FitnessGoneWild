@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import '../../styles/trekdetails.css';
 import '../../styles/places.css';
 import { MapPin } from 'lucide-react';
-import BookingModal from '../booking/BookingModal';
+// Loaded when a visitor opens it, so the home page starts faster
+const BookingModal = lazy(() => import('../booking/BookingModal'));
 import RichText from '../common/RichText';
 import TrekTerms from './TrekTerms';
 import useTrekImages, { FALLBACK_IMAGE } from '../../hooks/useTrekImages';
@@ -893,12 +894,14 @@ export default function TrekDetails({ trek, onBack }) {
     </main>
 
     {showBookingModal && (
+      <Suspense fallback={null}>
       <BookingModal
         trek={trek}
         onClose={() =>
           setShowBookingModal(false)
         }
       />
+      </Suspense>
     )}
   </>
   );

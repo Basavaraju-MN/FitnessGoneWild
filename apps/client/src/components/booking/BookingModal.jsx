@@ -1348,7 +1348,7 @@ export default function BookingModal({
         <div className="booking-secured">
           <span>🛡 Secured by</span>
           <img
-            src="/images/logo.png"
+            src="/images/logo-330.webp"
             alt="The Fitness Gone Wild"
           />
           <strong>The Fitness Gone Wild</strong>

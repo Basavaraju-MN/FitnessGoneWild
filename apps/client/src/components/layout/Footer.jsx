@@ -23,7 +23,7 @@ export default function Footer() {
       <div className="footer-grid">
         <div>
           <img
-            src="/images/logo.png"
+            src="/images/logo-330.webp"
             alt="The Fitness Gone Wild"
             style={{
               // Light box behind the logo so its dark colours show on the

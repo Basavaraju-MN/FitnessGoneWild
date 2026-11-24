@@ -45,7 +45,7 @@ export default function Header({ onNavigate }) {
     <header className="site-header">
       <nav className="nav" aria-label="Main navigation">
         <a className="brand" href="/#top" onClick={(event) => go(event, 'top')}>
-          <img className="brand-logo" src="/images/logo.png" alt="The Fitness Gone Wild" />
+          <img className="brand-logo" src="/images/logo-330.webp" alt="The Fitness Gone Wild" />
         </a>
 
         <button

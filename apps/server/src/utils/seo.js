@@ -193,7 +193,7 @@ function homePage(clientDist) {
         const heroPhoto = hero?.[0]?.image_path;
         const url = `${base}/`;
         const head = [
-          ...(heroPhoto ? [`<link rel="preload" as="image" href="${esc(heroPhoto)}" fetchpriority="high" />`] : []),
+          ...(heroPhoto ? heroPreloads(heroPhoto) : []),
           ...shareTags({ title: HOME_TITLE, description: HOME_DESCRIPTION, image: `${base}/images/hero1.jpg`, url }),
           jsonLd({
             '@context': 'https://schema.org',
@@ -222,6 +222,17 @@ function homePage(clientDist) {
       return next(error);
     }
   };
+}
+
+// The first hero photo at the size this screen gets (same rule as heroSize in
+// Hero.jsx), so the browser downloads exactly the photo the page then shows
+function heroPreloads(photo) {
+  const at = (w) => (photo.startsWith('/hero-photo/') ? `${photo}${photo.includes('?') ? '&' : '?'}w=${w}` : photo);
+  if (at(960) === photo) return [`<link rel="preload" as="image" href="${esc(photo)}" fetchpriority="high" />`];
+  return [
+    `<link rel="preload" as="image" href="${esc(at(960))}" media="(max-width: 768px)" fetchpriority="high" />`,
+    `<link rel="preload" as="image" href="${esc(at(1600))}" media="(min-width: 769px)" fetchpriority="high" />`,
+  ];
 }
 
 /* ---------------- Pages that are not real pages ---------------- */

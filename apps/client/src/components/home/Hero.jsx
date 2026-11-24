@@ -37,6 +37,15 @@ const DEFAULT_SLIDES = [
 // How long one hero photo takes to fade into the next (keep in step with .hero-photo in global.css)
 const HERO_FADE_MS = 1200;
 
+// Hero photos kept in the database come in two sizes: phones get the
+// 960px one, computers the 1600px one (same rule as heroPreloads in the
+// server's seo.js, which starts the first one downloading early)
+const heroSize = (path) => {
+  if (!String(path || '').startsWith('/hero-photo/')) return path;
+  const width = typeof window !== 'undefined' && window.innerWidth <= 768 ? 960 : 1600;
+  return `${path}${path.includes('?') ? '&' : '?'}w=${width}`;
+};
+
 // The built-in slides; their photos are only used when the admin has no heroes
 const defaultSlides = () => DEFAULT_SLIDES.map((sl) => ({ ...DEFAULT_TEXT, ...sl }));
 
@@ -55,7 +64,7 @@ export default function Hero() {
         if (cancelled) return;
         const heroes = (data?.heroes || [])
           .filter((h) => h.image_path && h.headline_line1)
-          .map((h) => ({ ...h, image: h.image_path, facts: Array.isArray(h.facts) ? h.facts : [] }));
+          .map((h) => ({ ...h, image: heroSize(h.image_path), facts: Array.isArray(h.facts) ? h.facts : [] }));
         setHeroSlides(heroes.length ? heroes : defaultSlides());
         setCurrentSlide(0);
         if (data?.slide_seconds) setSeconds(Number(data.slide_seconds));
