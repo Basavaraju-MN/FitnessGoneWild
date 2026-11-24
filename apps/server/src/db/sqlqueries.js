@@ -23,6 +23,7 @@ const sqlqueries = {
       t.badge_text,
       t.badge_style,
       t.is_featured,
+      /*incat*/ t.featured_in_category,
       t.featured_label,
       t.featured_order,
       t.status,
@@ -37,6 +38,9 @@ const sqlqueries = {
     GROUP BY t.id
     LIMIT 1
   `,
+  // A category's trips. Featured trips only when the admin ticked "Also show
+  // in its category" (trips.featured_in_category); /*incat*/ lines are left
+  // out until that column exists (dbops.withoutNewColumn)
   getTrekDetails: `
     SELECT
       t.id,
@@ -58,6 +62,7 @@ const sqlqueries = {
       t.badge_text,
       t.badge_style,
       t.is_featured,
+      /*incat*/ t.featured_in_category,
       t.featured_label,
       t.featured_order,
       t.status,
@@ -68,7 +73,9 @@ const sqlqueries = {
     FROM trips t
     LEFT JOIN inclusion_exclusion ie ON ie.trip_id = t.id
     WHERE t.category_id = ?
-      AND COALESCE(t.is_featured, 0) = 0
+      AND (COALESCE(t.is_featured, 0) = 0
+        /*incat*/ OR t.featured_in_category = 1
+      )
       AND t.status = 'published'
     GROUP BY t.id
     ORDER BY t.id ASC
@@ -94,6 +101,7 @@ const sqlqueries = {
       t.badge_text,
       t.badge_style,
       t.is_featured,
+      /*incat*/ t.featured_in_category,
       t.featured_label,
       t.featured_order,
       t.status,
@@ -159,6 +167,7 @@ const sqlqueries = {
       t.id AS trip_id,
       t.category_id,
       t.is_featured,
+      /*incat*/ t.featured_in_category,
       r.id AS region_id,
       r.slug AS region_slug,
       r.name AS region_name,

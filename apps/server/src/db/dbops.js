@@ -10,6 +10,18 @@ function firstBookableDate(now = new Date()) {
   return india.toISOString().slice(0, 10);
 }
 
+// trips.featured_in_category is added by the admin server when it starts
+// (featuredSchema.js). Until then the queries run without it (/*incat*/ parts
+// removed): featured trips then show only in Featured trips, as before.
+async function withoutNewColumn(sql, params) {
+  try {
+    return await executeQuery(sql, params);
+  } catch (error) {
+    if (error?.code !== 'ER_BAD_FIELD_ERROR') throw error;
+    return executeQuery(sql.replace(/\/\*incat\*\/[^\n]*/g, ''), params);
+  }
+}
+
 class Cmds {
 
   async getTrekCategories() {
@@ -18,18 +30,18 @@ class Cmds {
   }
 
   async getTrekDetails(categoryId) {
-    const rows = await executeQuery(sqlQueries.getTrekDetails, [categoryId]);
+    const rows = await withoutNewColumn(sqlQueries.getTrekDetails, [categoryId]);
     return rows || [];
   }
 
   async getTrekBySlug(slug) {
     if (!/^[a-z0-9_-]{1,80}$/i.test(String(slug || ''))) return null;
-    const rows = await executeQuery(sqlQueries.getTrekBySlug, [slug]);
+    const rows = await withoutNewColumn(sqlQueries.getTrekBySlug, [slug]);
     return rows?.[0] || null;
   }
 
   async getFeaturedTrips() {
-    const rows = await executeQuery(sqlQueries.getFeaturedTrips);
+    const rows = await withoutNewColumn(sqlQueries.getFeaturedTrips);
     return rows || [];
   }
 
@@ -54,7 +66,7 @@ class Cmds {
   }
 
   async getTripPlaces() {
-    return (await executeQuery(sqlQueries.getTripPlaces)) || [];
+    return (await withoutNewColumn(sqlQueries.getTripPlaces)) || [];
   }
 
   async getPickupCities(tripId) {

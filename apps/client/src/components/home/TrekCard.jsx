@@ -488,7 +488,9 @@ export default function TrekCard({ trek, onClick }) {
               Enquiry ↗
             </button>
 
-            {/* Opens the booking pop-up straight away */}
+            {/* Opens the booking pop-up straight away. Not for "Featured only"
+                trips (same rule as canBook on the trek page) */}
+            {(Number(trek.is_featured) !== 1 || Number(trek.featured_in_category) === 1) && (
             <button
               type="button"
               className="book-btn"
@@ -499,6 +501,7 @@ export default function TrekCard({ trek, onClick }) {
             >
               Book Now ↗
             </button>
+            )}
           </div>
 
           <button

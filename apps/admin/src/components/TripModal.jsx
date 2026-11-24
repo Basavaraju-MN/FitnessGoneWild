@@ -134,7 +134,7 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
     if (isNew) {
       setValues({
         status: 'draft', difficulty: 'Easy', badge_style: 'plain',
-        category_id: categories[0]?.id || '', is_featured: 0,
+        category_id: categories[0]?.id || '', is_featured: 0, featured_in_category: 0,
         terms_sections: [], terms_highlights: '',
         region_id: (lookups?.regions || []).find((r) => Number(r.is_active))?.id || '',
         pickup_points: [emptyPickup(firstCityId), emptyPickup(firstCityId)],
@@ -513,6 +513,19 @@ export default function TripModal({ tripId, categories, onClose, onSaved }) {
               </div>
               {Boolean(Number(values.is_featured)) && (
                 <>
+                  <div className="field check full">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={Boolean(Number(values.featured_in_category))}
+                        onChange={(e) => set('featured_in_category', e.target.checked ? 1 : 0)}
+                      />
+                      Also show in its category
+                    </label>
+                    <small className="muted">
+                      Ticked: shown in Featured trips and in its category tab. Not ticked: only in Featured trips.
+                    </small>
+                  </div>
                   <div className="field">
                     <label>Featured label</label>
                     {input('featured_label', { placeholder: 'Most booked' })}

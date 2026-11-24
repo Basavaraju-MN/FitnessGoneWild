@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { getFeaturedTrips, saveTripInterest } from '../../api/treks';
 import { trackContact } from '../../utils/metaPixel';
 import SectionHeader from '../common/SectionHeader';
@@ -9,6 +9,14 @@ import usePhotoRatio from '../../hooks/usePhotoRatio';
 import '../../styles/trekcard.css';
 import { getDisplayPrice, showsDifficulty } from '../../utils/tripPricing';
 import { fromLabel, usePlaces } from '../../context/PlacesContext';
+
+// Loaded when a visitor opens it, so the home page starts faster
+const BookingModal = lazy(() => import('../booking/BookingModal'));
+
+// Book Now for featured trips also shown in their category (admin: "Also show
+// in its category"); "Featured only" trips keep Interested (same rule as canBook
+// on the trek page)
+const canBook = (trip) => Number(trip.featured_in_category) === 1;
 
 // How long each featured trip stays before the next slides in
 const SLIDE_MS = 6000;
@@ -129,6 +137,13 @@ export default function FeaturedTrips({ onTrekSelect }) {
     fetchTrips();
   }, []);
 
+  // The trip being booked (booking pop-up open), as it came from the server
+  const [bookingTrip, setBookingTrip] = useState(null);
+  const handleBook = (event, trip) => {
+    event.stopPropagation();
+    setBookingTrip((trips || []).find((t) => t.id === trip.id) || trip);
+  };
+
   const handleInterested = async (event, trip) => {
     event.stopPropagation();
 
@@ -241,9 +256,15 @@ export default function FeaturedTrips({ onTrekSelect }) {
               </div>
 
               <div className="featured-actions">
-                <button type="button" className="outline" onClick={(event) => handleInterested(event, shown)}>
-                  Interested
-                </button>
+                {canBook(shown) ? (
+                  <button type="button" className="outline" onClick={(event) => handleBook(event, shown)}>
+                    Book Now ↗
+                  </button>
+                ) : (
+                  <button type="button" className="outline" onClick={(event) => handleInterested(event, shown)}>
+                    Interested
+                  </button>
+                )}
                 <button type="button" onClick={(event) => handleEnquire(event, shown)}>
                   Enquire about this trip ↗
                 </button>
@@ -267,6 +288,12 @@ export default function FeaturedTrips({ onTrekSelect }) {
             </div>
           )}
         </div>
+      )}
+
+      {bookingTrip && (
+        <Suspense fallback={null}>
+          <BookingModal trek={bookingTrip} onClose={() => setBookingTrip(null)} />
+        </Suspense>
       )}
     </section>
   );
