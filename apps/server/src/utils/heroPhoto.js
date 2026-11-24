@@ -3,6 +3,8 @@
 // Each photo is read from the database once, then served from memory; the
 // address changes when a photo is replaced, so browsers keep it for a year.
 const dbops = require('../db/dbops');
+// ?w=800: a smaller, compressed copy (phones)
+const { sendPhoto } = require('./photoSize');
 
 const kept = new Map(); // "<id>:<version>:<width>" -> { mime, data }
 const MAX_KEPT = 30; // a few heroes, each about 0.1–0.5 MB
@@ -44,9 +46,14 @@ async function heroPhoto(req, res, next) {
       kept.set(key, photo);
     }
 
-    res.set('Content-Type', photo.mime);
-    res.set('Cache-Control', req.query.v ? 'public, max-age=31536000, immutable' : 'public, max-age=300');
-    return res.send(photo.data);
+    return sendPhoto(req, res, {
+      // Smaller copies only for versioned addresses (a new photo = a new version)
+      key: req.query.v ? `hero-${id}-${String(req.query.v).replace(/\D/g, '')}` : null,
+      source: photo.data,
+      mime: photo.mime,
+      maxAge: req.query.v ? 365 * 24 * 60 * 60 * 1000 : 5 * 60 * 1000,
+      immutable: Boolean(req.query.v),
+    });
   } catch (error) {
     return next(error);
   }

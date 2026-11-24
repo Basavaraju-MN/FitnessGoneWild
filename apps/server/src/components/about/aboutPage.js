@@ -258,10 +258,13 @@ async function aboutPhoto(req, res, next) {
     const file = photo && await cacheFile(slot, photo);
     if (!file) return res.status(404).end();
     const current = Number(req.query.v) === photo.version;
-    return res.sendFile(file, {
+    // ?w=800: a smaller, compressed copy (phones)
+    return require('../../utils/photoSize').sendPhoto(req, res, {
+      key: `about-${slot}-${photo.version}`,
+      source: file,
+      mime: photo.mime,
       maxAge: current ? 365 * 24 * 60 * 60 * 1000 : 5 * 60 * 1000,
       immutable: current,
-      headers: { 'Content-Type': photo.mime },
     });
   } catch (error) {
     return next(error);

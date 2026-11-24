@@ -228,9 +228,9 @@ function homePage(clientDist) {
 // Hero.jsx), so the browser downloads exactly the photo the page then shows
 function heroPreloads(photo) {
   const at = (w) => (photo.startsWith('/hero-photo/') ? `${photo}${photo.includes('?') ? '&' : '?'}w=${w}` : photo);
-  if (at(960) === photo) return [`<link rel="preload" as="image" href="${esc(photo)}" fetchpriority="high" />`];
+  if (at(800) === photo) return [`<link rel="preload" as="image" href="${esc(photo)}" fetchpriority="high" />`];
   return [
-    `<link rel="preload" as="image" href="${esc(at(960))}" media="(max-width: 768px)" fetchpriority="high" />`,
+    `<link rel="preload" as="image" href="${esc(at(800))}" media="(max-width: 768px)" fetchpriority="high" />`,
     `<link rel="preload" as="image" href="${esc(at(1600))}" media="(min-width: 769px)" fetchpriority="high" />`,
   ];
 }

@@ -13,6 +13,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { pool, executeQuery } = require('../db/connection');
+// ?w=800: a smaller, compressed copy (phones)
+const { sendPhoto } = require('./photoSize');
 
 const MAX_IMAGES = 5;
 const EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
@@ -143,10 +145,12 @@ async function tripPhoto(req, res, next) {
 
     // Addresses with the photo's version never change: kept for a year
     const current = Number(req.query.v) === photo.version;
-    return res.sendFile(file, {
+    return sendPhoto(req, res, {
+      key: `trip-${tripId}-${position}-${photo.version}`,
+      source: file,
+      mime: photo.mime,
       maxAge: current ? 365 * 24 * 60 * 60 * 1000 : 5 * 60 * 1000,
       immutable: current,
-      headers: { 'Content-Type': photo.mime },
     });
   } catch (error) {
     return next(error);

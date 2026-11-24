@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { getHero } from '../../api/treks';
+import { sized } from '../../utils/photoSize';
 
 // Shown until the admin's heroes load (and if they cannot load).
 // Each hero (slide) has its own photo, texts, buttons and stats.
@@ -37,14 +38,11 @@ const DEFAULT_SLIDES = [
 // How long one hero photo takes to fade into the next (keep in step with .hero-photo in global.css)
 const HERO_FADE_MS = 1200;
 
-// Hero photos kept in the database come in two sizes: phones get the
-// 960px one, computers the 1600px one (same rule as heroPreloads in the
-// server's seo.js, which starts the first one downloading early)
-const heroSize = (path) => {
-  if (!String(path || '').startsWith('/hero-photo/')) return path;
-  const width = typeof window !== 'undefined' && window.innerWidth <= 768 ? 960 : 1600;
-  return `${path}${path.includes('?') ? '&' : '?'}w=${width}`;
-};
+// Hero photos: phones get the 800px copy, computers the 1600px one. Fixed by
+// screen width (not widthFor) because the home page starts downloading this
+// same address early (heroPreloads in the server's seo.js); both must match
+// or the photo is downloaded twice.
+const heroSize = (path) => sized(path, typeof window !== 'undefined' && window.innerWidth <= 768 ? 800 : 1600);
 
 // The built-in slides; their photos are only used when the admin has no heroes
 const defaultSlides = () => DEFAULT_SLIDES.map((sl) => ({ ...DEFAULT_TEXT, ...sl }));
@@ -200,6 +198,7 @@ export default function Hero() {
         type="button"
         onClick={handlePrevious}
         aria-label="Previous image"
+        className="hero-arrow hero-arrow-prev"
         style={{
           position: 'absolute',
           left: '20px',
@@ -227,6 +226,7 @@ export default function Hero() {
         type="button"
         onClick={handleNext}
         aria-label="Next image"
+        className="hero-arrow hero-arrow-next"
         style={{
           position: 'absolute',
           right: '20px',

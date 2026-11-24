@@ -7,6 +7,7 @@ const BookingModal = lazy(() => import('../booking/BookingModal'));
 import RichText from '../common/RichText';
 import TrekTerms from './TrekTerms';
 import useTrekImages, { FALLBACK_IMAGE } from '../../hooks/useTrekImages';
+import usePhotoRatio from '../../hooks/usePhotoRatio';
 import {
   getDisplayPrice,
   getPriceOptions,
@@ -82,7 +83,8 @@ export default function TrekDetails({ trek, onBack }) {
 
 
   // The trek's photos, in order (cover first)
-  const images = useTrekImages(trek);
+  const images = useTrekImages(trek, 1180);
+  const ratio = usePhotoRatio(images[0]); // cover photo shape (phones)
 
   useEffect(() => {
     setCurrentImage(0);
@@ -372,7 +374,8 @@ export default function TrekDetails({ trek, onBack }) {
         {/* IMAGE GALLERY */}
         {/* ================================= */}
 
-        <section className="trek-details-gallery">
+        {/* --photo: blurred fill behind the whole photo on phones (CSS) */}
+        <section className="trek-details-gallery" style={{ '--photo': `url("${images[currentImage] ?? images[0]}")`, '--ratio': ratio || undefined }}>
 
           <img
             src={images[currentImage] ?? images[0]}
